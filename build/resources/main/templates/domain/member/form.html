@@ -49,7 +49,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label required" for="memberId">사용자ID</label>
-                        <input id="memberId" name="memberId" class="input" required maxlength="5" placeholder="예: admin" 
+                        <input id="memberId" name="memberId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력" 
                               th:value="${member.memberId}" th:readonly="${!isNew}" />
                       </div>
                       <div class="form-row col-span-4">

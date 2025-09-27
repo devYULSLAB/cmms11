@@ -14,13 +14,13 @@
           <div class="spacer"></div>
           <div class="meta">
             <span class="badge">memberId</span>
-            <span>시연용</span>
+            <span>관리자</span>
           </div>
         </div>
       </header>
       <nav class="breadcrumbs">
         <div class="container">
-          <a th:href="@{#}" href="#">자산정보</a>
+          <a th:href="@{#}" href="#">회사정보</a>
           <span class="sep">/</span>
           <a th:href="@{/plant/list}">설비</a>
           <span class="sep">/</span>
@@ -48,13 +48,13 @@
                     <div class="section-title">기본정보</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="plant_id">설비 번호</label>
-                        <input id="plant_id" name="plantId" class="input" required maxlength="10" placeholder="예: EQP000123" 
-                              th:value="${plant.plantId}" th:readonly="${!isNew}" />
+                        <label class="label" for="plant_id">설비 번호</label>
+                        <input id="plant_id" name="plantId" class="input" maxlength="10" placeholder="자동생성" 
+                              th:value="${plant.plantId}" readonly />
                       </div>
                       <div class="form-row col-span-9">
                         <label class="label required" for="name">설비 이름</label>
-                        <input id="name" name="name" class="input" required maxlength="100" placeholder="예: 순환 펌프" 
+                        <input id="name" name="name" class="input" required maxlength="100" placeholder="예: 공기 압축기" 
                               th:value="${plant.name}" />
                       </div>
                     </div>
@@ -111,9 +111,9 @@
                     </div>
                   </div>
 
-                  <!-- 사양 / 모델 -->
+                  <!-- 제조사 / 모델 -->
                   <div class="section">
-                    <div class="section-title">사양 / 모델</div>
+                    <div class="section-title">제조사 / 모델</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label" for="maker_name">제조사</label>
@@ -132,7 +132,7 @@
                       </div>
                       <div class="form-row col-span-12">
                         <label class="label" for="spec">스펙</label>
-                        <textarea id="spec" name="spec" rows="3" placeholder="예: 압력 10~30 bar, 용량 40 m³/h" 
+                        <textarea id="spec" name="spec" rows="3" placeholder="예: 압력 10~30 bar, 유량 40 m³/h" 
                               th:text="${plant.spec}"></textarea>
                       </div>
                     </div>
@@ -225,11 +225,14 @@
                   <!-- 첨부 -->
                   <div class="section" data-attachments>
                     <div class="section-title">첨부</div>
-                    <input type="hidden" name="file_group_id" th:value="${plant.fileGroupId}" />
+                    <input type="hidden" name="fileGroupId" th:value="${plant.fileGroupId}" />
                     <div class="attachments">
-                        <input id="attachments-input" class="visually-hidden" type="file" multiple aria-hidden="true" />
-                        <button type="button" class="btn" data-attachments-add>파일 선택</button>
-                        <div class="hint">선택한 파일이 아래 목록에 표시됩니다.</div>
+                        <input id="attachments-input" class="visually-hidden" type="file" 
+                               multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                        <button type="button" class="btn" data-attachments-add>
+                          파일 선택
+                          <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                        </button>
                         <ul class="attachments-list" aria-live="polite" aria-label="첨부된 파일 목록">
                           <li class="empty">첨부된 파일이 없습니다.</li>
                         </ul>
@@ -252,5 +255,6 @@
       </footer>
     </div>
     <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>

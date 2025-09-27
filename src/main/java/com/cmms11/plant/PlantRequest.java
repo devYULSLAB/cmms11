@@ -13,8 +13,8 @@ import java.time.LocalDate;
  * 프로그램 개요: 설비 생성/수정 요청 DTO.
  */
 public record PlantRequest(
-    @NotBlank @Size(max = 10) String plantId,
-    @NotBlank @Size(max = 100) String name,
+    @Size(max = 10) String plantId,
+    @Size(max = 100) String name,
     @Size(max = 5) String assetId,
     @Size(max = 5) String siteId,
     @Size(max = 5) String deptId,

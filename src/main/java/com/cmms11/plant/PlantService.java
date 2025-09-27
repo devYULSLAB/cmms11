@@ -33,11 +33,11 @@ public class PlantService {
     private static final String MODULE_CODE = "1";
 
     private final PlantRepository repository;
-    private final AutoNumberService numberService;
+    private final AutoNumberService autoNumberService;
 
-    public PlantService(PlantRepository repository, AutoNumberService numberService) {
+    public PlantService(PlantRepository repository, AutoNumberService autoNumberService) {
         this.repository = repository;
-        this.numberService = numberService;
+        this.autoNumberService = autoNumberService;
     }
 
     @Transactional(readOnly = true)
@@ -63,8 +63,14 @@ public class PlantService {
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
 
+        // plantId가 없으면 자동 생성
+        String plantId = request.plantId();
+        if (plantId == null || plantId.isBlank()) {
+            plantId = autoNumberService.generateMasterId(companyId, MODULE_CODE);
+        }
+
         Plant plant = new Plant();
-        plant.setId(new PlantId(companyId, request.plantId()));
+        plant.setId(new PlantId(companyId, plantId));
         plant.setName(request.name());
         plant.setAssetId(request.assetId());
         plant.setSiteId(request.siteId());
@@ -201,7 +207,7 @@ public class PlantService {
         Plant plant;
         String finalPlantId;
         if (csvPlantId == null) {
-            finalPlantId = numberService.generateMasterId(companyId, MODULE_CODE);
+            finalPlantId = autoNumberService.generateMasterId(companyId, MODULE_CODE);
             plant = new Plant();
             plant.setId(new PlantId(companyId, finalPlantId));
             plant.setCreatedAt(now);

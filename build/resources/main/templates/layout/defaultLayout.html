@@ -54,20 +54,29 @@
           <div class="spacer"></div>
           <nav class="meta">
             <span id="user-info" style="margin-right:12px;color:var(--fg-muted)" 
-                  th:text="${isAuthenticated ? (memberId + (companyId != 'C0001' ? ' (' + companyId + ')' : '')) : '게스트 사용자'}">사용자</span>
+                  th:text="${isAuthenticated ? (memberId + ':' + companyId) : '게스트 사용자'}">사용자</span>
             <a class="btn sm" th:href="@{/api/auth/logout}" href="/api/auth/logout" data-hard-nav>로그아웃</a>
           </nav>
         </div>
       </header>
       <aside class="sidebar">
         <nav class="sidemenu">
-          <!-- 설비관리 -->
+          <!-- 설비 마스터 -->
           <div class="menu-group open" data-group>
-            <button type="button" class="menu-title" aria-expanded="true">자산관리</button>
+            <button type="button" class="menu-title" aria-expanded="true">자산 마스터</button>
             <div class="menu-items">
               <a class="menu-item" th:href="@{/plant/form}" href="/plant/form">등록</a>
               <a class="menu-item" th:href="@{/plant/list}" href="/plant/list">목록</a>
               <a class="menu-item" th:href="@{/plant/history}" href="/plant/history">이력</a>
+            </div>
+          </div>
+
+          <!-- 재고 마스터 -->
+          <div class="menu-group open" data-group>
+            <button type="button" class="menu-title" aria-expanded="true">재고 마스터</button>
+            <div class="menu-items">
+              <a class="menu-item" th:href="@{/inventory/form}" href="/inventory/form">등록</a>
+              <a class="menu-item" th:href="@{/inventory/list}" href="/inventory/list">목록</a>
             </div>
           </div>
 
@@ -145,7 +154,6 @@
             <button type="button" class="menu-title" aria-expanded="false">공통코드</button>
             <div class="menu-items">
               <a class="menu-item" th:href="@{/code/types}" href="/code/types">코드 타입</a>
-              <a class="menu-item" th:href="@{/code/items}" href="/code/items">코드 항목</a>
             </div>
           </div>
         </nav>
@@ -160,7 +168,8 @@
       </footer>
     </div>
     <script src="../assets/js/app.js"></script>
-    <script src="../assets/js/file-widget.js"></script>
+    <!-- file-widget.js는 S3 기반 업로드용이므로 현재 로컬 저장 시스템에서는 사용하지 않음 -->
+    <!-- <script src="../assets/js/file-widget.js"></script> -->
     <script>
       // 네비게이션 시스템 초기화
       document.addEventListener('DOMContentLoaded', () => {

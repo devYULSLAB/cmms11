@@ -1,5 +1,7 @@
 # STRUCTURES
 
+참고: 파일 업로드 최신 가이드가 업데이트되었습니다. 상세 내용은 `docs/FILE_UPLOAD.md`를 참고하세요.
+
 본 문서는 프로젝트의 구조와 규칙을 한눈에 보기 위해 정리되었습니다.
 요약: Spring Boot 기반의 얇은 Web 계층, Service 중심의 도메인 접근, JPA 저장소, 정적 템플릿(UI) 구조를 사용합니다.
 
@@ -123,86 +125,58 @@ src/main/resources/
 - 초기값/증분: `next_seq`에서 현재값 반환 후 +1 저장
 - 신규 생성: `sequence` 테이블에 (companyId, moduleCode, dateKey) 행이 없으면 신규로 생성 후 시퀀스 시작(코드에 반영됨)
 
-### 파일 업로드(권장 API 기반 설계)
+### 파일 업로드 가이드 (전역 위젯 기반, 최신)
 
-- 연결 방식: **느슨한 결합**
-  - 백엔드: 업로드/다운로드/목록 관리 전용 API 제공
-  - 프런트: 각 모듈(form.html)에서 `fileGroupId` 히든 필드로 참조, JS 위젯이 API 호출
+이 문서는 첨부(파일 업로드/목록/삭제) 기능의 최신 구조와 사용 규칙을 정리합니다. SPA 슬롯 주입 환경에서 일관된 동작을 보장하도록 전역 위젯과 표준 마크업만으로 동작합니다.
 
-#### 1) API 설계
-- `POST /api/files/init` → 업로드 세션 생성 (응답: `uploadId`, `fileGroupId`)
-- `POST /api/files/{uploadId}/parts` → 파일 업로드 (multipart or presigned URL)
-- `PATCH /api/files/{uploadId}/complete` → 업로드 완료, `file_item` 등록
-- `GET /api/files?groupId={fileGroupId}` → 그룹별 파일 목록
-- `DELETE /api/files/{fileId}` → 단건 삭제
-- `GET /api/files/{fileId}` → 단건 다운로드 (권한 검증 필수)
+#### 개요
+- 전역 스크립트: `src/main/resources/static/assets/js/app.js`
+  - SPA로 콘텐츠가 `#layout-slot`에 주입된 뒤, `[data-attachments]` 섹션을 자동으로 초기화합니다.
+- 템플릿별(페이지별) 첨부 전용 인라인 JS는 사용하지 않습니다.
+- 스타일은 레이아웃 공용 CSS(`base.css`)를 기본으로 하고, 페이지 전용 스타일이 필요하면 `<main>` 내부 `<style>`로 한정 적용합니다.
 
-#### 2) 데이터 보관
-- 메타 테이블: `file_group`, `file_item` (공통 스키마 사용)
-- 실제 파일: S3/디스크 등 외부 스토리지
-- 제약: 크기 제한, 확장자 화이트리스트, 무결성 검증(sha256), 다운로드 권한 체크
+#### 표준 마크업
+```html
+<div class="section" data-attachments>
+  <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
 
-#### 3) plant/form.html 예시 연동
-`<input type="hidden" id="fileGroupId" name="file_group_id" value="{{plant.file_group_id}}">
-<div class="section" id="attachments">
-  <button type="button" class="btn" id="btn-add">파일 선택</button>
-  <input id="file-input" type="file" multiple class="visually-hidden" />
-  <ul id="file-list" class="attachments-list"></ul>
+  <div class="attachments">
+    <input id="attachments-input" class="visually-hidden" type="file" multiple />
+    <button type="button" class="btn" data-attachments-add>파일 선택</button>
+    <ul class="attachments-list" aria-live="polite">
+      <li class="empty">첨부 파일이 없습니다.</li>
+    </ul>
+  </div>
 </div>
+```
 
-<script>
-(async function(){
-  const input=document.getElementById('file-input');
-  const groupEl=document.getElementById('fileGroupId');
-  const listEl=document.getElementById('file-list');
-  async function ensureGroup(){ /* POST /api/files/init */ }
-  async function refreshList(){ /* GET /api/files?groupId=... */ }
-  document.getElementById('btn-add').onclick=()=>input.click();
-  input.onchange=async(e)=>{ /* 업로드 후 PATCH complete */ };
-  refreshList();
-})();
-</script>`
-### 파일 업로드(권장 API 기반 설계)
-
-- 연결 방식: **느슨한 결합**
-  - 백엔드: 업로드/다운로드/목록 관리 전용 API 제공
-  - 프런트: 각 모듈(form.html)에서 `fileGroupId` 히든 필드로 참조, JS 위젯이 API 호출
-
-#### 1) API 설계
-- `POST /api/files/init` → 업로드 세션 생성 (응답: `uploadId`, `fileGroupId`)
-- `POST /api/files/{uploadId}/parts` → 파일 업로드 (multipart or presigned URL)
-- `PATCH /api/files/{uploadId}/complete` → 업로드 완료, `file_item` 등록
-- `GET /api/files?groupId={fileGroupId}` → 그룹별 파일 목록
-- `DELETE /api/files/{fileId}` → 단건 삭제
-- `GET /api/files/{fileId}` → 단건 다운로드 (권한 검증 필수)
-
-#### 2) 데이터 보관
-- 메타 테이블: `file_group`, `file_item` (공통 스키마 사용)
-- 실제 파일: S3/디스크 등 외부 스토리지
-- 제약: 크기 제한, 확장자 화이트리스트, 무결성 검증(sha256), 다운로드 권한 체크
-
-#### 3) plant/form.html 예시 연동
-`<input type="hidden" id="fileGroupId" name="file_group_id" value="{{plant.file_group_id}}">
-<div class="section" id="attachments">
-  <button type="button" class="btn" id="btn-add">파일 선택</button>
-  <input id="file-input" type="file" multiple class="visually-hidden" />
-  <ul id="file-list" class="attachments-list"></ul>
+- 읽기 전용(상세 화면 등)인 경우:
+```html
+<div class="section" data-attachments data-readonly>
+  <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
+  <ul class="attachments-list" aria-live="polite"></ul>
 </div>
+```
 
-<script>
-(async function(){
-  const input=document.getElementById('file-input');
-  const groupEl=document.getElementById('fileGroupId');
-  const listEl=document.getElementById('file-list');
-  async function ensureGroup(){ /* POST /api/files/init */ }
-  async function refreshList(){ /* GET /api/files?groupId=... */ }
-  document.getElementById('btn-add').onclick=()=>input.click();
-  input.onchange=async(e)=>{ /* 업로드 후 PATCH complete */ };
-  refreshList();
-})();
-</script>`
+#### 동작
+- 초기 로드: hidden `fileGroupId`가 있으면 전역 위젯이 `GET /api/files?groupId=...` 호출 → 목록 렌더.
+- 업로드: 사용자가 파일을 선택하면 `POST /api/files`(multipart, key=`files`) 호출. 응답의 `fileGroupId`로 hidden 값을 갱신하고, 반환된 항목으로 목록 갱신.
+- 삭제: 편집 화면에서만 노출. `DELETE /api/files/{fileId}?groupId=...` 성공 시 목록에서 제거. 비어 있으면 빈 메시지 표시.
+- 읽기 전용: `data-readonly`가 지정되면 업로드/삭제 컨트롤을 숨기고 다운로드만 노출.
 
-### CSV 대량 업로드(초기 데이터 세팅용)
+#### API 엔드포인트(현 구현, 단 POST 동작 여부는 별도 확인)
+- 업로드: `POST /api/files` (multipart/form-data, key=`files`) — 옵션 `groupId`
+- 목록: `GET /api/files?groupId={fileGroupId}`
+- 다운로드: `GET /api/files/{fileId}?groupId={fileGroupId}`
+- 삭제: `DELETE /api/files/{fileId}?groupId={fileGroupId}`
+
+#### SPA/템플릿 주의사항
+- defaultLayout는 `<main>` 내부 HTML만 주입합니다. 템플릿 `<head>`의 `<script>`는 실행되지 않습니다.
+- `/*[[...]]*/` 형태의 Thymeleaf JS 인라인 치환은 슬롯 주입 시 적용되지 않을 수 있으니, `fileGroupId`는 반드시 hidden 필드로 전달하세요.
+- 첨부 기능을 위한 인라인 JS는 넣지 않습니다. 전역 `app.js`가 자동으로 처리합니다.
+
+
+#### CSV 대량 업로드(초기 데이터 세팅용)
 - 엔드포인트: `POST /api/plants/upload`, `POST /api/inventories/upload` (multipart/form-data, 필드명 `file`)
 - 응답: `BulkUploadResult`(성공/실패 건수 + `BulkUploadError[rowNumber,message]` 목록)
 - CSV 헤더 가이드
@@ -305,3 +279,7 @@ CMMS 메인 메뉴
   - WorkPermit(작업허가): moduleCode=P → P250119001
   - Approval(승인): moduleCode=A → A250119001 
   - File(파일업로드): moduleCode=F → F250119001 
+
+## 파일 업로드 보완 사항 (중요)
+- 그룹 ID 폴백: 항목에 fileGroupId가 없을 수 있으므로 다음 순서로 해석합니다: (1) 렌더 시 전달된 groupId (2) 섹션/폼의 input[name=" fileGroupId\] 값 (3) 항목의 fileGroupId. 이로 인해 링크의 groupId=undefined 문제를 방지합니다.
+- 삭제 메서드: 기본은 DELETE /api/files/{fileId}?groupId=... 입니다. 서버가 POST 삭제만 허용한다면 전역 위젯을 해당 규격으로 맞춰야 합니다.

@@ -47,8 +47,8 @@ public class WorkOrderService {
     }
 
     @Transactional(readOnly = true)
-    public WorkOrderResponse get(String workOrderId) {
-        return WorkOrderResponse.from(getExisting(workOrderId));
+    public WorkOrderResponse get(String orderId) {
+        return WorkOrderResponse.from(getExisting(orderId));
     }
 
     public WorkOrderResponse create(WorkOrderRequest request) {
@@ -56,7 +56,7 @@ public class WorkOrderService {
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
 
-        String newId = resolveId(companyId, request.workOrderId(), request.plannedDate());
+        String newId = resolveId(companyId, request.orderId(), request.plannedDate());
         WorkOrder entity = new WorkOrder();
         entity.setId(new WorkOrderId(companyId, newId));
         entity.setCreatedAt(now);
@@ -68,23 +68,23 @@ public class WorkOrderService {
         return WorkOrderResponse.from(repository.save(entity));
     }
 
-    public WorkOrderResponse update(String workOrderId, WorkOrderRequest request) {
-        WorkOrder entity = getExisting(workOrderId);
+    public WorkOrderResponse update(String orderId, WorkOrderRequest request) {
+        WorkOrder entity = getExisting(orderId);
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setUpdatedBy(currentMemberId());
         return WorkOrderResponse.from(repository.save(entity));
     }
 
-    public void delete(String workOrderId) {
-        WorkOrder entity = getExisting(workOrderId);
+    public void delete(String orderId) {
+        WorkOrder entity = getExisting(orderId);
         repository.delete(entity);
     }
 
-    private WorkOrder getExisting(String workOrderId) {
+    private WorkOrder getExisting(String orderId) {
         return repository
-            .findByIdCompanyIdAndIdOrderId(MemberUserDetailsService.DEFAULT_COMPANY, workOrderId)
-            .orElseThrow(() -> new NotFoundException("WorkOrder not found: " + workOrderId));
+            .findByIdCompanyIdAndIdOrderId(MemberUserDetailsService.DEFAULT_COMPANY, orderId)
+            .orElseThrow(() -> new NotFoundException("WorkOrder not found: " + orderId));
     }
 
     private void applyRequest(WorkOrder entity, WorkOrderRequest request) {

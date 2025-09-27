@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * 프로그램 개요: 작업지시 응답 DTO.
  */
 public record WorkOrderResponse(
-    String workOrderId,
+    String orderId,
     String name,
     String plantId,
     String jobId,
@@ -34,9 +34,9 @@ public record WorkOrderResponse(
     String updatedBy
 ) {
     public static WorkOrderResponse from(WorkOrder workOrder) {
-        String workOrderId = workOrder.getId() != null ? workOrder.getId().getOrderId() : null;
+        String orderId = workOrder.getId() != null ? workOrder.getId().getOrderId() : null;
         return new WorkOrderResponse(
-            workOrderId,
+            orderId,
             workOrder.getName(),
             workOrder.getPlantId(),
             workOrder.getJobId(),

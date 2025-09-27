@@ -15,11 +15,11 @@ import java.util.List;
  */
 public record InspectionRequest(
     @Size(max = 10) String inspectionId,
-    @NotBlank @Size(max = 100) String name,
-    @NotBlank @Size(max = 10) String plantId,
-    @NotBlank @Size(max = 5) String jobId,
-    @NotBlank @Size(max = 5) String siteId,
-    @NotBlank @Size(max = 5) String deptId,
+    @Size(max = 100) String name,
+    @Size(max = 10) String plantId,
+    @Size(max = 5) String jobId,
+    @Size(max = 5) String siteId,
+    @Size(max = 5) String deptId,
     @Size(max = 5) String memberId,
     LocalDate plannedDate,
     LocalDate actualDate,

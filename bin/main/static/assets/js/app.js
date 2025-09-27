@@ -152,6 +152,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 파일 업로드 위젯 초기화 (fileUpload 모듈이 정의된 후에 실행)
+  function initializeFileUploadWidgets() {
+    if (typeof window.cmms?.fileUpload?.init === 'function') {
+      document.querySelectorAll('[data-attachments]').forEach(container => {
+        window.cmms.fileUpload.init(container);
+      });
+    }
+  }
+  
+  // DOMContentLoaded 시점에서는 fileUpload가 아직 정의되지 않을 수 있으므로
+  // 약간의 지연 후 초기화 시도
+  setTimeout(initializeFileUploadWidgets, 0);
   
 });
 
@@ -470,6 +482,23 @@ window.cmms.navigation = {
           try { window.cmms.csrf.refreshForms(); } catch (_) {}
         }
 
+        // SPA 콘텐츠 로드 후 페이지별 스크립트 실행 (DOM 삽입 직후)
+        this.executePageScripts(doc);
+        
+        // 파일 업로드 위젯 재초기화 (SPA 콘텐츠 로드 후)
+        // 약간의 지연을 두어 DOM이 완전히 렌더링된 후 실행
+        setTimeout(() => {
+          if (typeof window.cmms?.fileUpload?.init === 'function') {
+            try {
+              this.slot.querySelectorAll('[data-attachments]').forEach(container => {
+                window.cmms.fileUpload.init(container);
+              });
+            } catch (error) {
+              console.warn('File upload widget initialization failed:', error);
+            }
+          }
+        }, 10);
+
         // Intercept SPA-friendly form submissions inside slot
         const forms = this.slot.querySelectorAll('form[data-redirect]');
         forms.forEach((form) => {
@@ -558,6 +587,34 @@ window.cmms.navigation = {
     try { console.debug('[cmms-nav]', { targetHref, base: this.currentContentUrl, contentUrl }); } catch (_) {}
     this.setState(contentUrl, true);
     this.loadContent(contentUrl, { push: false });
+  },
+
+  /**
+   * SPA 콘텐츠 로드 후 페이지별 스크립트 실행
+   * @param {Document} doc - 파싱된 HTML 문서
+   */
+  executePageScripts: function(doc) {
+    // 페이지별 스크립트 실행
+    const scripts = doc.querySelectorAll('script');
+    scripts.forEach(script => {
+      try {
+        // 인라인 스크립트 실행
+        if (script.textContent.trim()) {
+          console.log('Executing page script:', script.textContent.substring(0, 100) + '...');
+          
+          // DOMContentLoaded 이벤트를 수동으로 트리거
+          const scriptContent = script.textContent;
+          const modifiedScript = scriptContent.replace(
+            /document\.addEventListener\('DOMContentLoaded',\s*\(\)\s*=>\s*\{/g,
+            '(function() {'
+          );
+          
+          eval(modifiedScript);
+        }
+      } catch (error) {
+        console.warn('Page script execution failed:', error);
+      }
+    });
   },
 
   /**
@@ -712,6 +769,7 @@ window.cmms.navigation = {
           href.startsWith('#') ||
           href.startsWith('/api/auth/logout') ||
           href.startsWith('/auth/') ||
+          href.startsWith('/api/files') ||
           anchor.hasAttribute('data-hard-nav') ||
           anchor.target === '_blank'
         ) {
@@ -760,6 +818,134 @@ window.cmms.navigation = {
 };
 
 // =============================================================================
+// 파일 업로드 모듈
+// =============================================================================
+window.cmms.fileUpload = {
+  init: function(container) {
+    const input = container.querySelector('#attachments-input');
+    const addBtn = container.querySelector('[data-attachments-add]');
+    const list = container.querySelector('.attachments-list');
+    const hiddenField = container.querySelector('input[name="fileGroupId"]');
+    
+    if (!input || !addBtn || !list) return;
+    
+    addBtn.addEventListener('click', () => input.click());
+    
+    input.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      
+      // 클라이언트 선검사
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedExts = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'hwp', 'hwpx', 'zip', 'txt'];
+      
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!allowedExts.includes(ext)) {
+          window.cmms.notification.error(`허용되지 않은 확장자입니다: ${file.name}`);
+          return;
+        }
+        if (file.size > maxSize) {
+          window.cmms.notification.error(`파일 크기가 10MB를 초과합니다: ${file.name}`);
+          return;
+        }
+      }
+      
+      // 업로드 실행
+      await this.uploadFiles(files, hiddenField, list);
+      e.target.value = ''; // 입력 초기화
+    });
+  },
+  
+  uploadFiles: async function(files, hiddenField, list) {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    
+    if (hiddenField?.value) {
+      formData.append('groupId', hiddenField.value);
+    }
+    
+    try {
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) throw new Error('업로드 실패');
+      
+      const result = await response.json();
+      
+      // fileGroupId 업데이트
+      if (hiddenField && result.fileGroupId) {
+        hiddenField.value = result.fileGroupId;
+      }
+      
+      // 목록 렌더링
+      this.renderFileList(result.items, list);
+      window.cmms.notification.success(`${files.length}개 파일이 업로드되었습니다.`);
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      window.cmms.notification.error('파일 업로드에 실패했습니다.');
+    }
+  },
+  
+  renderFileList: function(items, list) {
+    list.innerHTML = '';
+    
+    if (items.length === 0) {
+      list.innerHTML = '<li class="empty">첨부된 파일이 없습니다.</li>';
+      return;
+    }
+    
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'attachment-item';
+      li.innerHTML = `
+        <span class="file-name">${item.originalName}</span>
+        <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
+        <a href="/api/files/${item.fileId}?groupId=${item.fileGroupId}" class="btn-download">다운로드</a>
+        <button type="button" class="btn-remove" data-file-id="${item.fileId}" data-group-id="${item.fileGroupId}">삭제</button>
+      `;
+      list.appendChild(li);
+    });
+    
+    // 삭제 버튼 이벤트
+    list.querySelectorAll('.btn-remove').forEach(btn => {
+      btn.addEventListener('click', () => this.deleteFile(btn, list));
+    });
+  },
+  
+  deleteFile: async function(btn, list) {
+    const fileId = btn.dataset.fileId;
+    const groupId = btn.dataset.groupId;
+    
+    if (!confirm('파일을 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await fetch(`/api/files/${fileId}?groupId=${groupId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('삭제 실패');
+      
+      btn.closest('li').remove();
+      
+      // 빈 목록 처리
+      if (list.children.length === 0) {
+        list.innerHTML = '<li class="empty">첨부된 파일이 없습니다.</li>';
+      }
+      
+      window.cmms.notification.success('파일이 삭제되었습니다.');
+      
+    } catch (error) {
+      console.error('Delete error:', error);
+      window.cmms.notification.error('파일 삭제에 실패했습니다.');
+    }
+  }
+};
+
+// =============================================================================
 // 사용자 정보 관리 모듈
 // =============================================================================
 window.cmms.user = {
@@ -789,27 +975,10 @@ window.cmms.user = {
    * @returns {Promise} 업로드 응답
    */
   uploadFiles: async function(files, options = {}) {
-    // ❌ 잘못된 방법: 프론트엔드에서 회사코드를 전달
-    // const companyId = "C0002"; // 악의적 사용자가 조작 가능
-    
-    // ✅ 올바른 방법: 백엔드에서 사용자 정보로부터 추출
-    const response = await fetch('/api/files/init', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // companyId를 전달하지 않음 - 백엔드에서 자동 결정
-        groupId: options.groupId,
-        refEntity: options.refEntity,
-        refId: options.refId,
-        fileNames: Array.from(files).map(f => f.name)
-      })
-    });
-    
-    // 백엔드에서 인증된 사용자의 회사코드를 사용하여 S3 경로 생성
-    // 예: C0001/plant/F250119001/파일명.jpg
-    return response;
+    // 실제 파일 업로드는 window.cmms.fileUpload.uploadFiles()에서 처리됨
+    // 이 메서드는 예시용이며 실제로는 사용되지 않음
+    console.warn('uploadFiles method is deprecated. Use window.cmms.fileUpload.uploadFiles() instead.');
+    return Promise.resolve();
   },
 
   /**
@@ -825,5 +994,177 @@ window.cmms.user = {
 - 백엔드에서 사용자 정보로 회사코드 추출: "C0001:admin" -> "C0001"
 - S3 경로: C0001/plant/F250119001/파일명.jpg (본인 회사 데이터만 접근)
     `);
+  }
+};
+
+// =============================================================================
+// Override: Improved file upload module (load existing + readonly support)
+// =============================================================================
+// This overrides any previous definition to ensure consistent behavior across SPA loads.
+window.cmms.fileUpload = {
+  init: function(container) {
+    const input = container.querySelector('#attachments-input');
+    const addBtn = container.querySelector('[data-attachments-add]');
+    const list = container.querySelector('.attachments-list');
+    const form = container.closest('form');
+    const hiddenField = container.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
+
+    if (!list) return;
+
+    const readonly = container.hasAttribute('data-readonly') || container.dataset.readonly === 'true';
+    if (readonly) {
+      if (addBtn) addBtn.style.display = 'none';
+      if (input) input.style.display = 'none';
+    }
+
+    const groupId = hiddenField?.value?.trim();
+    if (groupId) {
+      this.loadExisting(groupId, list, { readonly }).catch((err) => {
+        try { console.warn('Load existing attachments failed:', err); } catch (_) {}
+      });
+    }
+
+    if (!input || !addBtn) return;
+
+    addBtn.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedExts = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'hwp', 'hwpx', 'zip', 'txt'];
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!allowedExts.includes(ext)) {
+          window.cmms.notification.error(`허용되지 않는 확장자입니다: ${file.name}`);
+          return;
+        }
+        if (file.size > maxSize) {
+          window.cmms.notification.error(`파일 크기가 10MB를 초과합니다: ${file.name}`);
+          return;
+        }
+      }
+
+      await this.uploadFiles(files, hiddenField, list);
+      e.target.value = '';
+    });
+  },
+
+  loadExisting: async function(groupId, list, { readonly = false } = {}) {
+    const response = await fetch(`/api/files?groupId=${encodeURIComponent(groupId)}`, { credentials: 'same-origin' });
+    if (!response.ok) throw new Error('Failed to load existing attachments: ' + response.status);
+    const result = await response.json();
+    const items = Array.isArray(result?.items) ? result.items : [];
+    this.renderFileList(items, list, { readonly, groupId });
+  },
+
+  uploadFiles: async function(files, hiddenField, list) {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    if (hiddenField?.value) {
+      formData.append('groupId', hiddenField.value);
+    }
+
+    try {
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const result = await response.json();
+
+      if (hiddenField && result.fileGroupId) {
+        hiddenField.value = result.fileGroupId;
+      }
+
+      this.renderFileList(result.items || [], list, { groupId: hiddenField?.value });
+      window.cmms.notification.success(`${files.length}개의 파일이 업로드되었습니다.`);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      window.cmms.notification.error('파일 업로드에 실패했습니다.');
+    }
+  },
+
+  renderFileList: function(items, list, { readonly = false, groupId: groupIdOverride } = {}) {
+    list.innerHTML = '';
+
+    if (!Array.isArray(items) || items.length === 0) {
+      list.innerHTML = '<li class="empty">첨부 파일이 없습니다.</li>';
+      return;
+    }
+
+    // Resolve groupId from options or hidden field nearby
+    let resolvedGroupId = groupIdOverride;
+    if (!resolvedGroupId) {
+      try {
+        const container = list.closest('[data-attachments]') || list.parentElement;
+        const form = container?.closest('form');
+        const hidden = container?.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
+        resolvedGroupId = hidden?.value || undefined;
+      } catch (_) { /* noop */ }
+    }
+
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'attachment-item';
+      const size = window.cmms.utils.formatFileSize(item.size);
+      const groupIdForItem = item.fileGroupId || resolvedGroupId || '';
+      const download = `<a href="/api/files/${item.fileId}?groupId=${groupIdForItem}" class="btn-download" data-hard-nav>다운로드</a>`;
+      const remove = readonly ? '' : `<button type=\"button\" class=\"btn-remove\" data-file-id=\"${item.fileId}\" data-group-id=\"${groupIdForItem}\">삭제</button>`;
+      li.innerHTML = `
+        <span class="file-name">${item.originalName}</span>
+        <span class="file-size">${size}</span>
+        ${download}
+        ${remove}
+      `;
+      list.appendChild(li);
+    });
+
+    if (!readonly) {
+      list.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', () => this.deleteFile(btn, list));
+      });
+    }
+  },
+
+  deleteFile: async function(btn, list) {
+    const fileId = btn.dataset.fileId;
+    let groupId = btn.dataset.groupId;
+    if (!groupId) {
+      try {
+        const container = list.closest('[data-attachments]') || list.parentElement;
+        const form = container?.closest('form');
+        const hidden = container?.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
+        groupId = hidden?.value;
+      } catch (_) { /* noop */ }
+    }
+
+    if (!confirm('파일을 삭제하시겠습니까?')) return;
+
+    try {
+      const response = await fetch(`/api/files/${fileId}?groupId=${encodeURIComponent(groupId || '')}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Delete failed');
+
+      btn.closest('li')?.remove();
+
+      if (!list.children.length) {
+        list.innerHTML = '<li class="empty">첨부 파일이 없습니다.</li>';
+      }
+
+      window.cmms.notification.success('파일이 삭제되었습니다.');
+
+    } catch (error) {
+      console.error('Delete error:', error);
+      window.cmms.notification.error('파일 삭제에 실패했습니다.');
+    }
   }
 };

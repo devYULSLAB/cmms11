@@ -47,8 +47,8 @@ public class WorkPermitService {
     }
 
     @Transactional(readOnly = true)
-    public WorkPermitResponse get(String workPermitId) {
-        return WorkPermitResponse.from(getExisting(workPermitId));
+    public WorkPermitResponse get(String permitId) {
+        return WorkPermitResponse.from(getExisting(permitId));
     }
 
     public WorkPermitResponse create(WorkPermitRequest request) {
@@ -56,7 +56,7 @@ public class WorkPermitService {
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
 
-        String newId = resolveId(companyId, request.workPermitId(), request.plannedDate());
+        String newId = resolveId(companyId, request.permitId(), request.plannedDate());
         WorkPermit entity = new WorkPermit();
         entity.setId(new WorkPermitId(companyId, newId));
         entity.setCreatedAt(now);
@@ -68,23 +68,23 @@ public class WorkPermitService {
         return WorkPermitResponse.from(repository.save(entity));
     }
 
-    public WorkPermitResponse update(String workPermitId, WorkPermitRequest request) {
-        WorkPermit entity = getExisting(workPermitId);
+    public WorkPermitResponse update(String permitId, WorkPermitRequest request) {
+        WorkPermit entity = getExisting(permitId);
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setUpdatedBy(currentMemberId());
         return WorkPermitResponse.from(repository.save(entity));
     }
 
-    public void delete(String workPermitId) {
-        WorkPermit entity = getExisting(workPermitId);
+    public void delete(String permitId) {
+        WorkPermit entity = getExisting(permitId);
         repository.delete(entity);
     }
 
-    private WorkPermit getExisting(String workPermitId) {
+    private WorkPermit getExisting(String permitId) {
         return repository
-            .findByIdCompanyIdAndIdPermitId(MemberUserDetailsService.DEFAULT_COMPANY, workPermitId)
-            .orElseThrow(() -> new NotFoundException("WorkPermit not found: " + workPermitId));
+            .findByIdCompanyIdAndIdPermitId(MemberUserDetailsService.DEFAULT_COMPANY, permitId)
+            .orElseThrow(() -> new NotFoundException("WorkPermit not found: " + permitId));
     }
 
     private void applyRequest(WorkPermit entity, WorkPermitRequest request) {

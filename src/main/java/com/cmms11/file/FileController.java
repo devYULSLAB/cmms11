@@ -35,8 +35,16 @@ public class FileController {
         @RequestParam(value = "refId", required = false) String refId,
         @RequestParam("files") List<MultipartFile> files
     ) {
-        FileGroupResponse response = fileService.upload(groupId, refEntity, refId, files);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            System.out.println("FileController.upload 호출됨 - 그룹ID: " + groupId + ", 파일 수: " + files.size());
+            FileGroupResponse response = fileService.upload(groupId, refEntity, refId, files);
+            System.out.println("파일 업로드 성공 - 응답 그룹ID: " + response.fileGroupId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            System.err.println("파일 업로드 오류: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping

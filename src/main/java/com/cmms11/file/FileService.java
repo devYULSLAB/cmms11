@@ -70,6 +70,8 @@ public class FileService {
     }
 
     public FileGroupResponse upload(String requestedGroupId, String refEntity, String refId, List<MultipartFile> files) {
+        System.out.println("파일 업로드 시작 - 요청된 그룹ID: " + requestedGroupId + ", 파일 수: " + (files != null ? files.size() : 0));
+        
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("업로드할 파일이 존재하지 않습니다.");
         }
@@ -87,6 +89,8 @@ public class FileService {
         int currentLineNo = maxLineNo != null ? maxLineNo : 0;
 
         for (MultipartFile file : files) {
+            System.out.println("파일 처리 시작 - 원본명: " + file.getOriginalFilename() + ", 크기: " + file.getSize() + ", 타입: " + file.getContentType());
+            
             if (file.isEmpty()) {
                 throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다.");
             }
@@ -251,16 +255,25 @@ public class FileService {
     }
 
     private String extractExtension(String originalName) {
+        if (!StringUtils.hasText(originalName)) {
+            return "";
+        }
+        
         String extension = StringUtils.getFilenameExtension(originalName);
         if (extension == null) {
             return "";
         }
-        return extension.toLowerCase();
+        
+        String lowerExtension = extension.toLowerCase();
+        System.out.println("파일명: " + originalName + ", 추출된 확장자: " + lowerExtension);
+        return lowerExtension;
     }
 
     private void validateExtension(String extension, String originalName) {
+        System.out.println("확장자 검증 - 파일명: " + originalName + ", 확장자: " + extension + ", 허용된 확장자: " + allowedExtensions);
+        
         if (!allowedExtensions.isEmpty() && !allowedExtensions.contains(extension)) {
-            throw new IllegalArgumentException("허용되지 않은 확장자입니다: " + originalName);
+            throw new IllegalArgumentException("허용되지 않은 확장자입니다: " + originalName + " (확장자: " + extension + ")");
         }
     }
 

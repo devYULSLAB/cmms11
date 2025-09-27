@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
  */
 public record MemoRequest(
     @Size(max = 10) String memoId,
-    @NotBlank @Size(max = 100) String title,
+    @Size(max = 100) String title,
     String content,
     @Size(max = 64) String refEntity,
     @Size(max = 10) String refId,

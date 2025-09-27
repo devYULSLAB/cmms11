@@ -12,9 +12,9 @@ import jakarta.validation.constraints.Size;
  */
 public record InventoryRequest(
     @Size(max = 10) String inventoryId,
-    @NotBlank @Size(max = 100) String name,
-    @NotBlank @Size(max = 5) String assetId,
-    @NotBlank @Size(max = 5) String deptId,
+    @Size(max = 100) String name,
+    @Size(max = 5) String assetId,
+    @Size(max = 5) String deptId,
     @Size(max = 100) String makerName,
     @Size(max = 100) String spec,
     @Size(max = 100) String model,

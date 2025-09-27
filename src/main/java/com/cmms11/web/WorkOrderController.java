@@ -79,7 +79,7 @@ public class WorkOrderController {
         if ("true".equals(isNew)) {
             service.create(request);
         } else {
-            service.update(request.workOrderId(), request);
+            service.update(request.orderId(), request);
         }
         return "redirect:/workorder/list";
     }

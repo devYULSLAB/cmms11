@@ -48,7 +48,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label required" for="deptId">부서코드</label>
-                        <input id="deptId" name="deptId" class="input" required maxlength="10" placeholder="예: D0001" 
+                        <input id="deptId" name="deptId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력" 
                               th:value="${dept.deptId}" th:readonly="${!isNew}" />
                       </div>
                       <div class="form-row col-span-4">

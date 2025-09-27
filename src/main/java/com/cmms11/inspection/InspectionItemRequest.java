@@ -12,4 +12,8 @@ public record InspectionItemRequest(
     @Size(max = 50) String unit,
     @Size(max = 50) String resultVal,
     @Size(max = 500) String note
-) {}
+) {
+    public InspectionItemRequest() {
+        this(null, null, null, null, null, null, null, null);
+    }
+}

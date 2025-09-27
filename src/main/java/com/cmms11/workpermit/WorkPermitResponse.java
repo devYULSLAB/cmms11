@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * 프로그램 개요: 작업허가 응답 DTO.
  */
 public record WorkPermitResponse(
-    String workPermitId,
+    String permitId,
     String name,
     String plantId,
     String jobId,
@@ -33,9 +33,9 @@ public record WorkPermitResponse(
     String updatedBy
 ) {
     public static WorkPermitResponse from(WorkPermit workPermit) {
-        String workPermitId = workPermit.getId() != null ? workPermit.getId().getPermitId() : null;
+        String permitId = workPermit.getId() != null ? workPermit.getId().getPermitId() : null;
         return new WorkPermitResponse(
-            workPermitId,
+            permitId,
             workPermit.getName(),
             workPermit.getPlantId(),
             workPermit.getJobId(),

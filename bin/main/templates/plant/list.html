@@ -69,8 +69,6 @@
                     <tr>
                       <th style="width:120px">설비번호</th>
                       <th>설비명</th>
-                      <th style="width:120px">Site</th>
-                      <th style="width:120px">기능위치</th>
                       <th style="width:140px">부서</th>
                       <th style="width:140px">제조사</th>
                       <th style="width:140px">모델</th>
@@ -82,8 +80,6 @@
                     <tr th:each="plant : ${page.content}">
                       <td><a th:href="@{/plant/edit/{id}(id=${plant.plantId})}" th:text="${plant.plantId}">-</a></td>
                       <td th:text="${plant.name}">-</td>
-                      <td th:text="${plant.siteId}">-</td>
-                      <td th:text="${plant.funcId}">-</td>
                       <td th:text="${plant.deptId}">-</td>
                       <td th:text="${plant.makerName}">-</td>
                       <td th:text="${plant.model}">-</td>

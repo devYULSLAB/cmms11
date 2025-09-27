@@ -13,6 +13,18 @@
       .approver-table th,.approver-table td{text-align:left}
       .approver-controls{display:flex;gap:8px;align-items:end}
       .stack .hint{color:var(--fg-muted);font-size:12px}
+      .approver-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);margin-bottom:8px}
+      .approver-item .order{flex:0 0 30px;text-align:center;font-weight:bold;color:var(--accent)}
+      .approver-item .info{flex:1;display:flex;flex-direction:column;gap:4px}
+      .approver-item .member-id{font-weight:bold;color:var(--fg)}
+      .approver-item .member-details{font-size:12px;color:var(--fg-muted)}
+      .approver-item .decision{flex:0 0 80px;text-align:center}
+      .approver-item .actions{flex:0 0 auto;display:flex;gap:4px}
+      .approver-item .decision-badge{padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold}
+      .approver-item .decision-badge.approval{background:var(--success-bg);color:var(--success-fg)}
+      .approver-item .decision-badge.agree{background:var(--warning-bg);color:var(--warning-fg)}
+      .approver-item .decision-badge.inform{background:var(--info-bg);color:var(--info-fg)}
+      [data-attachments] { border: none; }
     </style>
   </head>
   <body>
@@ -90,14 +102,8 @@
                     <label class="label">결재선</label>
                     <div class="approver-controls">
                       <div class="stack">
-                        <label class="label" for="member-select">결재자</label>
-                        <select id="member-select">
-                          <option value="">선택하세요</option>
-                          <option value="admin">admin (관리자)</option>
-                          <option value="kim">kim (김철수)</option>
-                          <option value="lee">lee (이영희)</option>
-                          <option value="park">park (박민수)</option>
-                        </select>
+                        <label class="label" for="member-id-input">결재자 ID</label>
+                        <input id="member-id-input" class="input" type="text" placeholder="예: 사용자ID" />
                       </div>
                       <div class="stack">
                         <label class="label" for="decision-select">구분</label>
@@ -115,19 +121,11 @@
                   </div>
                   <div class="form-row col-span-12">
                     <label class="label"></label>
-                    <table class="table approver-table" style="margin-top:12px">
-                      <thead>
-                        <tr>
-                          <th style="width:60px">순서</th>
-                          <th>결재자</th>
-                          <th style="width:120px">구분</th>
-                          <th style="width:160px">작업</th>
-                        </tr>
-                      </thead>
-                      <tbody id="approver-tbody">
-                        <tr class="empty"><td colspan="4">결재자를 추가하세요.</td></tr>
-                      </tbody>
-                    </table>
+                    <div class="approver-items" id="approver-items" style="margin-top:12px">
+                      <div class="empty-message" style="text-align:center;color:var(--fg-muted);padding:24px;border:1px dashed var(--border);border-radius:6px">
+                        결재자를 추가하세요.
+                      </div>
+                    </div>
                   </div>
                   <!-- 본문 -->
                   <div class="form-row col-span-12">
@@ -151,7 +149,7 @@
                   </div>                        
 
                   <div class="form-row col-span-12" data-attachments>
-                    <label class="label">첨부</label>
+                    <label class="label"></label>
                     <div class="row" style="gap:8px;align-items:center">
                       <input id="attachments-input" type="file" multiple style="display:none" />
                       <button class="btn" type="button" data-attachments-add>파일 선택</button>
@@ -191,69 +189,128 @@
       });
 
       // 결재선 추가/정렬/삭제
-      const tbody = document.getElementById('approver-tbody');
+      const approverItems = document.getElementById('approver-items');
+      let approverCount = 0;
+
+      // 사용자 정보 조회 (실제로는 API 호출)
+      async function fetchMemberInfo(memberId) {
+        // 임시 데이터 - 실제로는 API 호출
+        const mockData = {
+          'admin': { name: '관리자', deptId: 'IT', deptName: 'IT부서' },
+          'kim': { name: '김철수', deptId: 'HR', deptName: '인사부서' },
+          'lee': { name: '이영희', deptId: 'FN', deptName: '재무부서' },
+          'park': { name: '박민수', deptId: 'OP', deptName: '운영부서' }
+        };
+        return mockData[memberId] || { name: '알 수 없음', deptId: 'N/A', deptName: 'N/A' };
+      }
+
       function renumber() {
-        Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx) => {
-          const orderCell = tr.querySelector('[data-order]');
-          if (orderCell) orderCell.textContent = String(idx + 1);
+        Array.from(approverItems.querySelectorAll('.approver-item')).forEach((item, idx) => {
+          const orderElement = item.querySelector('.order');
+          if (orderElement) orderElement.textContent = String(idx + 1);
         });
       }
+
       function ensureNonEmpty() {
-        if (!tbody.querySelector('tr')) {
-          const tr = document.createElement('tr');
-          tr.className = 'empty';
-          const td = document.createElement('td');
-          td.colSpan = 4; td.textContent = '결재자를 추가하세요.';
-          tr.appendChild(td); tbody.appendChild(tr);
+        if (!approverItems.querySelector('.approver-item')) {
+          const emptyMessage = document.createElement('div');
+          emptyMessage.className = 'empty-message';
+          emptyMessage.style.cssText = 'text-align:center;color:var(--fg-muted);padding:24px;border:1px dashed var(--border);border-radius:6px';
+          emptyMessage.textContent = '결재자를 추가하세요.';
+          approverItems.appendChild(emptyMessage);
         }
       }
+
       function removeEmpty() {
-        const empty = tbody.querySelector('tr.empty');
+        const empty = approverItems.querySelector('.empty-message');
         if (empty) empty.remove();
       }
-      document.getElementById('add-approver').addEventListener('click', () => {
-        const memberSelect = document.getElementById('member-select');
-        const decisionSelect = document.getElementById('decision-select');
-        const memberId = memberSelect.value;
-        const memberLabel = memberSelect.options[memberSelect.selectedIndex]?.text || '';
-        const decision = decisionSelect.value;
-        if (!memberId) { alert('결재자를 선택하세요.'); return; }
-        // 중복 방지 (같은 사용자+구분)
-        const dup = Array.from(tbody.querySelectorAll('tr')).some(tr => tr.dataset.memberId === memberId && tr.dataset.decision === decision);
-        if (dup) { alert('이미 추가된 결재자입니다.'); return; }
 
+      document.getElementById('add-approver').addEventListener('click', async () => {
+        const memberIdInput = document.getElementById('member-id-input');
+        const decisionSelect = document.getElementById('decision-select');
+        const memberId = memberIdInput.value.trim();
+        const decision = decisionSelect.value;
+
+        if (!memberId) { 
+          alert('결재자 ID를 입력하세요.'); 
+          return; 
+        }
+
+        // 중복 방지 (같은 사용자+구분)
+        const existing = Array.from(approverItems.querySelectorAll('.approver-item')).some(item => 
+          item.dataset.memberId === memberId && item.dataset.decision === decision
+        );
+        if (existing) { 
+          alert('이미 추가된 결재자입니다.'); 
+          return; 
+        }
+
+        // 사용자 정보 조회
+        const memberInfo = await fetchMemberInfo(memberId);
+        
         removeEmpty();
-        const tr = document.createElement('tr');
-        tr.dataset.memberId = memberId;
-        tr.dataset.decision = decision;
-        tr.innerHTML = `
-          <td data-order></td>
-          <td><span class="badge">${memberId}</span> ${memberLabel}</td>
-          <td>
-            ${decision === 'APPROVAL' ? '결재' : decision === 'AGREE' ? '합의' : '통보'}
-          </td>
-          <td>
-            <div class="row" style="gap:6px">
-              <button class="btn sm" type="button" data-move="up">위로</button>
-              <button class="btn sm" type="button" data-move="down">아래로</button>
-              <button class="btn sm danger" type="button" data-remove>삭제</button>
-            </div>
-          </td>`;
-        tbody.appendChild(tr);
-        renumber();
+        const item = document.createElement('div');
+        item.className = 'approver-item';
+        item.dataset.memberId = memberId;
+        item.dataset.decision = decision;
+        
+        const decisionText = decision === 'APPROVAL' ? '결재' : decision === 'AGREE' ? '합의' : '통보';
+        const decisionClass = decision === 'APPROVAL' ? 'approval' : decision === 'AGREE' ? 'agree' : 'inform';
+        
+        item.innerHTML = `
+          <div class="order">${approverCount + 1}</div>
+          <div class="info">
+            <div class="member-id">${memberId}</div>
+            <div class="member-details">${memberInfo.name} / ${memberInfo.deptId} / ${memberInfo.deptName}</div>
+          </div>
+          <div class="decision">
+            <span class="decision-badge ${decisionClass}">${decisionText}</span>
+          </div>
+          <div class="actions">
+            <button class="btn sm" type="button" data-move="up" title="위로">↑</button>
+            <button class="btn sm" type="button" data-move="down" title="아래로">↓</button>
+            <button class="btn sm danger" type="button" data-remove title="삭제">×</button>
+          </div>
+        `;
+        
+        approverItems.appendChild(item);
+        approverCount++;
+        memberIdInput.value = ''; // 입력 필드 초기화
       });
-      tbody.addEventListener('click', (e) => {
+
+      approverItems.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
-        const tr = btn.closest('tr');
+        const item = btn.closest('.approver-item');
+        if (!item) return;
+
         if (btn.hasAttribute('data-remove')) {
-          tr.remove(); renumber(); ensureNonEmpty(); return;
+          item.remove(); 
+          approverCount--;
+          renumber(); 
+          ensureNonEmpty(); 
+          return;
         }
-        if (btn.dataset.move === 'up' && tr.previousElementSibling) {
-          tbody.insertBefore(tr, tr.previousElementSibling); renumber(); return;
+        
+        if (btn.dataset.move === 'up' && item.previousElementSibling) {
+          approverItems.insertBefore(item, item.previousElementSibling); 
+          renumber(); 
+          return;
         }
-        if (btn.dataset.move === 'down' && tr.nextElementSibling) {
-          tbody.insertBefore(tr.nextElementSibling, tr); renumber(); return;
+        
+        if (btn.dataset.move === 'down' && item.nextElementSibling) {
+          approverItems.insertBefore(item.nextElementSibling, item); 
+          renumber(); 
+          return;
+        }
+      });
+
+      // Enter 키로 추가
+      document.getElementById('member-id-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('add-approver').click();
         }
       });
     </script>

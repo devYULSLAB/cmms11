@@ -342,14 +342,14 @@
                                 workorder.status === 'PROC' ? 'badge warning' : 'badge success';
               
               row.innerHTML = `
-                <td><a href="/workorder/edit/${workorder.workorderId}">${workorder.workorderId}</a></td>
+                <td><a href="/workorder/edit/${workorder.orderId}">${workorder.orderId}</a></td>
                 <td>${workorder.name || '-'}</td>
                 <td>${workorder.jobId || '-'}</td>
                 <td>${workorder.plannedDate || '-'}</td>
                 <td>${workorder.actualDate || '-'}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
                 <td class="actions">
-                  <a class="btn btn-sm" href="/workorder/edit/${workorder.workorderId}">수정</a>
+                  <a class="btn btn-sm" href="/workorder/edit/${workorder.orderId}">수정</a>
                 </td>
               `;
               historyBody.appendChild(row);

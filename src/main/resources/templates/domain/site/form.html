@@ -48,7 +48,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label required" for="siteId">사이트코드</label>
-                        <input id="siteId" name="siteId" class="input" required maxlength="10" placeholder="예: S0001" th:value="${site.siteId}" />
+                        <input id="siteId" name="siteId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력" th:value="${site.siteId}" />
                       </div>
                       <div class="form-row col-span-4">
                         <label class="label required" for="name">사이트명</label>

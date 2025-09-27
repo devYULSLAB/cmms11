@@ -79,7 +79,7 @@ public class WorkPermitController {
         if ("true".equals(isNew)) {
             service.create(request);
         } else {
-            service.update(request.workPermitId(), request);
+            service.update(request.permitId(), request);
         }
         return "redirect:/workpermit/list";
     }
