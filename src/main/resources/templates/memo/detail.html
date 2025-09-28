@@ -52,29 +52,29 @@
                 <div class="section">
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-8"><div class="label">제목</div><div>설비 점검 주기 변경 안내</div></div>
-                    <div class="stack col-span-2"><div class="label">참조 모듈</div><div>work_order</div></div>
-                    <div class="stack col-span-2"><div class="label">참조 ID</div><div>O250101001</div></div>
-                    <div class="stack col-span-3"><div class="label">작성자</div><div>관리자</div></div>
-                    <div class="stack col-span-3"><div class="label">작성일</div><div>2025-01-05</div></div>
+                    <div class="stack col-span-8"><div class="label">제목</div><div th:text="${memo.title}">설비 점검 주기 변경 안내</div></div>
+                    <div class="stack col-span-2"><div class="label">참조 모듈</div><div th:text="${memo.refEntity ?: '-'}">work_order</div></div>
+                    <div class="stack col-span-2"><div class="label">참조 ID</div><div th:text="${memo.refId ?: '-'}">O250101001</div></div>
+                    <div class="stack col-span-3"><div class="label">작성자</div><div th:text="${memo.createdBy}">관리자</div></div>
+                    <div class="stack col-span-3"><div class="label">작성일</div><div th:text="${memo.createdAt}">2025-01-05</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">내용</div>
-                  <div class="doc-body">
+                  <div class="doc-body" th:utext="${memo.content}">
                     <p>설비 점검 주기가 월 1회에서 2주 1회로 변경됩니다. 점검 계획은 작업관리 메뉴에서 확인 바랍니다.</p>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">첨부</div>
-                  <table class="row-cols-3">
-                    <tr>
-                      <th>첨부 건수</th><td id="memo-file-count">0</td>
-                      <th>비고</th><td id="memo-file-note" colspan="3">-</td>
-                    </tr>
-                  </table>
+                  <div id="attachments-container" th:if="${memo.fileGroupId}">
+                    <div class="loading">첨부 파일을 불러오는 중...</div>
+                  </div>
+                  <div th:unless="${memo.fileGroupId}" class="notice">
+                    첨부된 파일이 없습니다.
+                  </div>
                 </div>
 
                 <!-- 출력 문서 형식 -->
@@ -85,9 +85,9 @@
                       <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
                     </header>
                     <div class="doc-body">
-                      <div class="row"><strong>제목</strong><span class="spacer"></span><span>설비 점검 주기 변경 안내</span></div>
-                      <div class="row"><strong>참조</strong><span class="spacer"></span><span>work_order/O250101001</span></div>
-                      <div class="row"><strong>작성일</strong><span class="spacer"></span><span>2025-01-05</span></div>
+                      <div class="row"><strong>제목</strong><span class="spacer"></span><span th:text="${memo.title}">설비 점검 주기 변경 안내</span></div>
+                      <div class="row"><strong>참조</strong><span class="spacer"></span><span th:text="${memo.refEntity ?: ''} + '/' + ${memo.refId ?: ''}" th:if="${memo.refEntity}">work_order/O250101001</span></div>
+                      <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${memo.createdAt}">2025-01-05</span></div>
                     </div>
                   </div>
                 </section>
@@ -111,6 +111,64 @@
         window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
         document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
       })();
+
+      // Detail 페이지에서 첨부 파일 로드
+      document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('attachments-container');
+        const fileGroupId = /*[[${memo.fileGroupId}]]*/ null;
+        
+        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
+        
+        if (container && fileGroupId) {
+          console.log('Loading attachments for fileGroupId:', fileGroupId);
+          loadAttachments(fileGroupId, container);
+        } else {
+          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
+        }
+      });
+
+      async function loadAttachments(fileGroupId, container) {
+        try {
+          console.log('Fetching files for groupId:', fileGroupId);
+          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
+          console.log('Response status:', response.status, 'ok:', response.ok);
+          
+          if (!response.ok) throw new Error('조회 실패');
+          
+          const result = await response.json();
+          console.log('API response:', result);
+          
+          if (result.items.length === 0) {
+            console.log('No files found, showing empty message');
+            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
+            return;
+          }
+          
+          const list = document.createElement('ul');
+          list.className = 'attachments-list';
+          
+          console.log('Creating list for', result.items.length, 'files');
+          result.items.forEach(item => {
+            console.log('Adding file item:', item);
+            const li = document.createElement('li');
+            li.className = 'attachment-item';
+            li.innerHTML = `
+              <span class="file-name">${item.originalName}</span>
+              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
+              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
+            `;
+            list.appendChild(li);
+          });
+          
+          console.log('Replacing container content with list');
+          container.innerHTML = '';
+          container.appendChild(list);
+          
+        } catch (error) {
+          console.error('Load attachments error:', error);
+          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
+        }
+      }
     </script>
   </body>
   </html>

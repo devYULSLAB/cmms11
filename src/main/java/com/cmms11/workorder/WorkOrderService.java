@@ -34,15 +34,34 @@ public class WorkOrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkOrderResponse> list(String keyword, Pageable pageable) {
+    public Page<WorkOrderResponse> list(String orderId, String plantId, String status, String plannedDateFrom, String plannedDateTo, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<WorkOrder> page;
-        if (keyword == null || keyword.isBlank()) {
-            page = repository.findByIdCompanyId(companyId, pageable);
-        } else {
-            String trimmed = "%" + keyword.trim() + "%";
-            page = repository.search(companyId, trimmed, pageable);
+        
+        // 날짜 문자열을 LocalDate로 변환
+        java.time.LocalDate fromDate = null;
+        java.time.LocalDate toDate = null;
+        
+        try {
+            if (plannedDateFrom != null && !plannedDateFrom.isBlank()) {
+                fromDate = java.time.LocalDate.parse(plannedDateFrom);
+            }
+            if (plannedDateTo != null && !plannedDateTo.isBlank()) {
+                toDate = java.time.LocalDate.parse(plannedDateTo);
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            // 날짜 파싱 오류 시 무시
         }
+        
+        Page<WorkOrder> page = repository.findByFilters(
+            companyId, 
+            orderId, 
+            plantId, 
+            status, 
+            fromDate, 
+            toDate, 
+            pageable
+        );
+        
         return page.map(WorkOrderResponse::from);
     }
 

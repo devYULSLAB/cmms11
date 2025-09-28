@@ -45,10 +45,15 @@ public class ApprovalController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/approval/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<ApprovalResponse> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "title", required = false) String title,
+                          @RequestParam(name = "createdBy", required = false) String createdBy,
+                          @RequestParam(name = "status", required = false) String status,
+                          Pageable pageable, Model model) {
+        Page<ApprovalResponse> page = service.list(title, createdBy, status, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
+        model.addAttribute("title", title);
+        model.addAttribute("createdBy", createdBy);
+        model.addAttribute("status", status);
         return "approval/list";
     }
 
@@ -58,6 +63,13 @@ public class ApprovalController {
         model.addAttribute("isNew", true);
         addReferenceData(model);
         return "approval/form";
+    }
+
+    @GetMapping("/approval/detail/{approvalId}")
+    public String detailForm(@PathVariable String approvalId, Model model) {
+        ApprovalResponse approval = service.get(approvalId);
+        model.addAttribute("approval", approval);
+        return "approval/detail";
     }
 
     @GetMapping("/approval/edit/{approvalId}")
@@ -88,8 +100,17 @@ public class ApprovalController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/approvals")
-    public Page<ApprovalResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<ApprovalResponse> list(@RequestParam(name = "q", required = false) String q, 
+                                      @RequestParam(name = "title", required = false) String title,
+                                      @RequestParam(name = "createdBy", required = false) String createdBy,
+                                      @RequestParam(name = "status", required = false) String status,
+                                      Pageable pageable) {
+        // 다중 필터가 있으면 다중 필터 사용, 없으면 기존 keyword 검색 사용
+        if (title != null || createdBy != null || status != null) {
+            return service.list(title, createdBy, status, pageable);
+        } else {
+            return service.list(q, pageable);
+        }
     }
 
     @ResponseBody

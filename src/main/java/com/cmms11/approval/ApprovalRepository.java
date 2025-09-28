@@ -28,5 +28,20 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
         Pageable pageable
     );
 
+    @Query(
+        "select a from Approval a " +
+        "where a.id.companyId = :companyId " +
+        "and (:title is null or :title = '' or a.title like concat('%', :title, '%')) " +
+        "and (:createdBy is null or :createdBy = '' or a.createdBy like concat('%', :createdBy, '%')) " +
+        "and (:status is null or :status = '' or a.status = :status)"
+    )
+    Page<Approval> findByFilters(
+        @Param("companyId") String companyId,
+        @Param("title") String title,
+        @Param("createdBy") String createdBy,
+        @Param("status") String status,
+        Pageable pageable
+    );
+
     Optional<Approval> findByIdCompanyIdAndIdApprovalId(String companyId, String approvalId);
 }

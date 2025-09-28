@@ -56,12 +56,13 @@
             </div>
             <div class="card-body">
               <div class="doc-header">
-                <div class="doc-title">설비 구매 요청의 건</div>
+                <div class="doc-title" th:text="${approval.title}">설비 구매 요청의 건</div>
                 <div class="meta-row">
-                  <div>문서번호: APR-2025-0001</div>
-                  <div>기안자: admin</div>
-                  <div>작성일: 2025-09-01</div>
-                  <div>상태: <span class="badge">결재중</span></div>
+                  <div>문서번호: <span th:text="${approval.approvalId}">APR-2025-0001</span></div>
+                  <div>기안자: <span th:text="${approval.createdBy}">admin</span></div>
+                  <div>작성일: <span th:text="${approval.createdAt}">2025-09-01</span></div>
+                  <div>상태: <span class="badge" th:text="${approval.status == 'DRAFT' ? '작성중' : approval.status == 'SUBMITTED' ? '상신' : approval.status == 'IN_PROGRESS' ? '결재중' : approval.status == 'APPROVED' ? '완결' : '반려'}" 
+                            th:classappend="${approval.status == 'DRAFT' ? 'badge' : approval.status == 'SUBMITTED' ? 'badge warning' : approval.status == 'IN_PROGRESS' ? 'badge warning' : approval.status == 'APPROVED' ? 'badge success' : 'badge danger'}">결재중</span></div>
                 </div>
                 <div class="approval-line">
                   <table class="table">
@@ -105,7 +106,7 @@
                 </div>
               </div>
 
-              <div class="doc-body">
+              <div class="doc-body" th:utext="${approval.content}">
                 <p>1. 목적: 신규 설비 구매에 대한 승인 요청입니다.</p>
                 <p>2. 배경: 생산성 향상을 위해 XYZ 모델의 설비 도입이 필요합니다.</p>
                 <p>3. 비용: 120,000,000원 (VAT 별도)</p>
@@ -114,9 +115,11 @@
 
               <div class="section" style="margin-top:12px">
                 <div class="section-title">첨부</div>
-                <div class="attachments">
-                  <a href="#">견적서.pdf</a>
-                  <a href="#">사양서.docx</a>
+                <div id="attachments-container" th:if="${approval.fileGroupId}">
+                  <div class="loading">첨부 파일을 불러오는 중...</div>
+                </div>
+                <div th:unless="${approval.fileGroupId}" class="notice">
+                  첨부된 파일이 없습니다.
                 </div>
               </div>
             </div>
@@ -128,6 +131,65 @@
       </footer>
     </div>
     <script src="../../static/assets/js/app.js"></script>
+    <script>
+      // Detail 페이지에서 첨부 파일 로드
+      document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('attachments-container');
+        const fileGroupId = /*[[${approval.fileGroupId}]]*/ null;
+        
+        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
+        
+        if (container && fileGroupId) {
+          console.log('Loading attachments for fileGroupId:', fileGroupId);
+          loadAttachments(fileGroupId, container);
+        } else {
+          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
+        }
+      });
+
+      async function loadAttachments(fileGroupId, container) {
+        try {
+          console.log('Fetching files for groupId:', fileGroupId);
+          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
+          console.log('Response status:', response.status, 'ok:', response.ok);
+          
+          if (!response.ok) throw new Error('조회 실패');
+          
+          const result = await response.json();
+          console.log('API response:', result);
+          
+          if (result.items.length === 0) {
+            console.log('No files found, showing empty message');
+            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
+            return;
+          }
+          
+          const list = document.createElement('ul');
+          list.className = 'attachments-list';
+          
+          console.log('Creating list for', result.items.length, 'files');
+          result.items.forEach(item => {
+            console.log('Adding file item:', item);
+            const li = document.createElement('li');
+            li.className = 'attachment-item';
+            li.innerHTML = `
+              <span class="file-name">${item.originalName}</span>
+              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
+              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
+            `;
+            list.appendChild(li);
+          });
+          
+          console.log('Replacing container content with list');
+          container.innerHTML = '';
+          container.appendChild(list);
+          
+        } catch (error) {
+          console.error('Load attachments error:', error);
+          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
+        }
+      }
+    </script>
   </body>
   </html>
 

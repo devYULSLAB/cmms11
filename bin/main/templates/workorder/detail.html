@@ -52,34 +52,35 @@
               <div class="section">
                 <div class="section-title">기본정보</div>
                 <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">작업지시 번호</div><div>O250101001</div></div>
-                  <div class="stack col-span-9"><div class="label">작업명</div><div>구동부 수리</div></div>
-                  <div class="stack col-span-3"><div class="label">설비 번호</div><div>EQP000123</div></div>
-                  <div class="stack col-span-3"><div class="label">작업 유형</div><div>REPR</div></div>
-                  <div class="stack col-span-3"><div class="label">Site</div><div>SEOUL</div></div>
-                  <div class="stack col-span-3"><div class="label">관리부서</div><div>설비팀</div></div>
+                  <div class="stack col-span-3"><div class="label">작업지시 번호</div><div th:text="${workorder.orderId}">O250101001</div></div>
+                  <div class="stack col-span-9"><div class="label">작업명</div><div th:text="${workorder.name}">구동부 수리</div></div>
+                  <div class="stack col-span-3"><div class="label">설비 번호</div><div th:text="${workorder.plantId}">EQP000123</div></div>
+                  <div class="stack col-span-3"><div class="label">작업 유형</div><div th:text="${workorder.jobId}">REPR</div></div>
+                  <div class="stack col-span-3"><div class="label">Site</div><div th:text="${workorder.siteId}">SEOUL</div></div>
+                  <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${workorder.deptId}">설비팀</div></div>
                 </div>
               </div>
 
               <div class="section">
                 <div class="section-title">일정 / 담당 / 계획</div>
                 <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">담당자</div><div>M0001</div></div>
-                  <div class="stack col-span-3"><div class="label">계획일</div><div>2025-01-12</div></div>
-                  <div class="stack col-span-3"><div class="label">계획비용</div><div>120,000</div></div>
-                  <div class="stack col-span-3"><div class="label">계획공수</div><div>8.00</div></div>
+                  <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${workorder.memberId}">M0001</div></div>
+                  <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${workorder.plannedDate}">2025-01-12</div></div>
+                  <div class="stack col-span-3"><div class="label">계획비용</div><div th:text="${workorder.plannedCost}">120,000</div></div>
+                  <div class="stack col-span-3"><div class="label">계획공수</div><div th:text="${workorder.plannedLabor}">8.00</div></div>
                 </div>
               </div>
 
               <div class="section">
                 <div class="section-title">실적 / 비용</div>
                 <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">실적일</div><div>2025-01-15</div></div>
-                  <div class="stack col-span-3"><div class="label">실적비용</div><div>150,000</div></div>
-                  <div class="stack col-span-3"><div class="label">실적공수</div><div>9.00</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div><span class="badge">배정</span></div></div>
+                  <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${workorder.actualDate}">2025-01-15</div></div>
+                  <div class="stack col-span-3"><div class="label">실적비용</div><div th:text="${workorder.actualCost}">150,000</div></div>
+                  <div class="stack col-span-3"><div class="label">실적공수</div><div th:text="${workorder.actualLabor}">9.00</div></div>
+                  <div class="stack col-span-3"><div class="label">상태</div><div><span class="badge" th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
+                            th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">배정</span></div></div>
                 </div>
-                <div class="stack col-span-12"><div class="label">비고</div><div class="muted">-</div></div>
+                <div class="stack col-span-12"><div class="label">비고</div><div class="muted" th:text="${workorder.note ?: '-'}">-</div></div>
               </div>
 
               <div class="section">
@@ -115,12 +116,12 @@
 
               <div class="section">
                 <div class="section-title">첨부</div>
-                <table class="row-cols-3">
-                  <tr>
-                    <th>비고</th><td id="wo-file-note" colspan="3">-</td>
-                    <th>첨부 건수</th><td id="wo-file-count">0</td>                    
-                  </tr>
-                </table>
+                <div id="attachments-container" th:if="${workorder.fileGroupId}">
+                  <div class="loading">첨부 파일을 불러오는 중...</div>
+                </div>
+                <div th:unless="${workorder.fileGroupId}" class="notice">
+                  첨부된 파일이 없습니다.
+                </div>
               </div>
 
               <!-- 출력 문서 형식 -->
@@ -131,12 +132,12 @@
                     <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
                   </header>
                   <div class="doc-body">
-                    <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span>O250101001</span></div>
-                    <div class="row"><strong>작업명</strong><span class="spacer"></span><span>구동부 수리</span></div>
-                    <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span>EQP000123</span></div>
-                    <div class="row"><strong>계획일</strong><span class="spacer"></span><span>2025-01-12</span></div>
-                    <div class="row"><strong>실적일</strong><span class="spacer"></span><span>2025-01-15</span></div>
-                    <div class="row"><strong>상태</strong><span class="spacer"></span><span>배정</span></div>
+                    <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span th:text="${workorder.orderId}">O250101001</span></div>
+                    <div class="row"><strong>작업명</strong><span class="spacer"></span><span th:text="${workorder.name}">구동부 수리</span></div>
+                    <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${workorder.plantId}">EQP000123</span></div>
+                    <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${workorder.plannedDate}">2025-01-12</span></div>
+                    <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${workorder.actualDate}">2025-01-15</span></div>
+                    <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}">배정</span></div>
                   </div>
                 </div>
               </section>
@@ -151,6 +152,7 @@
     </div>
     <script src="../../static/assets/js/app.js"></script>
     <script>
+      // 출력일 표기 및 미리보기 종료 핸들러
       (function() {
         var d = new Date();
         var z = function(n){ return (n<10? ('0'+n) : n); };
@@ -160,6 +162,64 @@
         window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
         document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
       })();
+
+      // Detail 페이지에서 첨부 파일 로드
+      document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('attachments-container');
+        const fileGroupId = /*[[${workorder.fileGroupId}]]*/ null;
+        
+        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
+        
+        if (container && fileGroupId) {
+          console.log('Loading attachments for fileGroupId:', fileGroupId);
+          loadAttachments(fileGroupId, container);
+        } else {
+          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
+        }
+      });
+
+      async function loadAttachments(fileGroupId, container) {
+        try {
+          console.log('Fetching files for groupId:', fileGroupId);
+          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
+          console.log('Response status:', response.status, 'ok:', response.ok);
+          
+          if (!response.ok) throw new Error('조회 실패');
+          
+          const result = await response.json();
+          console.log('API response:', result);
+          
+          if (result.items.length === 0) {
+            console.log('No files found, showing empty message');
+            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
+            return;
+          }
+          
+          const list = document.createElement('ul');
+          list.className = 'attachments-list';
+          
+          console.log('Creating list for', result.items.length, 'files');
+          result.items.forEach(item => {
+            console.log('Adding file item:', item);
+            const li = document.createElement('li');
+            li.className = 'attachment-item';
+            li.innerHTML = `
+              <span class="file-name">${item.originalName}</span>
+              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
+              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
+            `;
+            list.appendChild(li);
+          });
+          
+          console.log('Replacing container content with list');
+          container.innerHTML = '';
+          container.appendChild(list);
+          
+        } catch (error) {
+          console.error('Load attachments error:', error);
+          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
+        }
+      }
     </script>
   </body>
   </html>

@@ -45,10 +45,15 @@ public class MemoController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/memo/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<MemoResponse> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "title", required = false) String title,
+                          @RequestParam(name = "createdBy", required = false) String createdBy,
+                          @RequestParam(name = "refEntity", required = false) String refEntity,
+                          Pageable pageable, Model model) {
+        Page<MemoResponse> page = service.list(title, createdBy, refEntity, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
+        model.addAttribute("title", title);
+        model.addAttribute("createdBy", createdBy);
+        model.addAttribute("refEntity", refEntity);
         return "memo/list";
     }
 
@@ -58,6 +63,13 @@ public class MemoController {
         model.addAttribute("isNew", true);
         addReferenceData(model);
         return "memo/form";
+    }
+
+    @GetMapping("/memo/detail/{memoId}")
+    public String detailForm(@PathVariable String memoId, Model model) {
+        MemoResponse memo = service.get(memoId);
+        model.addAttribute("memo", memo);
+        return "memo/detail";
     }
 
     @GetMapping("/memo/edit/{memoId}")
@@ -88,8 +100,17 @@ public class MemoController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/memos")
-    public Page<MemoResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<MemoResponse> list(@RequestParam(name = "q", required = false) String q, 
+                                  @RequestParam(name = "title", required = false) String title,
+                                  @RequestParam(name = "createdBy", required = false) String createdBy,
+                                  @RequestParam(name = "refEntity", required = false) String refEntity,
+                                  Pageable pageable) {
+        // 다중 필터가 있으면 다중 필터 사용, 없으면 기존 keyword 검색 사용
+        if (title != null || createdBy != null || refEntity != null) {
+            return service.list(title, createdBy, refEntity, pageable);
+        } else {
+            return service.list(q, pageable);
+        }
     }
 
     @ResponseBody

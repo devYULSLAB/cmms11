@@ -48,10 +48,19 @@ public class InspectionController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/inspection/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<InspectionResponse> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "inspectionId", required = false) String inspectionId,
+                          @RequestParam(name = "plantId", required = false) String plantId,
+                          @RequestParam(name = "status", required = false) String status,
+                          @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                          @RequestParam(name = "plannedDateTo", required = false) String plannedDateTo,
+                          Pageable pageable, Model model) {
+        Page<InspectionResponse> page = service.list(inspectionId, plantId, status, plannedDateFrom, plannedDateTo, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
+        model.addAttribute("inspectionId", inspectionId);
+        model.addAttribute("plantId", plantId);
+        model.addAttribute("status", status);
+        model.addAttribute("plannedDateFrom", plannedDateFrom);
+        model.addAttribute("plannedDateTo", plannedDateTo);
         return "inspection/list";
     }
 
@@ -104,8 +113,13 @@ public class InspectionController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/inspections")
-    public Page<InspectionResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<InspectionResponse> list(@RequestParam(name = "inspectionId", required = false) String inspectionId,
+                                        @RequestParam(name = "plantId", required = false) String plantId,
+                                        @RequestParam(name = "status", required = false) String status,
+                                        @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                                        @RequestParam(name = "plannedDateTo", required = false) String plannedDateTo,
+                                        Pageable pageable) {
+        return service.list(inspectionId, plantId, status, plannedDateFrom, plannedDateTo, pageable);
     }
 
     @ResponseBody

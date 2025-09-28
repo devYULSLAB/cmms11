@@ -34,15 +34,30 @@ public class WorkPermitService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkPermitResponse> list(String keyword, Pageable pageable) {
+    public Page<WorkPermitResponse> list(String permitId, String plantId, String jobId, String status, String plannedDateFrom, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<WorkPermit> page;
-        if (keyword == null || keyword.isBlank()) {
-            page = repository.findByIdCompanyId(companyId, pageable);
-        } else {
-            String trimmed = "%" + keyword.trim() + "%";
-            page = repository.search(companyId, trimmed, pageable);
+        
+        // 날짜 문자열을 LocalDate로 변환
+        java.time.LocalDate fromDate = null;
+        
+        try {
+            if (plannedDateFrom != null && !plannedDateFrom.isBlank()) {
+                fromDate = java.time.LocalDate.parse(plannedDateFrom);
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            // 날짜 파싱 오류 시 무시
         }
+        
+        Page<WorkPermit> page = repository.findByFilters(
+            companyId, 
+            permitId, 
+            plantId, 
+            jobId, 
+            status, 
+            fromDate, 
+            pageable
+        );
+        
         return page.map(WorkPermitResponse::from);
     }
 

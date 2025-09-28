@@ -38,18 +38,26 @@
                 </div>
               </div>
               <div class="card-body">
-                <div class="section">
-                  <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-4"><input class="input" placeholder="제목" /></div>
-                    <div class="col-span-3"><input class="input" placeholder="작성자" /></div>
-                    <div class="col-span-3"><input class="input" placeholder="참조 모듈" /></div>
-                    <div class="col-span-2" style="display:flex;gap:8px;justify-content:flex-end">
-                      <button class="btn">초기화</button>
-                      <button class="btn">검색</button>
+                <form method="get" th:action="@{/memo/list}">
+                  <div class="section">
+                    <div class="section-title">필터</div>
+                    <div class="grid cols-12">
+                      <div class="col-span-4">
+                        <input class="input" placeholder="제목" name="title" th:value="${title}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="작성자" name="createdBy" th:value="${createdBy}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="참조 모듈" name="refEntity" th:value="${refEntity}" />
+                      </div>
+                      <div class="col-span-2" style="display:flex;gap:8px;justify-content:flex-end">
+                        <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
+                        <button type="submit" class="btn primary">검색</button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </form>
 
                 <table class="table">
                   <thead>
@@ -64,12 +72,13 @@
                   </thead>
                   <tbody>
                     <tr th:each="memo : ${page.content}">
-                      <td><a th:href="@{/memo/edit/{id}(id=${memo.memoId})}" th:text="${memo.memoId}">-</a></td>
+                      <td><a th:href="@{/memo/detail/{id}(id=${memo.memoId})}" th:text="${memo.memoId}">-</a></td>
                       <td th:text="${memo.title}">-</td>
                       <td th:text="${memo.refEntity ?: ''} + '/' + ${memo.refId ?: ''}" th:if="${memo.refEntity}">-</td>
                       <td th:text="${memo.createdBy}">-</td>
                       <td th:text="${memo.createdAt}">-</td>
                       <td class="actions">
+                        <a class="btn btn-sm" th:href="@{/memo/detail/{id}(id=${memo.memoId})}">상세</a>
                         <a class="btn btn-sm" th:href="@{/memo/edit/{id}(id=${memo.memoId})}">수정</a>
                         <button class="btn btn-sm danger" 
                                 th:data-delete-url="@{/memo/delete/{id}(id=${memo.memoId})}"
@@ -80,12 +89,10 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
-                  <div class="spacer"></div>
-                  <div class="pagination">
-                    <button class="btn sm" disabled>이전</button>
-                    <button class="btn sm">다음</button>
-                  </div>
+                <div class="pagination">
+                  <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/memo/list?page=' + ${page.number - 1} + '&amp;title=&quot; + encodeURIComponent(&quot;${title}&quot;) + &quot;&amp;createdBy=&quot; + encodeURIComponent(&quot;${createdBy}&quot;) + &quot;&amp;refEntity=&quot; + encodeURIComponent(&quot;${refEntity}&quot;)'">이전</button>
+                  <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+                  <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/memo/list?page=' + ${page.number + 1} + '&amp;title=&quot; + encodeURIComponent(&quot;${title}&quot;) + &quot;&amp;createdBy=&quot; + encodeURIComponent(&quot;${createdBy}&quot;) + &quot;&amp;refEntity=&quot; + encodeURIComponent(&quot;${refEntity}&quot;)'">다음</button>
                 </div>
               </div>
             </section>

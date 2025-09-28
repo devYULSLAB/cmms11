@@ -28,5 +28,24 @@ public interface InspectionRepository extends JpaRepository<Inspection, Inspecti
         Pageable pageable
     );
 
+    @Query(
+        "select i from Inspection i " +
+        "where i.id.companyId = :companyId " +
+        "and (:inspectionId is null or :inspectionId = '' or i.id.inspectionId like concat('%', :inspectionId, '%')) " +
+        "and (:plantId is null or :plantId = '' or i.plantId like concat('%', :plantId, '%')) " +
+        "and (:status is null or :status = '' or i.status = :status) " +
+        "and (:plannedDateFrom is null or i.plannedDate >= :plannedDateFrom) " +
+        "and (:plannedDateTo is null or i.plannedDate <= :plannedDateTo)"
+    )
+    Page<Inspection> findByFilters(
+        @Param("companyId") String companyId,
+        @Param("inspectionId") String inspectionId,
+        @Param("plantId") String plantId,
+        @Param("status") String status,
+        @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
+        @Param("plannedDateTo") java.time.LocalDate plannedDateTo,
+        Pageable pageable
+    );
+
     Optional<Inspection> findByIdCompanyIdAndIdInspectionId(String companyId, String inspectionId);
 }

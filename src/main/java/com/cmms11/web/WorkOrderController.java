@@ -50,10 +50,19 @@ public class WorkOrderController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/workorder/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<WorkOrderResponse> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "orderId", required = false) String orderId,
+                          @RequestParam(name = "plantId", required = false) String plantId,
+                          @RequestParam(name = "status", required = false) String status,
+                          @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                          @RequestParam(name = "plannedDateTo", required = false) String plannedDateTo,
+                          Pageable pageable, Model model) {
+        Page<WorkOrderResponse> page = service.list(orderId, plantId, status, plannedDateFrom, plannedDateTo, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
+        model.addAttribute("orderId", orderId);
+        model.addAttribute("plantId", plantId);
+        model.addAttribute("status", status);
+        model.addAttribute("plannedDateFrom", plannedDateFrom);
+        model.addAttribute("plannedDateTo", plannedDateTo);
         return "workorder/list";
     }
 
@@ -72,6 +81,13 @@ public class WorkOrderController {
         model.addAttribute("isNew", false);
         addReferenceData(model);
         return "workorder/form";
+    }
+
+    @GetMapping("/workorder/detail/{workOrderId}")
+    public String detailForm(@PathVariable String workOrderId, Model model) {
+        WorkOrderResponse workOrder = service.get(workOrderId);
+        model.addAttribute("workorder", workOrder);
+        return "workorder/detail";
     }
 
     @PostMapping("/workorder/save")
@@ -93,8 +109,13 @@ public class WorkOrderController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/workorders")
-    public Page<WorkOrderResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<WorkOrderResponse> list(@RequestParam(name = "orderId", required = false) String orderId,
+                                       @RequestParam(name = "plantId", required = false) String plantId,
+                                       @RequestParam(name = "status", required = false) String status,
+                                       @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                                       @RequestParam(name = "plannedDateTo", required = false) String plannedDateTo,
+                                       Pageable pageable) {
+        return service.list(orderId, plantId, status, plannedDateFrom, plannedDateTo, pageable);
     }
 
     @ResponseBody
@@ -142,7 +163,7 @@ public class WorkOrderController {
             null, // actualDate
             null, // actualCost
             null, // actualLabor
-            null, // status
+            "PLAN", // status - 기본값 설정
             null, // fileGroupId
             null, // note
             null, // createdAt

@@ -119,15 +119,18 @@
                   <!-- 첨부 -->
                   <div class="section" data-attachments>
                     <div class="section-title">첨부</div>
+                    <input type="hidden" name="fileGroupId" th:value="${inventory.fileGroupId}" />
                     <div class="attachments">
-                      <input id="attachments-input" class="visually-hidden" type="file" multiple aria-hidden="true" />
-                      <button type="button" class="btn" data-attachments-add>파일 선택</button>
-                      <div class="hint">선택한 파일이 아래 목록에 표시됩니다</div>
-                      <ul class="attachments-list" aria-live="polite" aria-label="첨부파일 목록">
-                        <li class="empty">첨부파일이 없습니다.</li>
-                      </ul>
-                    </div>
-                    <input type="hidden" id="fileGroupId" name="fileGroupId" />
+                        <input id="attachments-input" class="visually-hidden" type="file" 
+                               multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                        <button type="button" class="btn" data-attachments-add>
+                          파일 선택
+                          <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                        </button>
+                        <ul class="attachments-list" aria-live="polite" aria-label="첨부된 파일 목록">
+                          <li class="empty">첨부된 파일이 없습니다.</li>
+                        </ul>
+                      </div>
                   </div>
 
                   <div class="actions" style="margin-top:16px">

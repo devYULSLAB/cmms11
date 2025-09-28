@@ -56,6 +56,21 @@ public class ApprovalService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ApprovalResponse> list(String title, String createdBy, String status, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        
+        Page<Approval> page = repository.findByFilters(
+            companyId, 
+            title, 
+            createdBy, 
+            status, 
+            pageable
+        );
+        
+        return page.map(approval -> ApprovalResponse.from(approval, Collections.emptyList()));
+    }
+
+    @Transactional(readOnly = true)
     public ApprovalResponse get(String approvalId) {
         Approval approval = getExisting(approvalId);
         List<ApprovalStepResponse> steps = stepRepository

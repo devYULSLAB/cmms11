@@ -28,5 +28,24 @@ public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPerm
         Pageable pageable
     );
 
+    @Query(
+        "select w from WorkPermit w " +
+        "where w.id.companyId = :companyId " +
+        "and (:permitId is null or :permitId = '' or w.id.permitId like concat('%', :permitId, '%')) " +
+        "and (:plantId is null or :plantId = '' or w.plantId like concat('%', :plantId, '%')) " +
+        "and (:jobId is null or :jobId = '' or w.jobId = :jobId) " +
+        "and (:status is null or :status = '' or w.status = :status) " +
+        "and (:plannedDateFrom is null or w.plannedDate >= :plannedDateFrom)"
+    )
+    Page<WorkPermit> findByFilters(
+        @Param("companyId") String companyId,
+        @Param("permitId") String permitId,
+        @Param("plantId") String plantId,
+        @Param("jobId") String jobId,
+        @Param("status") String status,
+        @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
+        Pageable pageable
+    );
+
     Optional<WorkPermit> findByIdCompanyIdAndIdPermitId(String companyId, String permitId);
 }

@@ -40,32 +40,40 @@
               <div class="card-body">
                 <div class="section">
                   <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-3"><input class="input" placeholder="허가 번호" /></div>
-                    <div class="col-span-3"><input class="input" placeholder="설비 번호" /></div>
-                    <div class="col-span-2">
-                      <select class="input">
-                        <option value="">허가유형(전체)</option>
-                        <option value="HOT">화기</option>
-                        <option value="CONF">밀폐공간</option>
-                        <option value="ELEC">전기</option>
-                      </select>
+                  <form method="get" th:action="@{/workpermit/list}">
+                    <div class="grid cols-12">
+                      <div class="col-span-3">
+                        <input class="input" placeholder="허가 번호" name="permitId" th:value="${permitId}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="설비 번호" name="plantId" th:value="${plantId}" />
+                      </div>
+                      <div class="col-span-2">
+                        <select class="input" name="jobId">
+                          <option value="">허가유형(전체)</option>
+                          <option value="HOT" th:selected="${jobId == 'HOT'}">화기</option>
+                          <option value="CONF" th:selected="${jobId == 'CONF'}">밀폐공간</option>
+                          <option value="ELEC" th:selected="${jobId == 'ELEC'}">전기</option>
+                        </select>
+                      </div>
+                      <div class="col-span-2">
+                        <select class="input" name="status">
+                          <option value="">상태(전체)</option>
+                          <option value="REQ" th:selected="${status == 'REQ'}">요청</option>
+                          <option value="APRV" th:selected="${status == 'APRV'}">승인</option>
+                          <option value="REJT" th:selected="${status == 'REJT'}">반려</option>
+                          <option value="DONE" th:selected="${status == 'DONE'}">종료</option>
+                        </select>
+                      </div>
+                      <div class="col-span-2">
+                        <input class="input" type="date" name="plannedDateFrom" th:value="${plannedDateFrom}" title="계획일(From)" />
+                      </div>
                     </div>
-                    <div class="col-span-2">
-                      <select class="input">
-                        <option value="">상태(전체)</option>
-                        <option value="REQ">요청</option>
-                        <option value="APRV">승인</option>
-                        <option value="REJT">반려</option>
-                        <option value="DONE">종료</option>
-                      </select>
+                    <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
+                      <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
+                      <button type="submit" class="btn primary">검색</button>
                     </div>
-                    <div class="col-span-2"><input class="input" type="date" title="계획일(From)" /></div>
-                  </div>
-                  <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
-                    <button class="btn">초기화</button>
-                    <button class="btn">검색</button>
-                  </div>
+                  </form>
                 </div>
 
                 <table class="table">
@@ -107,8 +115,9 @@
                 <div class="row" style="margin-top:12px">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" disabled>이전</button>
-                    <button class="btn sm">다음</button>
+                    <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/workpermit/list?page=' + ${page.number - 1} + '&amp;permitId=&quot; + encodeURIComponent(&quot;${permitId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;jobId=&quot; + encodeURIComponent(&quot;${jobId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;)'">이전</button>
+                    <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+                    <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/workpermit/list?page=' + ${page.number + 1} + '&amp;permitId=&quot; + encodeURIComponent(&quot;${permitId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;jobId=&quot; + encodeURIComponent(&quot;${jobId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;)'">다음</button>
                   </div>
                 </div>
               </div>

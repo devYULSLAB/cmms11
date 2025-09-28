@@ -47,6 +47,21 @@ public class MemoService {
     }
 
     @Transactional(readOnly = true)
+    public Page<MemoResponse> list(String title, String createdBy, String refEntity, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        
+        Page<Memo> page = repository.findByFilters(
+            companyId, 
+            title, 
+            createdBy, 
+            refEntity, 
+            pageable
+        );
+        
+        return page.map(MemoResponse::from);
+    }
+
+    @Transactional(readOnly = true)
     public MemoResponse get(String memoId) {
         return MemoResponse.from(getExisting(memoId));
     }

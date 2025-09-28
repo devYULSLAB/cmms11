@@ -79,7 +79,7 @@ FLUSH PRIVILEGES;
 ```bash
 # 환경 변수 설정
 export DB_PASSWORD="강력한_비밀번호"
-export AWS_S3_BUCKET="prodYULSLAB-bucket"
+export AWS_S3_BUCKET="prodYULSLAB-bucket"   //지금은 사용 안 함 
 
 # 또는 /etc/environment에 영구 설정
 sudo nano /etc/environment

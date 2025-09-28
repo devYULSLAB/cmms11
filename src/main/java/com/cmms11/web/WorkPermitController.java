@@ -50,10 +50,19 @@ public class WorkPermitController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/workpermit/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<WorkPermitResponse> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "permitId", required = false) String permitId,
+                          @RequestParam(name = "plantId", required = false) String plantId,
+                          @RequestParam(name = "jobId", required = false) String jobId,
+                          @RequestParam(name = "status", required = false) String status,
+                          @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                          Pageable pageable, Model model) {
+        Page<WorkPermitResponse> page = service.list(permitId, plantId, jobId, status, plannedDateFrom, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
+        model.addAttribute("permitId", permitId);
+        model.addAttribute("plantId", plantId);
+        model.addAttribute("jobId", jobId);
+        model.addAttribute("status", status);
+        model.addAttribute("plannedDateFrom", plannedDateFrom);
         return "workpermit/list";
     }
 
@@ -72,6 +81,13 @@ public class WorkPermitController {
         model.addAttribute("isNew", false);
         addReferenceData(model);
         return "workpermit/form";
+    }
+
+    @GetMapping("/workpermit/detail/{workPermitId}")
+    public String detailForm(@PathVariable String workPermitId, Model model) {
+        WorkPermitResponse workPermit = service.get(workPermitId);
+        model.addAttribute("workpermit", workPermit);
+        return "workpermit/detail";
     }
 
     @PostMapping("/workpermit/save")
@@ -93,8 +109,13 @@ public class WorkPermitController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/workpermits")
-    public Page<WorkPermitResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<WorkPermitResponse> list(@RequestParam(name = "permitId", required = false) String permitId,
+                                        @RequestParam(name = "plantId", required = false) String plantId,
+                                        @RequestParam(name = "jobId", required = false) String jobId,
+                                        @RequestParam(name = "status", required = false) String status,
+                                        @RequestParam(name = "plannedDateFrom", required = false) String plannedDateFrom,
+                                        Pageable pageable) {
+        return service.list(permitId, plantId, jobId, status, plannedDateFrom, pageable);
     }
 
     @ResponseBody
@@ -142,7 +163,7 @@ public class WorkPermitController {
             null, // hazardFactor
             null, // safetyFactor
             null, // checksheetJson
-            null, // status
+            "REQ", // status - 기본값 설정
             null, // fileGroupId
             null, // note
             null, // createdAt

@@ -151,13 +151,17 @@
                   <div class="form-row col-span-12" data-attachments>
                     <label class="label"></label>
                     <div class="row" style="gap:8px;align-items:center">
-                      <input id="attachments-input" type="file" multiple style="display:none" />
-                      <button class="btn" type="button" data-attachments-add>파일 선택</button>
+                      <input id="attachments-input" class="visually-hidden" type="file" 
+                             multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                      <button class="btn" type="button" data-attachments-add>
+                        파일 선택
+                        <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                      </button>
                     </div>
                   </div>
                   <div class="form-row col-span-12">
                     <label class="label"></label>
-                    <ul class="attachments-list" style="margin-top:8px; width:100%; box-sizing:border-box">
+                    <ul class="attachments-list" style="margin-top:8px; width:100%; box-sizing:border-box" aria-live="polite" aria-label="첨부된 파일 목록">
                       <li class="empty">첨부 파일이 없습니다.</li>
                     </ul>
                   </div>                  

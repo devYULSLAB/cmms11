@@ -50,11 +50,23 @@ public class InventoryController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/inventory/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
+    public String listForm(@RequestParam(name = "q", required = false) String q, 
+                          @RequestParam(name = "inventoryId", required = false) String inventoryId,
+                          @RequestParam(name = "deptId", required = false) String deptId,
+                          Pageable pageable, Model model) {
         Page<InventoryResponse> page = service.list(q, pageable);
         model.addAttribute("page", page);
         model.addAttribute("keyword", q);
+        model.addAttribute("inventoryId", inventoryId);
+        model.addAttribute("deptId", deptId);
+        // 부서 목록 추가
+        model.addAttribute("depts", deptService.list(null, Pageable.unpaged()).getContent());
         return "inventory/list";
+    }
+
+    @GetMapping("/inventory/uploadForm")
+    public String uploadForm(Model model) {
+        return "inventory/uploadForm";
     }
 
     @GetMapping("/inventory/form")
@@ -63,6 +75,13 @@ public class InventoryController {
         model.addAttribute("isNew", true);
         addReferenceData(model);
         return "inventory/form";
+    }
+
+    @GetMapping("/inventory/detail/{inventoryId}")
+    public String detailForm(@PathVariable String inventoryId, Model model) {
+        InventoryResponse inventory = service.get(inventoryId);
+        model.addAttribute("inventory", inventory);
+        return "inventory/detail";
     }
 
     @GetMapping("/inventory/edit/{inventoryId}")
@@ -146,8 +165,8 @@ public class InventoryController {
             null, // serial
             null, // fileGroupId
             null, // note
-            null, // status
-            null, // deleteMark
+            "ACTIVE", // status
+            "N", // deleteMark
             null, // createdAt
             null, // createdBy
             null, // updatedAt

@@ -28,5 +28,20 @@ public interface MemoRepository extends JpaRepository<Memo, MemoId> {
         Pageable pageable
     );
 
+    @Query(
+        "select m from Memo m " +
+        "where m.id.companyId = :companyId " +
+        "and (:title is null or :title = '' or m.title like concat('%', :title, '%')) " +
+        "and (:createdBy is null or :createdBy = '' or m.createdBy like concat('%', :createdBy, '%')) " +
+        "and (:refEntity is null or :refEntity = '' or m.refEntity like concat('%', :refEntity, '%'))"
+    )
+    Page<Memo> findByFilters(
+        @Param("companyId") String companyId,
+        @Param("title") String title,
+        @Param("createdBy") String createdBy,
+        @Param("refEntity") String refEntity,
+        Pageable pageable
+    );
+
     Optional<Memo> findByIdCompanyIdAndIdMemoId(String companyId, String memoId);
 }

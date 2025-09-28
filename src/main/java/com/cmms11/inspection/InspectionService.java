@@ -43,15 +43,34 @@ public class InspectionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<InspectionResponse> list(String keyword, Pageable pageable) {
+    public Page<InspectionResponse> list(String inspectionId, String plantId, String status, String plannedDateFrom, String plannedDateTo, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Inspection> page;
-        if (keyword == null || keyword.isBlank()) {
-            page = repository.findByIdCompanyId(companyId, pageable);
-        } else {
-            String trimmed = "%" + keyword.trim() + "%";
-            page = repository.search(companyId, trimmed, pageable);
+        
+        // 날짜 문자열을 LocalDate로 변환
+        java.time.LocalDate fromDate = null;
+        java.time.LocalDate toDate = null;
+        
+        try {
+            if (plannedDateFrom != null && !plannedDateFrom.isBlank()) {
+                fromDate = java.time.LocalDate.parse(plannedDateFrom);
+            }
+            if (plannedDateTo != null && !plannedDateTo.isBlank()) {
+                toDate = java.time.LocalDate.parse(plannedDateTo);
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            // 날짜 파싱 오류 시 무시
         }
+        
+        Page<Inspection> page = repository.findByFilters(
+            companyId, 
+            inspectionId, 
+            plantId, 
+            status, 
+            fromDate, 
+            toDate, 
+            pageable
+        );
+        
         return page.map(InspectionResponse::from);
     }
 
