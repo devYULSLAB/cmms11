@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:classpath:database-dev.properties
   jpa:
     hibernate:
       ddl-auto: update
@@ -14,8 +16,8 @@ server:
 app:
   file-storage:
     location: storage/uploads
-    max-size: 10485760
-    allowed-extensions: jpg,jpeg,png,pdf,doc,docx,xls,xlsx,hwp,hwpx,zip,txt
+    max-size: 20971520  # 개발환경에서는 20MB 허용
+    allowed-extensions: jpg,jpeg,png,pdf,doc,docx,xls,xlsx,hwp,hwpx,zip,txt,gif,bmp,mp4,mov  # 개발환경에서는 더 많은 형식 허용
 
 aws:
   s3:

@@ -1,9 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>점검 계획/결과 등록/수정 · CMMS</title>
+    <title>점검 계획/결과 등록/수정 - CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -28,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inspection-form" data-module="inspection-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,13 +41,13 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/inspection/save}" data-redirect="@{/inspection/list}">
+                <form data-validate method="post" th:action="@{/inspection/save}" data-redirect="@{/inspection/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
-                  <!-- 기본정보 -->
+                  <!-- 점검 정보 -->
                   <div class="section">
-                    <div class="section-title">기본정보</div>
+                    <div class="section-title">점검 정보</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label" for="inspection_id">점검 번호</label>
@@ -61,8 +63,11 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label required" for="plant_id">설비 번호</label>
-                        <input id="plant_id" name="plantId" class="input" required maxlength="10" placeholder="EQP000123" 
-                              th:value="${inspection.plantId}" />
+                        <div class="actions actions-left-align">
+                          <input id="plant_id" name="plantId" class="input" required maxlength="10" placeholder="EQP000123" 
+                                th:value="${inspection.plantId}" />
+                          <button class="btn" type="button" id="btn-plant-picker" title="설비 선택">🏭</button>
+                        </div>
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="job_id">작업 유형</label>
@@ -81,18 +86,18 @@
                           <option value="">(선택)</option>
                           <option th:each="site : ${sites}"
                                   th:value="${site.siteId}"
-                                  th:text="${site.siteId + ' - ' + site.siteName}"
+                                  th:text="${site.siteId + ' - ' + site.name}"
                                   th:selected="${inspection.siteId == site.siteId}">
                           </option>
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="dept_id">관리부서</label>
+                        <label class="label" for="dept_id">부서</label>
                         <select id="dept_id" name="deptId">
                           <option value="">(선택)</option>
                           <option th:each="dept : ${depts}"
                                   th:value="${dept.deptId}"
-                                  th:text="${dept.deptId + ' - ' + dept.deptName}"
+                                  th:text="${dept.deptId + ' - ' + dept.name}"
                                   th:selected="${inspection.deptId == dept.deptId}">
                           </option>
                         </select>
@@ -100,13 +105,13 @@
                     </div>
                   </div>
 
-                  <!-- 일정 / 담당 -->
+                  <!-- 점검 일정 / 담당 -->
                   <div class="section">
-                    <div class="section-title">일정 / 담당</div>
+                    <div class="section-title">점검 일정 / 담당</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label" for="member_id">담당자</label>
-                        <input id="member_id" name="memberId" class="input" maxlength="5" placeholder="예: M0001" 
+                        <input id="member_id" name="memberId" class="input" maxlength="5" placeholder="사원번호" 
                               th:value="${inspection.memberId}" />
                       </div>
                       <div class="form-row col-span-3">
@@ -130,7 +135,7 @@
                     </div>
                     <div class="form-row col-span-12">
                       <label class="label" for="note">비고</label>
-                      <textarea id="note" name="note" rows="4" maxlength="500" placeholder="기타 메모(최대 500자)" 
+                      <textarea id="note" name="note" rows="4" maxlength="500" placeholder="비고를 입력하세요(최대 500자)" 
                               th:text="${inspection.note}"></textarea>
                     </div>
                   </div>
@@ -138,36 +143,44 @@
                   <!-- 점검 항목 -->
                   <div class="section" data-insp-items>
                     <div class="section-title">점검 항목</div>
-                    <div class="section-desc">inspection_item 기준: 이름, 방법, 최소, 최대, 표준, 비고</div>
+                    <div class="section-desc">inspection_item 항목: 항목, 단위, 방법, 최소값, 최대값, 기준값, 결과값, 비고</div>
+                    <div class="actions actions-space-between" style="margin-bottom:12px">
+                      <button type="button" class="btn sm" id="btn-copy-previous">이전 점검 복사</button>
+                      <button type="button" class="btn sm" data-add-item>항목 추가</button>
+                    </div>
                     <table class="table">
                       <thead>
                         <tr>
-                          <th style="width:44px">#</th>
-                          <th>이름</th>
-                          <th>방법</th>
-                          <th>최소</th>
-                          <th>최대</th>
-                          <th>표준</th>
-                          <th>비고</th>
-                          <th style="width:80px"></th>
+                          <th class="table-col-number">#</th>
+                          <th class="table-col-name-medium">항목</th>
+                          <th class="table-col-type-medium">단위</th>
+                          <th class="table-col-name-small">방법</th>
+                          <th class="table-col-type-medium">최소값</th>
+                          <th class="table-col-type-medium">최대값</th>
+                          <th class="table-col-type-medium">기준값</th>
+                          <th class="table-col-type-medium">결과값</th>
+                          <th class="table-col-type-medium"></th>
                         </tr>
                       </thead>
                       <tbody id="insp-items-body">
                         <tr class="insp-item-row">
-                          <td class="cell-center line-no">1</td>
-                          <td><input class="input" name="items[0].name" required maxlength="100" placeholder="예: 소음도 측정" /></td>
-                          <td><input class="input" name="items[0].method" maxlength="100" placeholder="예: 소음계 사용" /></td>
-                          <td><input class="input" name="items[0].min_val" maxlength="50" placeholder="예: 55" /></td>
-                          <td><input class="input" name="items[0].max_val" maxlength="50" placeholder="예: 65" /></td>
-                          <td><input class="input" name="items[0].std_val" maxlength="50" placeholder="예: 60" /></td>
-                          <td><input class="input" name="items[0].note" maxlength="500" /></td>
-                          <td class="cell-center"><button type="button" class="btn sm danger" data-remove-item style="display:none">삭제</button></td>
+                          <td class="cell-center line-no" rowspan="2">1</td>
+                          <td><input class="input" name="items[0].name" required maxlength="100" placeholder="항목" /></td>
+                          <td><input class="input" name="items[0].unit" maxlength="20" placeholder="단위" /></td>
+                          <td><input class="input" name="items[0].method" maxlength="100" placeholder="방법" /></td>
+                          <td><input class="input" name="items[0].minVal" maxlength="50" placeholder="최소" /></td>
+                          <td><input class="input" name="items[0].maxVal" maxlength="50" placeholder="최대" /></td>
+                          <td><input class="input" name="items[0].stdVal" maxlength="50" placeholder="기준" /></td>
+                          <td><input class="input" name="items[0].result" maxlength="50" placeholder="결과" /></td>
+                          <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger hidden" data-remove-item>삭제</button></td>
+                        </tr>
+                        <tr class="insp-item-note-row">
+                          <td colspan="7">
+                            <input class="input" name="items[0].note" maxlength="500" placeholder="비고" />
+                          </td>
                         </tr>
                       </tbody>
                     </table>
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
-                      <button type="button" class="btn sm" data-add-item>항목 추가</button>
-                    </div>
                   </div>
 
                   <!-- 첨부 -->
@@ -178,17 +191,17 @@
                       <input id="attachments-input" class="visually-hidden" type="file" 
                              multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
                       <button type="button" class="btn" data-attachments-add>
-                        파일 선택
+                        첨부 파일 추가
                         <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
                       </button>
-                      <ul class="attachments-list" aria-live="polite" aria-label="첨부된 파일 목록">
-                        <li class="empty">첨부된 파일이 없습니다.</li>
+                      <ul class="attachments-list" aria-live="polite" aria-label="첨부 파일 목록">
+                        <li class="empty">첨부 파일이 없습니다.</li>
                       </ul>
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-medium">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -201,60 +214,10 @@
         </main>
       </section>
       <footer>
-        <div class="container">© 점검 관리</div>
+        <div class="container">점검 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const section = document.querySelector('[data-insp-items]');
-        if (!section) return;
-        const tbody = section.querySelector('#insp-items-body');
-        const addBtn = section.querySelector('[data-add-item]');
-
-        function renumber() {
-          tbody.querySelectorAll('.insp-item-row').forEach((tr, i) => {
-            tr.querySelector('.line-no').textContent = i + 1;
-            tr.querySelectorAll('input').forEach((inp) => {
-              const field = inp.name.split('.').pop();
-              inp.name = `items[${i}].${field}`;
-            });
-            const delBtn = tr.querySelector('[data-remove-item]');
-            if (delBtn) delBtn.style.display = i === 0 ? 'none' : 'inline-flex';
-          });
-        }
-
-        function addRow() {
-          const i = tbody.querySelectorAll('.insp-item-row').length;
-          const tr = document.createElement('tr');
-          tr.className = 'insp-item-row';
-          tr.innerHTML = `
-            <td class="cell-center line-no">${i + 1}</td>
-            <td><input class="input" name="items[${i}].name" required maxlength="100" placeholder="예: 소음도 측정" /></td>
-            <td><input class="input" name="items[${i}].method" maxlength="100" placeholder="예: 소음계 사용" /></td>
-            <td><input class="input" name="items[${i}].min_val" maxlength="50" placeholder="예: 55" /></td>
-            <td><input class="input" name="items[${i}].max_val" maxlength="50" placeholder="예: 65" /></td>
-            <td><input class="input" name="items[${i}].std_val" maxlength="50" placeholder="예: 60" /></td>
-            <td><input class="input" name="items[${i}].note" maxlength="500" /></td>
-            <td class="cell-center"><button type="button" class="btn sm danger" data-remove-item>삭제</button></td>`;
-          tbody.appendChild(tr);
-          attachRowHandlers(tr);
-          renumber();
-        }
-
-        function attachRowHandlers(tr) {
-          const delBtn = tr.querySelector('[data-remove-item]');
-          delBtn?.addEventListener('click', () => {
-            tr.remove();
-            renumber();
-          });
-        }
-
-        // init
-        tbody.querySelectorAll('.insp-item-row').forEach(attachRowHandlers);
-        renumber();
-        addBtn?.addEventListener('click', addRow);
-      });
-    </script>
+    
+    <!-- 인라인 스크립트 제거됨 - inspection.js로 이관 -->
   </body>
   </html>

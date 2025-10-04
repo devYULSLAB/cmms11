@@ -67,19 +67,29 @@ public class WorkOrderController {
     }
 
     @GetMapping("/workorder/form")
-    public String newForm(Model model) {
+    public String newForm(@RequestParam(defaultValue = "all") String mode, Model model) {
         model.addAttribute("workOrder", emptyWorkOrder());
         model.addAttribute("isNew", true);
+        model.addAttribute("mode", mode);
         addReferenceData(model);
+        model.addAttribute("items", java.util.List.of());
         return "workorder/form";
     }
 
     @GetMapping("/workorder/edit/{workOrderId}")
-    public String editForm(@PathVariable String workOrderId, Model model) {
+    public String editForm(@PathVariable String workOrderId, 
+                          @RequestParam(defaultValue = "all") String mode, 
+                          Model model) {
         WorkOrderResponse workOrder = service.get(workOrderId);
         model.addAttribute("workOrder", workOrder);
         model.addAttribute("isNew", false);
+        model.addAttribute("mode", mode);
         addReferenceData(model);
+        try {
+            model.addAttribute("items", service.getItems(workOrderId));
+        } catch (Exception e) {
+            model.addAttribute("items", java.util.List.of());
+        }
         return "workorder/form";
     }
 
@@ -87,6 +97,11 @@ public class WorkOrderController {
     public String detailForm(@PathVariable String workOrderId, Model model) {
         WorkOrderResponse workOrder = service.get(workOrderId);
         model.addAttribute("workorder", workOrder);
+        try {
+            model.addAttribute("items", service.getItems(workOrderId));
+        } catch (Exception e) {
+            model.addAttribute("items", java.util.List.of());
+        }
         return "workorder/detail";
     }
 

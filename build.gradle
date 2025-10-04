@@ -47,3 +47,25 @@ dependencies {
 tasks.withType(Test) {
     useJUnitPlatform()
 }
+
+// Ensure UTF-8 encoding for compilation and resources
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('processResources') {
+    filteringCharset = 'UTF-8'
+}
+
+// JAR에서 불필요한 파일들 제외
+bootJar {
+    
+    // 로그 설정 파일 제외 (운영 환경에서 별도 관리)
+    exclude 'logback-*.xml'
+    exclude 'log4j2.xml'
+}
+
+// JAR 파일명에 버전 정보 포함
+bootJar {
+    archiveFileName = "${project.name}-${project.version}.jar"
+}

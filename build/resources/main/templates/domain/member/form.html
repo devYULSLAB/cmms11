@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>사용자 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -63,8 +65,30 @@
                           <option value="">(선택)</option>
                           <option th:each="dept : ${depts}" 
                                   th:value="${dept.deptId}" 
-                                  th:text="${dept.deptName}"
+                                  th:text="${dept.name}"
                                   th:selected="${member.deptId == dept.deptId}"></option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="grid cols-12">
+                      <div class="form-row col-span-4">
+                        <label class="label" for="position">직급</label>
+                        <input id="position" name="position" class="input" maxlength="50" placeholder="예: 대리, 과장, 차장" 
+                              th:value="${member.position}" />
+                      </div>
+                      <div class="form-row col-span-4">
+                        <label class="label" for="title">직책</label>
+                        <input id="title" name="title" class="input" maxlength="50" placeholder="예: 팀장, 파트장" 
+                              th:value="${member.title}" />
+                      </div>
+                      <div class="form-row col-span-4">
+                        <label class="label" for="siteId">사이트</label>
+                        <select id="siteId" name="siteId">
+                          <option value="">(선택)</option>
+                          <option th:each="site : ${sites}" 
+                                  th:value="${site.siteId}" 
+                                  th:text="${site.name}"
+                                  th:selected="${member.siteId == site.siteId}"></option>
                         </select>
                       </div>
                     </div>
@@ -79,16 +103,15 @@
                         <input id="phone" name="phone" class="input" type="tel" maxlength="100" 
                               th:value="${member.phone}" />
                       </div>
-                      <div class="form-row col-span-4">
-                        <label class="label" for="siteId">사이트</label>
-                        <input id="siteId" name="siteId" class="input" type="text" maxlength="5" 
-                              th:value="${member.siteId}" />
-                      </div>
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label" for="password">비밀번호</label>
                         <input id="password" name="password" class="input" type="password" maxlength="100" autocomplete="new-password" />
+                      </div>
+                      <div class="form-row col-span-4">
+                        <label class="label" for="passwordConfirm">비밀번호 확인</label>
+                        <input id="passwordConfirm" class="input" type="password" maxlength="100" autocomplete="new-password" />
                       </div>
                     </div>
                     <div class="form-row col-span-12">
@@ -109,7 +132,7 @@
 
                   <div class="actions" style="margin-top:16px">
                     <button class="btn" type="button" onclick="history.back()">취소</button>
-                    <button class="btn primary" type="submit">
+                    <button class="btn primary" type="submit" id="btn-submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>
                   </div>
@@ -123,7 +146,31 @@
         <div class="container">© 사용자 관리</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
+    <script>
+      // 비밀번호 확인 검증
+      document.querySelector('form')?.addEventListener('submit', (e) => {
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('passwordConfirm').value;
+        
+        // 비밀번호를 입력한 경우에만 검증
+        if (password || passwordConfirm) {
+          if (password !== passwordConfirm) {
+            e.preventDefault();
+            alert('비밀번호가 일치하지 않습니다.');
+            document.getElementById('passwordConfirm').focus();
+            return false;
+          }
+          
+          if (password.length < 4) {
+            e.preventDefault();
+            alert('비밀번호는 최소 4자 이상이어야 합니다.');
+            document.getElementById('password').focus();
+            return false;
+          }
+        }
+      });
+    </script>
   </body>
   </html>
 

@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title th:text="${isNew ? '권한 등록' : '권한 수정'} + ' · CMMS'">권한 등록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -39,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form th:action="@{/domain/role/save}" method="post" th:data-redirect="@{/domain/role/list}">
+                <form th:action="@{/domain/role/save}" method="post" th:data-redirect="@{/domain/role/list}" data-form-manager>
                   <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
                   
@@ -73,7 +75,7 @@
                     </div>
                   </div>
 
-                  <div class="stack" style="margin-top:16px">
+                  <div class="stack actions-top-medium">
                     <label class="label" for="note">설명</label>
                     <textarea 
                       id="note" 
@@ -85,7 +87,7 @@
                       placeholder="권한에 대한 설명을 입력하세요"></textarea>
                   </div>
 
-                  <div class="stack" style="margin-top:16px">
+                  <div class="stack actions-top-medium">
                     <label class="label" for="note">비고</label>
                     <textarea 
                       id="note" 
@@ -97,8 +99,8 @@
                       placeholder="추가 메모를 입력하세요"></textarea>
                   </div>
 
-                  <div class="actions" style="margin-top:24px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-large">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn primary" type="submit" th:text="${isNew ? '등록' : '수정'}">등록</button>
                   </div>
                 </form>
@@ -111,6 +113,6 @@
         <div class="container">© 기본정보</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>

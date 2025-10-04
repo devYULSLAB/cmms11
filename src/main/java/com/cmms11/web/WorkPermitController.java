@@ -71,6 +71,7 @@ public class WorkPermitController {
         model.addAttribute("workPermit", emptyWorkPermit());
         model.addAttribute("isNew", true);
         addReferenceData(model);
+        model.addAttribute("items", java.util.List.of());
         return "workpermit/form";
     }
 
@@ -80,6 +81,11 @@ public class WorkPermitController {
         model.addAttribute("workPermit", workPermit);
         model.addAttribute("isNew", false);
         addReferenceData(model);
+        try {
+            model.addAttribute("items", service.getItems(workPermitId));
+        } catch (Exception e) {
+            model.addAttribute("items", java.util.List.of());
+        }
         return "workpermit/form";
     }
 
@@ -87,6 +93,11 @@ public class WorkPermitController {
     public String detailForm(@PathVariable String workPermitId, Model model) {
         WorkPermitResponse workPermit = service.get(workPermitId);
         model.addAttribute("workpermit", workPermit);
+        try {
+            model.addAttribute("items", service.getItems(workPermitId));
+        } catch (Exception e) {
+            model.addAttribute("items", java.util.List.of());
+        }
         return "workpermit/detail";
     }
 

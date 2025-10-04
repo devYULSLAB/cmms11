@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비 상세 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
   </head>
@@ -29,17 +31,17 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="plant-detail" data-module="plant-detail">
         <main>
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="row" style="width:100%;justify-content:space-between">
+                <div class="row actions-space-between">
                   <div class="card-title">설비 상세</div>
                   <div class="toolbar">
                     <a class="btn" th:href="@{/plant/list}">목록</a>
-                    <a class="btn" href="#" onclick="document.body.classList.add('print-preview')">출력 미리보기</a>
-                    <a class="btn" href="#" onclick="window.print()">인쇄</a>
+                    <a class="btn" href="#" data-print-preview>출력 미리보기</a>
+                    <a class="btn" href="#" data-print-btn>인쇄</a>
                     <a class="btn" th:href="@{/plant/edit/{id}(id=${plant.plantId})}">수정</a>
                     <button class="btn danger" 
                             th:data-delete-url="@{/plant/delete/{id}(id=${plant.plantId})}"
@@ -54,25 +56,27 @@
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
                     <!-- 1행: 설비번호, 설비명 -->
-                    <div class="stack col-span-3"><div class="label">설비번호</div><div>EQP000123</div></div>
-                    <div class="stack col-span-9"><div class="label">설비명</div><div>순환 펌프</div></div>
+                    <div class="stack col-span-3"><div class="label">설비번호</div><div th:text="${plant.plantId}">EQP000123</div></div>
+                    <div class="stack col-span-9"><div class="label">설비명</div><div th:text="${plant.name}">순환 펌프</div></div>
                     <!-- 2행: 자산유형, Site, 관리부서, 기능위치 -->
-                    <div class="stack col-span-3"><div class="label">자산유형</div><div>EQPMT</div></div>
-                    <div class="stack col-span-3"><div class="label">Site</div><div>SEOUL</div></div>
-                    <div class="stack col-span-3"><div class="label">관리부서</div><div>설비과</div></div>
-                    <div class="stack col-span-3"><div class="label">기능위치</div><div>PMP</div></div>
-                    <!-- 3행: 비고 -->
-                    <div class="stack col-span-12"><div class="label">비고</div><div>정기점검 대상 설비</div></div>
+                    <div class="stack col-span-3"><div class="label">자산유형</div><div th:text="${plant.assetId ?: '-'}">EQPMT</div></div>
+                    <div class="stack col-span-3"><div class="label">Site</div><div th:text="${plant.siteId ?: '-'}">SEOUL</div></div>
+                    <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${plant.deptId ?: '-'}">설비과</div></div>
+                    <div class="stack col-span-3"><div class="label">기능위치</div><div th:text="${plant.funcId ?: '-'}">PMP</div></div>
+                    <!-- 3행: 상태 -->
+                    <div class="stack col-span-12"><div class="label">상태</div><div><span class="badge" th:text="${plant.status == 'ACTIVE' ? '정상' : '중지'}" th:classappend="${plant.status == 'ACTIVE' ? 'badge' : 'badge danger'}">정상</span></div></div>
+                    <!-- 4행: 비고 -->
+                    <div class="stack col-span-12"><div class="label">비고</div><div th:text="${plant.note ?: '-'}">정기점검 대상 설비</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">사양 / 모델</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-4"><div class="label">제조사</div><div>Acme</div></div>
-                    <div class="stack col-span-4"><div class="label">모델</div><div>AX-100</div></div>
-                    <div class="stack col-span-4"><div class="label">시리얼</div><div>SN123456</div></div>
-                    <div class="stack col-span-12"><div class="label">스펙</div><div class="notice">압력 10~30 bar, 용량 40 m³/h</div></div>
+                    <div class="stack col-span-4"><div class="label">제조사</div><div th:text="${plant.makerName ?: '-'}">Acme</div></div>
+                    <div class="stack col-span-4"><div class="label">모델</div><div th:text="${plant.model ?: '-'}">AX-100</div></div>
+                    <div class="stack col-span-4"><div class="label">시리얼</div><div th:text="${plant.serial ?: '-'}">SN123456</div></div>
+                    <div class="stack col-span-12"><div class="label">스펙</div><div th:text="${plant.spec ?: '-'}">압력 10~30 bar, 용량 40 m³/h</div></div>
                   </div>
                 </div>
 
@@ -80,24 +84,24 @@
                   <div class="section-title">설치 / 감가상각</div>
                   <div class="grid cols-12">
                     <!-- 1행: 설치일 단독 표시 -->
-                    <div class="stack col-span-12"><div class="label">설치일</div><div>2022-06-01</div></div>
+                    <div class="stack col-span-12"><div class="label">설치일</div><div th:text="${plant.installDate ?: '-'}">2022-06-01</div></div>
                     <!-- 2행: 감가유형, 감가기간, 취득가, 잔존가 -->
-                    <div class="stack col-span-3"><div class="label">감가유형</div><div>SL</div></div>
-                    <div class="stack col-span-3"><div class="label">감가기간(년)</div><div>10</div></div>
-                    <div class="stack col-span-3"><div class="label">취득가</div><div>120,000,000</div></div>
-                    <div class="stack col-span-3"><div class="label">잔존가</div><div>12,000,000</div></div>
+                    <div class="stack col-span-3"><div class="label">감가유형</div><div th:text="${plant.depreId ?: '-'}">SL</div></div>
+                    <div class="stack col-span-3"><div class="label">감가기간(년)</div><div th:text="${plant.deprePeriod ?: '-'}">10</div></div>
+                    <div class="stack col-span-3"><div class="label">취득가</div><div th:text="${plant.purchaseCost != null ? #numbers.formatInteger(plant.purchaseCost, 0, 'COMMA') : '-'}">120,000,000</div></div>
+                    <div class="stack col-span-3"><div class="label">잔존가</div><div th:text="${plant.residualValue != null ? #numbers.formatInteger(plant.residualValue, 0, 'COMMA') : '-'}">12,000,000</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">운영 / 안전</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-3"><div class="label">점검대상</div><div><span class="badge">Y</span></div></div>
-                    <div class="stack col-span-3"><div class="label">PSM 대상</div><div><span class="badge">N</span></div></div>
-                    <div class="stack col-span-3"><div class="label">작업허가 대상</div><div><span class="badge">Y</span></div></div>
-                    <div class="stack col-span-3"><div class="label">점검주기(개월)</div><div>3</div></div>
-                    <div class="stack col-span-3"><div class="label">최종 점검일</div><div>2025-01-01</div></div>
-                    <div class="stack col-span-3"><div class="label">다음 점검일</div><div>2025-04-01</div></div>
+                    <div class="stack col-span-3"><div class="label">점검대상</div><div><span class="badge" th:text="${plant.inspectionYn}" th:classappend="${plant.inspectionYn == 'Y' ? 'badge' : 'badge danger'}">Y</span></div></div>
+                    <div class="stack col-span-3"><div class="label">PSM 대상</div><div><span class="badge" th:text="${plant.psmYn}" th:classappend="${plant.psmYn == 'Y' ? 'badge danger' : 'badge'}">N</span></div></div>
+                    <div class="stack col-span-3"><div class="label">작업허가 대상</div><div><span class="badge" th:text="${plant.workpermitYn}" th:classappend="${plant.workpermitYn == 'Y' ? 'badge danger' : 'badge'}">Y</span></div></div>
+                    <div class="stack col-span-3"><div class="label">점검주기(개월)</div><div th:text="${plant.inspectionInterval ?: '-'}">3</div></div>
+                    <div class="stack col-span-3"><div class="label">최종 점검일</div><div th:text="${plant.lastInspection ?: '-'}">2025-01-01</div></div>
+                    <div class="stack col-span-3"><div class="label">다음 점검일</div><div th:text="${plant.nextInspection ?: '-'}">2025-04-01</div></div>
                   </div>
                 </div>
 
@@ -211,81 +215,13 @@
             </section>
           </div>
         </main>
+        
+        <!-- 인라인 스크립트는 plant.js로 이관됨 -->
       </section>
       <footer>
         <div class="container">© 설비 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      // 출력일 표기 및 미리보기 종료 핸들러
-      (function() {
-        var d = new Date();
-        var z = function(n){ return (n<10? ('0'+n) : n); };
-        var ts = d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
-        var el = document.getElementById('print-date');
-        if (el) el.textContent = ts;
-        window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
-        document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
-      })();
-
-      // Detail 페이지에서 첨부 파일 로드
-      document.addEventListener('DOMContentLoaded', () => {
-        const container = document.getElementById('attachments-container');
-        const fileGroupId = /*[[${plant.fileGroupId}]]*/ null;
-        
-        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
-        
-        if (container && fileGroupId) {
-          console.log('Loading attachments for fileGroupId:', fileGroupId);
-          loadAttachments(fileGroupId, container);
-        } else {
-          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
-        }
-      });
-
-      async function loadAttachments(fileGroupId, container) {
-        try {
-          console.log('Fetching files for groupId:', fileGroupId);
-          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
-          console.log('Response status:', response.status, 'ok:', response.ok);
-          
-          if (!response.ok) throw new Error('조회 실패');
-          
-          const result = await response.json();
-          console.log('API response:', result);
-          
-          if (result.items.length === 0) {
-            console.log('No files found, showing empty message');
-            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-            return;
-          }
-          
-          const list = document.createElement('ul');
-          list.className = 'attachments-list';
-          
-          console.log('Creating list for', result.items.length, 'files');
-          result.items.forEach(item => {
-            console.log('Adding file item:', item);
-            const li = document.createElement('li');
-            li.className = 'attachment-item';
-            li.innerHTML = `
-              <span class="file-name">${item.originalName}</span>
-              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-            `;
-            list.appendChild(li);
-          });
-          
-          console.log('Replacing container content with list');
-          container.innerHTML = '';
-          container.appendChild(list);
-          
-        } catch (error) {
-          console.error('Load attachments error:', error);
-          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-        }
-      }
-    </script>
+    
   </body>
   </html>

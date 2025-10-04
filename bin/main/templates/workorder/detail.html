@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>작업지시 상세 · CMMS</title>
+    
+    <!-- 공통 CSS 폴백 (서버 없이 디자인 확인용) -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
   </head>
@@ -15,10 +17,11 @@
           <div class="spacer"></div>
           <div class="meta">
             <span class="badge">memberId</span>
-            <span>운영팀</span>
+            <span>사용자</span>
           </div>
         </div>
       </header>
+      
       <nav class="breadcrumbs">
         <div class="container">
           <a th:href="@{#}" href="#">작업관리</a>
@@ -28,198 +31,134 @@
           <span>상세</span>
         </div>
       </nav>
+      
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="workorder-detail" data-module="workorder-detail"
+               th:attr="data-file-group-id=${workorder.fileGroupId},data-order-id=${workorder.orderId},data-print-enabled=true">
         <main>
-        <div class="container">
-          <section class="card">
-            <div class="card-header">
-              <div class="row" style="width:100%;justify-content:space-between">
+          <div class="container">
+            <section class="card">
+              <div class="card-header">
                 <div class="card-title">작업지시 상세</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/workorder/list}">목록</a>
-                  <a class="btn" href="#" onclick="document.body.classList.add('print-preview')">출력 미리보기</a>
-                  <a class="btn" href="#" onclick="window.print()">인쇄</a>
+                  <a class="btn" href="#" data-print-preview>출력 미리보기</a>
+                  <a class="btn" href="#" data-print>인쇄</a>
                   <a class="btn" th:href="@{/workorder/edit/{id}(id=${workorder.orderId})}">수정</a>
                   <button class="btn danger" 
                           th:data-delete-url="@{/workorder/delete/{id}(id=${workorder.orderId})}"
                           data-redirect="@{/workorder/list}"
-                          data-confirm="정말 삭제하시겠습니까?">삭제</button>
+                          data-confirm-message="정말 삭제하시겠습니까?">삭제</button>
                 </div>
               </div>
-            </div>
-            <div class="card-body">
-              <div class="section">
-                <div class="section-title">기본정보</div>
-                <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">작업지시 번호</div><div th:text="${workorder.orderId}">O250101001</div></div>
-                  <div class="stack col-span-9"><div class="label">작업명</div><div th:text="${workorder.name}">구동부 수리</div></div>
-                  <div class="stack col-span-3"><div class="label">설비 번호</div><div th:text="${workorder.plantId}">EQP000123</div></div>
-                  <div class="stack col-span-3"><div class="label">작업 유형</div><div th:text="${workorder.jobId}">REPR</div></div>
-                  <div class="stack col-span-3"><div class="label">Site</div><div th:text="${workorder.siteId}">SEOUL</div></div>
-                  <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${workorder.deptId}">설비팀</div></div>
+              <div class="card-body">
+                
+                <!-- 기본 정보 테이블 -->
+                <div class="section">
+                  <div class="section-title">기본 정보</div>
+                  <table class="table table-details">
+                    <tbody>
+                      <tr>
+                        <th class="table-col-name-small">작업지시 번호</th>
+                        <td th:text="${workorder.orderId}">O250101001</td>
+                        <th class="table-col-name-small">작업명</th>
+                        <td th:text="${workorder.name}">구동부 정비</td>
+                      </tr>
+                      <tr>
+                        <th class="table-col-name-small">설비 번호</th>
+                        <td th:text="${workorder.plantId}">EQP000123</td>
+                        <th class="table-col-name-small">작업유형</th>
+                        <td th:text="${workorder.jobId}">PM-001</td>
+                      </tr>
+                      <tr>
+                        <th class="table-col-name-small">계획일</th>
+                        <td th:text="${workorder.plannedDate}">2025-01-12</td>
+                        <th class="table-col-name-small">실적일</th>
+                        <td th:text="${workorder.actualDate}">2025-01-15</td>
+                      </tr>
+                      <tr>
+                        <th class="table-col-name-small">상태</th>
+                        <td colspan="3">
+                          <span class="badge" th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
+                                th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">배정</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </div>
 
-              <div class="section">
-                <div class="section-title">일정 / 담당 / 계획</div>
-                <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${workorder.memberId}">M0001</div></div>
-                  <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${workorder.plannedDate}">2025-01-12</div></div>
-                  <div class="stack col-span-3"><div class="label">계획비용</div><div th:text="${workorder.plannedCost}">120,000</div></div>
-                  <div class="stack col-span-3"><div class="label">계획공수</div><div th:text="${workorder.plannedLabor}">8.00</div></div>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">실적 / 비용</div>
-                <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${workorder.actualDate}">2025-01-15</div></div>
-                  <div class="stack col-span-3"><div class="label">실적비용</div><div th:text="${workorder.actualCost}">150,000</div></div>
-                  <div class="stack col-span-3"><div class="label">실적공수</div><div th:text="${workorder.actualLabor}">9.00</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div><span class="badge" th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
-                            th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">배정</span></div></div>
-                </div>
-                <div class="stack col-span-12"><div class="label">비고</div><div class="muted" th:text="${workorder.note ?: '-'}">-</div></div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">작업 항목</div>
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th style="width:44px">#</th>
-                      <th>이름</th>
-                      <th>방법</th>
-                      <th>결과</th>
-                      <th>비고</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="cell-center">1</td>
-                      <td>베어링 교체</td>
-                      <td>표준작업서 #12</td>
-                      <td>양호</td>
-                      <td>-</td>
-                    </tr>
-                    <tr>
-                      <td class="cell-center">2</td>
-                      <td>벨트 장력 조정</td>
-                      <td>토크렌치 사용</td>
-                      <td>완료</td>
-                      <td>소음 감소 확인</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="section">
-                <div class="section-title">첨부</div>
-                <div id="attachments-container" th:if="${workorder.fileGroupId}">
-                  <div class="loading">첨부 파일을 불러오는 중...</div>
-                </div>
-                <div th:unless="${workorder.fileGroupId}" class="notice">
-                  첨부된 파일이 없습니다.
-                </div>
-              </div>
-
-              <!-- 출력 문서 형식 -->
-              <section class="print-form" aria-hidden="true">
-                <div class="doc">
-                  <header class="doc-header">
-                    <div class="doc-title">작업지시서</div>
-                    <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
-                  </header>
-                  <div class="doc-body">
-                    <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span th:text="${workorder.orderId}">O250101001</span></div>
-                    <div class="row"><strong>작업명</strong><span class="spacer"></span><span th:text="${workorder.name}">구동부 수리</span></div>
-                    <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${workorder.plantId}">EQP000123</span></div>
-                    <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${workorder.plannedDate}">2025-01-12</span></div>
-                    <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${workorder.actualDate}">2025-01-15</span></div>
-                    <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}">배정</span></div>
+                <!-- 작업 항목 테이블 -->
+                <div class="section">
+                  <div class="section-title">작업 항목</div>
+                  <div class="data-table-container">
+                    <table class="table" data-table-readonly>
+                      <thead>
+                        <tr>
+                          <th class="table-col-number">#</th>
+                          <th>작업명</th>
+                          <th>작업방법</th>
+                          <th>결과</th>
+                          <th>메모</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
+                          <td class="cell-center" th:text="${iter.index + 1}">1</td>
+                          <td th:text="${item.name}">부품 교체</td>
+                          <td th:text="${item.method}">기준서 따라 교체</td>
+                          <td th:text="${item.result}">정상 교체 완료</td>
+                          <td th:text="${item.note}">특이사항 없음</td>
+                        </tr>
+                        <tr th:if="${items == null or items.empty}">
+                          <td colspan="5" class="cell-center muted">작업 항목이 없습니다.</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              </section>
-            </div>
-          </section>
-        </div>
+
+                <!-- 첨부파일 섹션 -->
+                <div class="section">
+                  <div class="section-title">첨부파일</div>
+                  <div id="attachments-container" data-attachments-display 
+                       th:attr="data-file-group-id=${workorder.fileGroupId}">
+                    <div th:if="${workorder.fileGroupId}">
+                      <div class="loading">첨부 파일을 불러오는 중...</div>
+                    </div>
+                    <div th:unless="${workorder.fileGroupId}" class="notice">
+                      첨부된 파일이 없습니다.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 출력 문서 양식 (인쇄용) -->
+                <section class="print-form" aria-hidden="true">
+                  <div class="doc">
+                    <header class="doc-header">
+                      <div class="doc-title">작업지시서</div>
+                      <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
+                    </header>
+                    <div class="doc-body">
+                      <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span th:text="${workorder.orderId}">O250101001</span></div>
+                      <div class="row"><strong>작업명</strong><span class="spacer"></span><span th:text="${workorder.name}">구동부 정비</span></div>
+                      <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${workorder.plantId}">EQP000123</span></div>
+                      <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${workorder.plannedDate}">2025-01-12</span></div>
+                      <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${workorder.actualDate}">2025-01-15</span></div>
+                      <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}">배정</span></div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
         </main>
       </section>
+      
       <footer>
         <div class="container">© 작업관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      // 출력일 표기 및 미리보기 종료 핸들러
-      (function() {
-        var d = new Date();
-        var z = function(n){ return (n<10? ('0'+n) : n); };
-        var ts = d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
-        var el = document.getElementById('print-date');
-        if (el) el.textContent = ts;
-        window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
-        document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
-      })();
-
-      // Detail 페이지에서 첨부 파일 로드
-      document.addEventListener('DOMContentLoaded', () => {
-        const container = document.getElementById('attachments-container');
-        const fileGroupId = /*[[${workorder.fileGroupId}]]*/ null;
-        
-        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
-        
-        if (container && fileGroupId) {
-          console.log('Loading attachments for fileGroupId:', fileGroupId);
-          loadAttachments(fileGroupId, container);
-        } else {
-          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
-        }
-      });
-
-      async function loadAttachments(fileGroupId, container) {
-        try {
-          console.log('Fetching files for groupId:', fileGroupId);
-          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
-          console.log('Response status:', response.status, 'ok:', response.ok);
-          
-          if (!response.ok) throw new Error('조회 실패');
-          
-          const result = await response.json();
-          console.log('API response:', result);
-          
-          if (result.items.length === 0) {
-            console.log('No files found, showing empty message');
-            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-            return;
-          }
-          
-          const list = document.createElement('ul');
-          list.className = 'attachments-list';
-          
-          console.log('Creating list for', result.items.length, 'files');
-          result.items.forEach(item => {
-            console.log('Adding file item:', item);
-            const li = document.createElement('li');
-            li.className = 'attachment-item';
-            li.innerHTML = `
-              <span class="file-name">${item.originalName}</span>
-              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-            `;
-            list.appendChild(li);
-          });
-          
-          console.log('Replacing container content with list');
-          container.innerHTML = '';
-          container.appendChild(list);
-          
-        } catch (error) {
-          console.error('Load attachments error:', error);
-          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-        }
-      }
-    </script>
+    
+    <!-- JavaScript 로드는 defaultLayout에서 통합 관리됨 -->
   </body>
-  </html>
+</html>

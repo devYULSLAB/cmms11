@@ -34,6 +34,12 @@ public class Member {
     @Column(name = "site_id", length = 5)
     private String siteId;
 
+    @Column(length = 50)
+    private String position;
+
+    @Column(length = 50)
+    private String title;
+
     @Column(length = 500)
     private String note;
 

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * 이름: InspectionRequest
@@ -29,6 +30,7 @@ public record InspectionRequest(
     @Valid List<InspectionItemRequest> items
 ) {
     public InspectionRequest {
-        items = items == null ? List.of() : List.copyOf(items);
+        // Ensure a mutable list so Spring's DataBinder can grow items[index]
+        items = (items == null) ? new ArrayList<>() : new ArrayList<>(items);
     }
 }

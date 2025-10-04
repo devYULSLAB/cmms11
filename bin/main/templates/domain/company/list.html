@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>회사 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-company-list" data-module="domain-company-list">
         <main>
           <div class="container">
             <section class="card">
@@ -38,7 +40,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <div class="section">
+                <!-- <div class="section">
                   <div class="section-title">필터</div>
                   <div class="grid cols-12">
                     <div class="col-span-3">
@@ -50,22 +52,22 @@
                     <div class="col-span-3">
                       <input class="input" placeholder="사업자등록번호" />
                     </div>
-                    <div class="col-span-3" style="display:flex;gap:8px;justify-content:flex-end">
+                    <div class="col-span-3 search-actions">
                       <button class="btn">초기화</button>
                       <button class="btn">검색</button>
                     </div>
                   </div>
-                </div>
+                </div> -->
 
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:120px">회사코드</th>
-                      <th>회사명</th>
-                      <th style="width:140px">사업자등록번호</th>
-                      <th>비고</th>
-                      <th style="width:120px">상태</th>
-                      <th style="width:140px">액션</th>
+                      <th class="table-col-id-medium">회사코드</th>
+                      <th class="table-col-name-medium">회사명</th>
+                      <th class="table-col-id-large">사업자등록번호</th>
+                      <th class="table-col-info-small">비고</th>
+                      <th class="table-col-type-medium">상태</th>
+                      <th class="table-col-action-medium">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -88,7 +90,7 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-small">
                   <div class="spacer"></div>
                   <div class="pagination">
                     <button class="btn sm" disabled>이전</button>
@@ -104,6 +106,6 @@
         <div class="container">© 기본정보</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>

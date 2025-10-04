@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>게시/메모 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -28,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="memo-form" data-module="memo-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/memo/save}" data-redirect="@{/memo/list}">
+                <form data-validate method="post" th:action="@{/memo/save}" data-redirect="@{/memo/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -101,8 +103,8 @@
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-medium">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -118,7 +120,7 @@
         <div class="container">© 문서/게시</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

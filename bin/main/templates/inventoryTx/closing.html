@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>재고 마감 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-tx-closing" data-module="inventory-tx-closing">
         <main>
           <div class="container">
             <section class="card">
@@ -38,114 +40,92 @@
                 </div>
               </div>
               <div class="card-body">
+                <!-- 성공/에러 메시지 표시 -->
+                <div th:if="${successMessage}" class="alert alert-success">
+                  <span th:text="${successMessage}">성공 메시지</span>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger">
+                  <span th:text="${errorMessage}">에러 메시지</span>
+                </div>
+                
                 <div class="section">
-                  <div class="section-title">마감 선택</div>
-                  <div class="grid cols-12">
-                    <div class="form-row col-span-3">
-                      <label class="label required" for="yyyymm">마감월 </label>
-                      <input id="yyyymm" class="input" type="month" required />
+                  <div class="section-title">마감 조회</div>
+                  <form method="get" th:action="@{/inventoryTx/closing}">
+                    <div class="grid cols-12">
+                      <div class="form-row col-span-3">
+                        <label class="label required" for="yyyymm">마감월 </label>
+                        <input id="yyyymm" name="yyyymm" class="input" type="month" th:value="${yyyymm}" required />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label required" for="storageId">창고</label>
+                        <input id="storageId" name="storageId" class="input" maxlength="5" placeholder="예: S0001" th:value="${storageId}" required />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label" for="inventoryId">재고번호(선택)</label>
+                        <input id="inventoryId" name="inventoryId" class="input" maxlength="10" placeholder="예: INV000012" th:value="${inventoryId}" />
+                      </div>
                     </div>
-                    <div class="form-row col-span-3">
-                      <label class="label required" for="storage_id">창고</label>
-                      <input id="storage_id" class="input" maxlength="5" placeholder="예: S0001" required />
+                    <div class="actions actions-left-align actions-top-small">
+                      <button class="btn" type="submit">조회</button>
                     </div>
-                    <div class="form-row col-span-3">
-                      <label class="label" for="inventory_id">재고번호(선택)</label>
-                      <input id="inventory_id" class="input" maxlength="10" placeholder="예: INV000012" />
+                  </form>
+                </div>
+                
+                <div class="section">
+                  <div class="section-title">마감 수행</div>
+                  <form method="post" th:action="@{/inventoryTx/closing}" onsubmit="return confirmClosing()">
+                    <input type="hidden" name="_csrf" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="yyyymm" th:value="${yyyymm}" />
+                    <input type="hidden" name="storageId" th:value="${storageId}" />
+                    <input type="hidden" name="inventoryId" th:value="${inventoryId}" />
+                    <div class="actions actions-left-align actions-top-small">
+                      <button class="btn primary" type="submit" th:disabled="${yyyymm == null}">마감 수행</button>
                     </div>
-                  </div>
-                  <div class="grid cols-12">
-                    <div class="form-row col-span-12"><span class="danger-text" style="font-weight:100; font-size:12px; white-space:nowrap">(당월은 수행불가능)</span></div>
-                  </div>
-                  <div class="actions" style="justify-content:flex-start;margin-top:8px">
-                    <button class="btn" id="btn-refresh" type="button">조회</button>
-                    <button class="btn primary" id="btn-close" type="button">마감 수행</button>
-                  </div>
-                  <div class="help">마감은 이전월까지만 가능합니다. (예: 오늘이 2025-09 이면 2025-08까지 가능)</div>
+                    <div class="help">마감은 이전월까지만 가능합니다. (예: 오늘이 2025-09 이면 2025-08까지 가능)</div>
+                  </form>
                 </div>
 
-                <div class="section">
+                <div class="section" th:if="${closingList != null}">
                   <div class="section-title">마감 상세</div>
-                  <div class="notice" id="begin-summary">기초: 수량 -, 금액 -</div>
                   <table class="table">
                     <thead>
                       <tr>
-                        <th style="width:100px">창고</th>
-                        <th style="width:140px">재고번호</th>
-                        <th style="width:120px">날짜</th>
-                        <th style="width:100px">구분</th>
-                        <th class="cell-right" style="width:120px">수량</th>
-                        <th class="cell-right" style="width:140px">금액</th>
+                        <th class="table-col-id-small">창고</th>
+                        <th class="table-col-id-large">재고번호</th>
+                        <th class="cell-right table-col-amount-medium">기초수량</th>
+                        <th class="cell-right table-col-amount-small">입고</th>
+                        <th class="cell-right table-col-amount-small">출고</th>
+                        <th class="cell-right table-col-amount-medium">기말수량</th>
+                        <th class="cell-right table-col-amount-large">기말금액</th>
                       </tr>
                     </thead>
-                    <tbody id="closing-body">
-                      <tr>
-                        <td>S0001</td>
-                        <td>INV000012</td>
-                        <td>2025-08-03</td>
-                        <td>입고</td>
-                        <td class="cell-right">10.000</td>
-                        <td class="cell-right">100,000.00</td>
+                    <tbody>
+                      <tr th:if="${#lists.isEmpty(closingList)}">
+                        <td colspan="7" class="cell-center muted">마감 데이터가 없습니다.</td>
                       </tr>
-                      <tr>
-                        <td>S0001</td>
-                        <td>INV000012</td>
-                        <td>2025-08-10</td>
-                        <td>출고</td>
-                        <td class="cell-right">5.000</td>
-                        <td class="cell-right">50,000.00</td>
-                      </tr>
-                      <tr>
-                        <td>S0001</td>
-                        <td>INV000012</td>
-                        <td>2025-08-15</td>
-                        <td>이동</td>
-                        <td class="cell-right">3.000</td>
-                        <td class="cell-right">-</td>
-                      </tr>
-                      <tr>
-                        <td>S0001</td>
-                        <td>INV000012</td>
-                        <td>2025-08-20</td>
-                        <td>조정</td>
-                        <td class="cell-right">2.000</td>
-                        <td class="cell-right">20,000.00</td>
+                      <tr th:each="closing : ${closingList}">
+                        <td th:text="${closing.storageId()}">-</td>
+                        <td th:text="${closing.inventoryId()}">-</td>
+                        <td class="cell-right" th:text="${#numbers.formatDecimal(closing.beginQty(), 1, 3)}">0.000</td>
+                        <td class="cell-right" th:text="${#numbers.formatDecimal(closing.inQty(), 1, 3)}">0.000</td>
+                        <td class="cell-right" th:text="${#numbers.formatDecimal(closing.outQty(), 1, 3)}">0.000</td>
+                        <td class="cell-right" th:text="${#numbers.formatDecimal(closing.endQty(), 1, 3)}">0.000</td>
+                        <td class="cell-right" th:text="${#numbers.formatDecimal(closing.endAmount(), 2, 2)}">0.00</td>
                       </tr>
                     </tbody>
                   </table>
-                  <div class="notice" id="end-summary" style="margin-top:8px">기말: 수량 -, 금액 -</div>
                 </div>
               </div>
             </section>
           </div>
         </main>
+        
+        <!-- 인라인 스크립트는 inventory-tx.js로 이관됨 -->
       </section>
       <footer>
         <div class="container">© 재고 마감</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const y = document.getElementById('yyyymm');
-        const btnClose = document.getElementById('btn-close');
-        function maxMonthStr() {
-          const d = new Date();
-          // previous month
-          const year = d.getMonth() === 0 ? d.getFullYear()-1 : d.getFullYear();
-          const month = d.getMonth() === 0 ? 12 : d.getMonth(); // 1..12
-          const mm = String(month).padStart(2,'0');
-          return `${year}-${mm}`; // input[type=month] format
-        }
-        const maxStr = maxMonthStr();
-        if (y) y.max = maxStr;
-        btnClose?.addEventListener('click', () => {
-          if (!y?.value) { alert('마감월을 선택하세요'); return; }
-          if (y.value > maxStr) { alert('현재월은 마감할 수 없습니다. 이전월까지만 가능합니다.'); return; }
-          if (!document.getElementById('storage_id')?.value) { alert('창고를 선택하세요'); return; }
-          alert(`마감 수행: ${y.value.replace('-','')}`);
-        });
-      });
-    </script>
+    
   </body>
   </html>

@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>자재/재고 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -28,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-form" data-module="inventory-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/inventory/save}" data-redirect="@{/inventory/list}">
+                <form data-validate method="post" th:action="@{/inventory/save}" data-redirect="@{/inventory/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -76,7 +78,7 @@
                           <option value="">선택</option>
                           <option th:each="dept : ${depts}"
                                   th:value="${dept.deptId}"
-                                  th:text="${dept.deptId + ' - ' + dept.deptName}"
+                                  th:text="${dept.deptId + ' - ' + dept.name}"
                                   th:selected="${inventory.deptId == dept.deptId}">
                           </option>
                         </select>
@@ -150,7 +152,7 @@
         <div class="container">© 자재/재고</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

@@ -1,36 +1,51 @@
+/* CSS 변수 정의 (CSS Custom Properties) */
 :root{
-  /* palette */
+  /* 색상 팔레트 - 일관된 컬러 시스템 유지 */
   --bg:#ffffff;--fg:#111827;--muted:#6b7280;--border:#e5e7eb;--primary:#2563eb;--primary-600:#1d4ed8;--danger:#dc2626;--surface:#f9fafb;--focus:#93c5fd;
-  /* spacing (8px scale) */
+  /* 간격 단위 (8px 기준 스케일) - 리듬감 있는 레이아웃을 위함 */
   --space-2:2px;--space-4:4px;--space-8:8px;--space-12:12px;--space-16:16px;--space-20:20px;--space-24:24px;--space-32:32px;
-  /* sizing */
+  /* 크기 정의 */
   --h-input:36px;--radius:8px;--container:1200px;
 }
+
+/* 전역 리셋 및 기본 스타일 */
 *{box-sizing:border-box}
 html,body{height:100%}
+
+/* 본문 기본 스타일 - 모던 웹 폰트 스택 사용 */
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";color:var(--fg);background:var(--bg);line-height:1.5}
+
+/* 링크 스타일 */
 a{color:var(--primary);text-decoration:none}
 a:hover{text-decoration:underline}
 
+/* 레이아웃 구조 */
 .container{max-width:var(--container);margin:0 auto;padding:var(--space-24)}
 .page{display:flex;min-height:100vh;flex-direction:column}
+
+/* 헤더 메뉴바 스타일 */
 header.appbar{border-bottom:1px solid var(--border);background:var(--surface)}
 header .appbar-inner{display:flex;align-items:center;gap:var(--space-16);padding:var(--space-12) var(--space-24)}
 .brand{font-weight:600}
 .spacer{flex:1}
 
+/* 브레드크럼 스타일 */
 nav.breadcrumbs{border-bottom:1px solid var(--border);background:#fff}
 nav.breadcrumbs .container{padding-top:var(--space-12);padding-bottom:var(--space-12)}
 .breadcrumbs a,.breadcrumbs span{font-size:14px;color:var(--muted)}
 .breadcrumbs .sep{margin:0 6px;color:var(--border)}
 
+/* 메인 콘텐츠 영역 */
 main{flex:1}
+
+/* 카드 컴포넌트 */
 .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
 .card .card-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-16) var(--space-20);border-bottom:1px solid var(--border)}
 .card .card-title{font-weight:600}
 .card .card-body{padding:var(--space-16) var(--space-20)}
 .toolbar{display:flex;flex-wrap:wrap;gap:var(--space-8)}
 
+/* 버튼 컴포넌트 */
 .btn{display:inline-flex;align-items:center;gap:var(--space-8);border:1px solid var(--border);background:#fff;color:var(--fg);padding:var(--space-8) var(--space-12);border-radius:6px;font-size:14px;cursor:pointer}
 .btn:hover{background:var(--surface)}
 .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
@@ -39,13 +54,16 @@ main{flex:1}
 .btn.danger:hover{background:#fff5f5}
 .btn.sm{padding:6px 10px;font-size:13px}
 
+/* 폼 입력 요소 */
 .input,select,textarea{width:100%;height:var(--h-input);padding:0 10px;border:1px solid var(--border);border-radius:6px;background:#fff}
 .input:focus,select:focus,textarea:focus{outline:2px solid var(--focus);outline-offset:1px}
 .input[readonly],.input:disabled{background:#f3f4f6}
 textarea{height:auto;min-height:100px;padding:8px 10px;resize:vertical}
 
+/* 그리드 레이아웃 시스템 - 12열 반응형 그리드 */
 .grid{display:grid;gap:var(--space-12);margin-bottom:var(--space-12)}
-/* 12-col responsive grid */
+
+/* 12열 그리드 컬럼 정의 */
 .grid.cols-12{grid-template-columns:repeat(12,minmax(0,1fr))}
 .col-span-12{grid-column:span 12}
 .col-span-9{grid-column:span 9}
@@ -54,55 +72,243 @@ textarea{height:auto;min-height:100px;padding:8px 10px;resize:vertical}
 .col-span-4{grid-column:span 4}
 .col-span-3{grid-column:span 3}
 .col-span-2{grid-column:span 2}
+
+/* 2열, 3열 그리드 */
 .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-@media (max-width: 860px){.grid.cols-2,.grid.cols-3{grid-template-columns:1fr}}
+
+/* 모바일 반응형 미디어 쿼리 */
 @media (max-width: 860px){
+  .grid.cols-2,.grid.cols-3{grid-template-columns:1fr}
   .grid.cols-12{grid-template-columns:1fr}
   .col-span-6,.col-span-4,.col-span-3{grid-column:span 1}
 }
 
+/* 폼 레이아웃 */
 .form-row{display:grid;grid-template-columns:90px 1fr;gap:var(--space-12);align-items:center}
 @media (max-width: 720px){.form-row{grid-template-columns:1fr}}
 .label{font-size:14px;color:var(--muted)}
 .required::after{content:" *";color:var(--danger)}
 .help{font-size:12px;color:var(--muted)}
-.actions{display:flex;gap:10px;justify-content:flex-end}
 
+/* =============================================================================
+ * ACTION BUTTON GROUPS STANDARDIZATION
+ * =============================================================================
+ * 액션 버튼 그룹의 기본 스타일과 마진 변형 클래스들
+ * 기존 인라인 style="margin-top:XXpx", style="justify-content:XX" 사용을 표준화
+ */
+
+.actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:16px; /* 표준 마진 추가 */
+}
+
+/* 마진 크기별 변형 클래스 */
+.actions-top-small{
+  margin-top:8px; /* 작은 여백 - 기존: style="margin-top:8px" */
+}
+
+.actions-top-medium{
+  margin-top:12px; /* 중간 여백 - 기존: style="margin-top:12px" */
+}
+
+.actions-top-large{
+  margin-top:20px; /* 큰 여백 */
+}
+
+/* 정렬 방향별 변형 클래스 */
+.actions-left-align{
+  justify-content:flex-start; /* 좌측 정렬 - 기존: style="justify-content:flex-start" */
+}
+
+.actions-center-align{
+  justify-content:center; /* 중앙 정렬 */
+}
+
+.actions-space-between{
+  justify-content:space-between; /* 양 끝 정렬 - 기존: style="justify-content:space-between" */
+}
+
+/* 액션 버튼 크기별 마진 조정 */
+.actions.compact{
+  gap:6px; /* 작은 간격 */
+}
+
+.actions.loose{
+  gap:16px; /* 넓은 간격 */
+}
+
+/* 테이블 스타일 */
 table.table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 table.table thead th{background:var(--surface);text-align:left;font-weight:600;font-size:13px;padding:10px;border-bottom:1px solid var(--border);color:#374151}
 table.table tbody td{padding:10px;border-bottom:1px solid var(--border);font-size:14px}
 table.table tbody tr:hover{background:#fafafa}
 .cell-right{text-align:right}
-.cell-center{text-align:center}
+.cell-center {text-align:center}
 
+/* =============================================================================
+ * TABLE COLUMN WIDTH STANDARDS
+ * =============================================================================
+ * 인라인 스타일 대신 재사용 가능한 테이블 컬럼 너비 클래스
+ * 기존 인라인 style="width:XXXpx" 사용을 이 클래스들로 표준화
+ * 사용법: <th class="table-col-number">순번</th>
+ */
+
+/* 숫자/순번 컬럼 (기존: style="width:44px") */
+.table-col-number{
+  width:44px;
+}
+
+/* 좁은 컬럼 (기존: style="width:60px") - 순서, 일련번호 등 */
+.table-col-narrow{
+  width:60px;
+}
+
+/* 상태 컬럼 (기존: style="width:80px") - 진행, 완료 등 */
+.table-col-status{
+  width:80px;
+}
+
+/* 코드/ID 컬럼 (기존: style="width:120px") - 사용자ID, 부서코드 등 */
+.table-col-code{
+  width:120px;
+}
+
+/* 짧은 이름 컬럼 (기존: style="width:140px") - 설비번호, 메모번호 등 */
+.table-col-name-short{
+  width:140px;
+}
+
+/* 액션 컬럼 (기존: style="width:140px") - 수정/삭제 버튼 */
+.table-col-action{
+  width:140px;
+}
+
+/* 날짜 컬럼 (기본: style="width:140px", 확장: 160px) */
+.table-col-date{
+  width:140px;
+}
+
+.table-col-date-wide{
+  width:160px;
+}
+
+/* 긴 이름/정보 컬럼 (기존: style="width:200px") - 설비명, 상세정보 등 */
+.table-col-name-long{
+  width:200px;
+}
+
+/* 주소/상세정보 컬럼 (기존: style="width:220px") - 주소, 규격 등 */
+.table-col-info-long{
+  width:220px;
+}
+
+/* 필터링 및 검색 */
 .filters{display:flex;flex-wrap:wrap;gap:var(--space-8)}
 .search{display:flex;gap:8px}
 .search .input{width:260px}
 
+/* 메타데이터 및 상태 표시 */
 .meta{display:flex;gap:12px;color:var(--muted);font-size:13px}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px;color:#374151;background:#fff}
 .badge.success{color:#166534;border-color:#bbf7d0;background:#f0fdf4}
 .badge.warn{color:#92400e;border-color:#fed7aa;background:#fffbeb}
 
+/* 페이지네이션 */
 .pagination{display:flex;gap:var(--space-8);justify-content:flex-end}
 .pagination .btn{padding:6px 10px}
 
+/* 푸터 */
 footer{border-top:1px solid var(--border);background:var(--surface)}
 footer .container{padding-top:12px;padding-bottom:12px;color:var(--muted);font-size:13px}
 
+/* 알림 및 메시지 */
 .notice{padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:14px}
 .danger-text{color:var(--danger)}
 
-.stack{display:flex;flex-direction:column;gap:6px}
-.row{display:flex;align-items:center;gap:10px}
+/* =============================================================================
+ * FLEXBOX LAYOUT STANDARDIZATION  
+ * =============================================================================
+ * 플렉스 레이아웃과 흔히 사용되는 조합들을 표준화
+ * 기존 인라인 flex 스타일을 재사용 가능한 클래스로 통합
+ */
 
-/* Sections */
+.stack{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* =============================================================================
+ * COMMON FLEX PATTERNS
+ * =============================================================================
+ * 템플릿에서 자주 사용되는 플렉스 조합들을 클래스화
+ */
+
+/* 전체 너비 플렉스 (기존: style="width:100%;justify-content:space-between") */
+.full-width-flex{
+  width:100%;
+  justify-content:space-between;
+}
+
+/* 헤더 메타 정보 플렉스 (기존: style="display:flex;gap:XXpx") */
+.meta-flex{
+  display:flex;
+  gap:12px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* 좌측 정렬 버튼 그룹 */
+.row-left-align{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:flex-start;
+}
+
+/* 우측 정렬 버튼 그룹 (기존: style="margin-top:8px;justify-content:flex-end") */
+.row-right-align{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+
+/* 세로 스택에 간격 추가 */
+.stack-small{
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-8);
+}
+
+.stack-medium{
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-12);
+}
+
+.stack-large{
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-16);
+}
+
+/* 섹션 및 컨텐츠 구분 */
 .section{display:flex;flex-direction:column;gap:var(--space-12);margin-bottom:var(--space-24)}
 .section-title{font-weight:600;color:#111827}
 .section-desc{font-size:13px;color:var(--muted)}
 
-/* Attachments */
+/* 첨부파일 관리 */
 .attachments{display:flex;flex-direction:column;gap:var(--space-8)}
 .attachments .hint{font-size:12px;color:var(--muted);margin-top:var(--space-4)}
 .attachments-list{list-style:none;margin:var(--space-12) 0 0 0;padding:0;border:1px solid var(--border);border-radius:6px;background:#fff;width:100%}
@@ -115,9 +321,11 @@ footer .container{padding-top:12px;padding-bottom:12px;color:var(--muted);font-s
 .attachment-item .btn-download:hover{background:var(--primary-600);text-decoration:none}
 .attachment-item .btn-remove{padding:var(--space-4) var(--space-8);font-size:12px;background:#fff;border:1px solid #fecaca;color:var(--danger);border-radius:4px;cursor:pointer}
 .attachment-item .btn-remove:hover{background:#fff5f5}
+
+/* 접근성 지원 */
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-/* File upload widget enhancements */
+/* 파일 업로드 위젯 강화 기능 */
 [data-attachments] {
   border: 2px dashed var(--border);
   border-radius: var(--radius);
@@ -149,7 +357,7 @@ footer .container{padding-top:12px;padding-bottom:12px;color:var(--muted);font-s
   color: #dc2626;
 }
 
-/* Print styles */
+/* 인쇄 스타일 */
 @media print{
   header,nav,.toolbar,.pagination,footer{display:none !important}
   .container{max-width:none;padding:0}

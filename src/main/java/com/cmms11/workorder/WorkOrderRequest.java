@@ -1,8 +1,11 @@
 package com.cmms11.workorder;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 이름: WorkOrderRequest
@@ -27,6 +30,10 @@ public record WorkOrderRequest(
     BigDecimal actualLabor,
     @Size(max = 10) String status,
     @Size(max = 10) String fileGroupId,
-    @Size(max = 500) String note
+    @Size(max = 500) String note,
+    @Valid List<WorkOrderItemRequest> items
 ) {
+    public WorkOrderRequest {
+        items = (items == null) ? new ArrayList<>() : new ArrayList<>(items);
+    }
 }

@@ -4,47 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CMMS · Layout</title>
-    <link rel="stylesheet" href="../assets/css/base.css" />
-    <style>
-      html, body { height: 100%; overflow: hidden; }
-      /* Layout grid to keep footer fixed at bottom and content sized */
-      .layout {
-        display: grid;
-        grid-template-areas:
-          "header header"
-          "sidebar content"
-          "footer footer";
-        grid-template-rows: auto 1fr auto;
-        grid-template-columns: 250px 1fr;
-        height: 100vh; /* lock viewport height so only content scrolls */
-      }
-      .header { grid-area: header; }
-      .sidebar { grid-area: sidebar; border-right:1px solid var(--border); padding:12px; overflow:auto; }
-      .content { grid-area: content; overflow:auto; -webkit-overflow-scrolling: touch; }
-      .footer { grid-area: footer; }
-      /* Ensure a consistent visual height even when content is sparse */
-      #layout-slot { min-height: 480px; }
-      /* Sidebar menu */
-      .sidemenu { display:block; }
-      .menu-group { margin-bottom: 8px; border-radius: 6px; }
-      .menu-title { display:flex; align-items:center; width:100%; padding:8px 10px; background: var(--bg-subtle); border:1px solid var(--border); border-radius:6px; cursor:pointer; font-weight:600; color:var(--fg); }
-      .menu-title:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
-      .menu-items { padding:6px 8px 4px 12px; }
-      .menu-group:not(.open) .menu-items { display:none; }
-      .menu-item { display:block; padding:6px 4px; color: var(--fg); text-decoration: none; border-radius:4px; }
-      .menu-item:hover { background: var(--bg-subtle); }
-      .menu-item.active { background: var(--accent-a10); color: var(--accent-contrast); }
-      @media (max-width: 860px){
-        .layout {
-          grid-template-areas:
-            "header"
-            "content"
-            "footer";
-          grid-template-columns: 1fr;
-        }
-        .sidebar { display:none; }
-      }
-    </style>
+    <link rel="stylesheet" th:href="@{/assets/css/base.css}" href="../../static/assets/css/base.css" />
+    <link rel="stylesheet" th:href="@{/assets/css/print.css}" href="../../static/assets/css/print.css" />
+    <link rel="stylesheet" th:href="@{/assets/css/layout.css}" href="../../static/assets/css/layout.css" />
+    <!-- layout styles moved to /assets/css/layout.css -->
   </head>
   <body>
     <div class="layout">
@@ -53,12 +16,40 @@
           <div class="brand">CMMS</div>
           <div class="spacer"></div>
           <nav class="meta">
-            <span id="user-info" style="margin-right:12px;color:var(--fg-muted)" 
-                  th:text="${isAuthenticated ? (memberId + ':' + companyId) : '게스트 사용자'}">사용자</span>
-            <a class="btn sm" th:href="@{/api/auth/logout}" href="/api/auth/logout" data-hard-nav>로그아웃</a>
+            <!-- 사용자 정보 영역 표준화: 인라인 스타일을 CSS 클래스로 변경 -->
+            <div class="user-info-group">
+              <div th:if="${isAuthenticated}" class="user-profile">
+                <div class="user-name" th:text="${memberId + ' (' + companyId + ')'}">사용자</div>
+                <div class="user-detail" th:text="'부서: ' + ${deptId ?: '-'} + ' / 사이트: ' + ${siteId ?: '-'}">-</div>
+              </div>
+              <span th:if="${!isAuthenticated}" class="guest-user">게스트 사용자</span>
+              <div class="user-actions">
+                <button th:if="${isAuthenticated}" class="btn sm" type="button" id="btn-profile-edit" title="내 정보 수정">⚙️</button>
+                <a class="btn sm" th:href="@{/api/auth/logout}" href="/api/auth/logout" data-hard-nav>로그아웃</a>
+              </div>
+            </div>
           </nav>
         </div>
       </header>
+      <!-- 
+        사이드바 네비게이션 - 라우터 네비게이션 링크 통합
+        
+        [라우터 통합 방식]
+        - 링크 클릭 시 페이지 새로고침 없이 동적 콘텐츠 교체
+        - href 속성은 브라우저 기본 기능과 서버 사이드 렌더링 호환성 유지
+        - JavaScript 네비게이션이 우선 동작하며, 실패 시 기본 브라우저 동작으로 폴백
+        
+        [SPA 네비게이션 동작]
+        1. 링크 클릭 → 기본 이벤트 방지
+        2. href URL 분석 → 적절한 콘텐츠 요청
+        3. 서버 응답 처리 → layout-slot에 동적 삽입  
+        4. URL 동기화 → 브라우저 주소창 업데이트
+        5. 페이지 스크립트 실행 → 새 콘텐츠 초기화
+        
+        [폴백 메커니즘]
+        JavaScript 비활성화 시 기본 브라우저 링크 동작으로 자동 전환
+        서버 측 핸들러와 완벽히 호환되는 견고한 구조
+      -->
       <aside class="sidebar">
         <nav class="sidemenu">
           <!-- 설비 마스터 -->
@@ -84,7 +75,7 @@
           <div class="menu-group" data-group>
             <button type="button" class="menu-title" aria-expanded="false">점검관리</button>
             <div class="menu-items">
-              <a class="menu-item" th:href="@{/inspection/plan}" href="/inspection/plan">계획</a>
+              <a class="menu-item" th:href="@{/inspection/plan}" href="/inspection/plan">계획수립</a>
               <a class="menu-item" th:href="@{/inspection/form}" href="/inspection/form">등록(결과)</a>
               <a class="menu-item" th:href="@{/inspection/list}" href="/inspection/list">목록</a>
             </div>
@@ -94,7 +85,9 @@
           <div class="menu-group" data-group>
             <button type="button" class="menu-title" aria-expanded="false">작업관리</button>
             <div class="menu-items">
-              <a class="menu-item" th:href="@{/workorder/form}" href="/workorder/form">등록(결과)</a>
+              <a class="menu-item" th:href="@{/workorder/form(mode=plan)}" href="/workorder/form?mode=plan">계획 등록</a>
+              <a class="menu-item" th:href="@{/workorder/form(mode=actual)}" href="/workorder/form?mode=actual">실적 입력</a>
+              <a class="menu-item" th:href="@{/workorder/form(mode=all)}" href="/workorder/form?mode=all">전체 등록</a>
               <a class="menu-item" th:href="@{/workorder/list}" href="/workorder/list">목록</a>
             </div>
           </div>
@@ -158,18 +151,94 @@
           </div>
         </nav>
       </aside>
+      <!-- 
+        메인 콘텐츠 영역 - SPA 라우터 시스템의 핵심 동작 원리
+        
+        [SPA 라우터 동작 방식]
+        1. 초기 페이지 로드 시: content 파라미터로 지정된 페이지가 이 슬롯에 삽입됨
+        2. 네비게이션 시: app.js의 navigation.navigate()가 새 콘텐츠를 이 슬롯에 동적 삽입
+        3. 페이지 전환: DOM 조작을 통해 기존 콘텐츠를 새 콘텐츠로 교체
+        
+        [라우터 라이프사이클]
+        - 요청 URL → 서버가 계산한 content 경로 → 이 슬롯에 렌더링
+        - 예: /workorder/list → content="/workorder/list" → 레이아웃 슬롯에 삽입
+      -->
       <main class="content">
         <div class="container">
-          <div id="layout-slot"></div>
+          <!-- 
+            라우터 슬롯 (Router Slot)
+            
+            이 div가 실제 페이지 콘텐츠가 동적으로 삽입되는 위치입니다.
+            
+            [동작 원리]
+            - 초기 로드: 서버에서 계산된 content가 이 요소의 innerHTML에 삽입됨
+            - SPA 네비게이션: JavaScript가 새로운 콘텐츠를 이 요소에 동적으로 주입
+            
+            [데이터 바인딩]
+            - content: 서버에서 계산된 현재 페이지 경로 (예: "/workorder/list")
+            - JavaScript에서는 window.cmms.navigation.currentContentUrl로 접근 가능
+            
+            [이벤트 생명주기]
+            1. DOMContentLoaded: 초기 콘텐츠 로드 완료
+            2. SPA 네비그이션: 콘텐츠 교체 및 관련 이벤트 발생
+            3. 페이지 스크립트 실행: 새로운 콘텐츠의 JavaScript 자동 초기화
+          -->
+          <div id="layout-slot" data-slot-root></div>
         </div>
       </main>
       <footer class="footer">
         <div class="container">© CMMS</div>
       </footer>
     </div>
-    <script src="../assets/js/app.js"></script>
+    <!-- 
+      핵심 라이브러리 로드 순서 (의존성 중요)
+      
+      [1단계] app.js - SPA 라우터 시스템의 핵심
+      - window.cmms.navigation: 라우터 네비게이션 관리
+      - window.cmms.pages: 페이지별 초기화 시스템  
+      - window.cmms.csrf: 서버 통신 보안 처리
+      - DOM 조작을 통한 동적 콘텐츠 교체 메커니즘
+      
+      [2단계] common.js - 공통 컴포넌트 (app.js 확장)
+      - 조건부 로딩된 각 페이지 모듈들이 사용하는 표준 컴포넌트
+      - TableManager, FormManager, DataLoader 등 유틸리티 제공
+      - app.js의 기능을 확장하여 페이지별 특화 로직 지원
+    -->
+    <script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
+    <script th:src="@{/assets/js/common.js}" src="../../static/assets/js/common.js"></script>
+    
+    <!-- 
+      모듈 동적 로딩 시스템 - SPA 전용
+      
+      [변경 사항]
+      - 조건부 스크립트 로딩을 app.js의 동적 로더로 대체
+      - 초기 렌더 시점에 모든 모듈을 로드하지 않음
+      - 첫 방문 시에만 필요한 모듈을 동적으로 로드
+      
+      [성능 최적화 효과]
+      - 초기 로딩 시간 단축 (모든 모듈을 한 번에 로드하지 않음)
+      - 메모리 사용량 감소 (필요한 모듈만 로드)
+      - 네트워크 트래픽 최소화 (온디맨드 로딩)
+    -->
+    
     <!-- file-widget.js는 S3 기반 업로드용이므로 현재 로컬 저장 시스템에서는 사용하지 않음 -->
     <!-- <script src="../assets/js/file-widget.js"></script> -->
+    
+    <!-- 
+      라우터 시스템 초기화 - SPA 네비게이션 엔진 가동
+      
+      [초기화 순서]
+      1. DOM Ready 대기: 모든 기본 라이브러리 로드 완료 후 시작
+      2. 네비게이션 엔진 활성화: window.cmms.navigation.init() 호출
+      3. 이벤트 리스너 등록: 모든 내비게이션 링크에 SPA 동작 바인딩
+      4. 초기 상태 설정: 현재 페이지 정보 및 히스토리 상태 관리
+      
+      [라우터 핵심 기능]
+      - 동적 콘텐츠 교체: layout-slot 기반 페이지 전환
+      - 히스토리 관리: 브라우저 뒤로/앞으로 버튼 호환성
+      - URL 동기화: 사용자 친화적 주소창 표시
+      - 이벤트 버블링: 페이지 전환 시 관련 이젠트 자동 발생
+    -->
     <script>
       // 네비게이션 시스템 초기화
       document.addEventListener('DOMContentLoaded', () => {
@@ -177,10 +246,60 @@
       });
     </script>
     
-    <!-- Thymeleaf로 전달된 콘텐츠 URL을 JavaScript에서 사용할 수 있도록 설정 -->
+    <!-- 
+      서버-클라이언트 라우터 데이터 바인딩 - 양방향 통신 설정
+      
+      [데이터 전달 메커니즘]
+      서버 측 레이아웃 컨트롤러(LayoutController)에서 Thymeleaf로 계산된 값을
+      JavaScript 전역 변수로 직접 주입하여 라우터 시스템이 인식할 수 있도록 함
+      
+      [라우터 중심 데이터]
+      - content: 현재 렌더링 중인 페이지 경로 (서버 측 계산됨)
+      - 이 값이 조건부 JavaScript 로딩의 판단 기준이 됨
+      - SPA 네비게이션 시 초기 상태 추적에 사용됨
+      
+      [폴백 처리]
+      서버 없이 디자인 미리보기가 가능하도록 각 변수마다 기본값 제공
+      Thymeleaf 인라인 JavaScript가 처리되지 않을 때의 대체값 설정
+    -->
     <script th:inline="javascript">
       // 서버에서 전달된 콘텐츠 URL을 JavaScript 변수로 설정
       window.initialContent = /*[[${content}]]*/ '/plant/list.html';
+      
+      // 파일 업로드 설정을 JavaScript 변수로 설정 (서버에서 직접 전달)
+      window.fileUploadConfig = {
+        maxSize: /*[[${fileUploadConfig.maxSize}]]*/ 10485760,
+        allowedExtensions: /*[[${fileUploadConfig.allowedExtensions}]]*/ ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'hwp', 'hwpx', 'zip', 'txt'],
+        maxSizeFormatted: /*[[${fileUploadConfig.maxSizeFormatted}]]*/ '10MB',
+        profile: /*[[${fileUploadConfig.profile}]]*/ 'default'
+      };
+      console.log('파일 업로드 설정 로드됨:', window.fileUploadConfig);
+      console.log('현재 프로파일:', window.fileUploadConfig.profile);
     </script>
+    
+    <script>
+      // 내 정보 수정 팝업
+      document.getElementById('btn-profile-edit')?.addEventListener('click', () => {
+        const width = 700;
+        const height = 650;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        
+        const popup = window.open(
+          '/common/profile-edit',
+          'profileEdit',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+        
+        // 팝업이 닫힐 때 페이지 새로고침 (정보 업데이트 반영)
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.location.reload();
+          }
+        }, 500);
+      });
+    </script>
+
   </body>
   </html>

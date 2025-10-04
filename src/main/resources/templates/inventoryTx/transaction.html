@@ -4,13 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>재고 거래 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <style>
       .tabs{display:flex;gap:8px;flex-wrap:wrap}
       .tab-btn{padding:6px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer}
       .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
-      .tx-panel{display:none}
-      .tx-panel.active{display:block}
+      .section.tx-panel{display:none !important}
+      .section.tx-panel.active{display:block !important}
     </style>
   </head>
   <body>
@@ -33,7 +35,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-tx-transaction" data-module="inventory-tx-transaction">
         <main>
           <div class="container">
             <section class="card">
@@ -53,25 +55,25 @@
                   </div>
                 </div>
 
-                <form data-validate>
-
-
+                <form data-validate id="txForm">
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                  <input type="hidden" id="txType" name="txType" value="IN" />
+                  
                   <!-- 입고: inventory_history.in_qty, unit_cost, amount; stock 가산 -->
                   <div class="section tx-panel active" data-panel="IN">
                     <div class="section-title">입고</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="in_tx_date">일자</label>
-                        <input id="in_tx_date" name="txDate" class="input" type="date" required />
+                        <label class="label required" for="txDate">일자</label>
+                        <input id="txDate" name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="in_inventory_id">재고번호</label>
-                        <input id="in_inventory_id" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <label class="label required" for="inventoryId">재고번호</label>
+                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="in_storage_id">창고</label>
-                        <select id="in_storage_id" name="storageId" required>
+                        <label class="label required" for="storageId">창고</label>
+                        <select id="storageId" name="storageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -82,22 +84,22 @@
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="in_qty">수량</label>
-                        <input id="in_qty" name="inQty" class="input" type="number" step="0.001" min="0" required />
+                        <label class="label required" for="inQty">수량</label>
+                        <input id="inQty" name="inQty" class="input" type="number" step="0.001" min="0" required />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="in_unit_cost">단가</label>
-                        <input id="in_unit_cost" name="unitCost" class="input" type="number" step="0.000001" min="0" />
+                        <label class="label" for="unitCost">단가</label>
+                        <input id="unitCost" name="unitCost" class="input" type="number" step="0.000001" min="0" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="in_amount">금액</label>
-                        <input id="in_amount" name="amount" class="input" type="number" step="0.01" min="0" />
+                        <label class="label" for="amount">금액</label>
+                        <input id="amount" name="amount" class="input" type="number" step="0.01" min="0" />
                       </div>
                     </div>
                     <div class="grid cols-12">                    
                       <div class="form-row col-span-6">
-                        <label class="label" for="in_note">비고</label>
-                        <input id="in_note" name="note" class="input" maxlength="500" />
+                        <label class="label" for="note">비고</label>
+                        <input id="note" name="note" class="input" maxlength="500" />
                       </div>
                     </div>
                   </div>
@@ -107,16 +109,16 @@
                     <div class="section-title">출고</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="out_tx_date">일자</label>
-                        <input id="out_tx_date" name="txDate" class="input" type="date" required />
+                        <label class="label required" for="txDate">일자</label>
+                        <input id="txDate" name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="out_inventory_id">재고번호</label>
-                        <input id="out_inventory_id" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <label class="label required" for="inventoryId">재고번호</label>
+                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="out_storage_id">창고</label>
-                        <select id="out_storage_id" name="storageId" required>
+                        <label class="label required" for="storageId">창고</label>
+                        <select id="storageId" name="storageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -125,14 +127,14 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="out_qty">수량</label>
-                        <input id="out_qty" name="outQty" class="input" type="number" step="0.001" min="0" required />
+                        <label class="label required" for="outQty">수량</label>
+                        <input id="outQty" name="outQty" class="input" type="number" step="0.001" min="0" required />
                       </div>
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-6">
-                        <label class="label" for="out_note">비고</label>
-                        <input id="out_note" name="note" class="input" maxlength="500" />
+                        <label class="label" for="note">비고</label>
+                        <input id="note" name="note" class="input" maxlength="500" />
                       </div>
                     </div>
                   </div>
@@ -142,16 +144,16 @@
                     <div class="section-title">이동</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="mv_tx_date">일자</label>
-                        <input id="mv_tx_date" name="txDate" class="input" type="date" required />
+                        <label class="label required" for="txDate">일자</label>
+                        <input id="txDate" name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="mv_inventory_id">재고번호</label>
-                        <input id="mv_inventory_id" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <label class="label required" for="inventoryId">재고번호</label>
+                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="mv_src_storage_id">출고 창고</label>
-                        <select id="mv_src_storage_id" name="srcStorageId" required>
+                        <label class="label required" for="srcStorageId">출고 창고</label>
+                        <select id="srcStorageId" name="srcStorageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -160,8 +162,8 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="mv_dst_storage_id">입고 창고</label>
-                        <select id="mv_dst_storage_id" name="dstStorageId" required>
+                        <label class="label required" for="dstStorageId">입고 창고</label>
+                        <select id="dstStorageId" name="dstStorageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -172,12 +174,12 @@
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="mv_qty">수량</label>
-                        <input id="mv_qty" name="moveQty" class="input" type="number" step="0.001" min="0" required />
+                        <label class="label required" for="moveQty">수량</label>
+                        <input id="moveQty" name="moveQty" class="input" type="number" step="0.001" min="0" required />
                       </div>
                       <div class="form-row col-span-9">
-                        <label class="label" for="mv_note">비고</label>
-                        <input id="mv_note" name="note" class="input" maxlength="500" />
+                        <label class="label" for="note">비고</label>
+                        <input id="note" name="note" class="input" maxlength="500" />
                       </div>
                     </div>
                   </div>
@@ -187,16 +189,16 @@
                     <div class="section-title">조정</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="adj_tx_date">일자</label>
-                        <input id="adj_tx_date" name="txDate" class="input" type="date" required />
+                        <label class="label required" for="txDate">일자</label>
+                        <input id="txDate" name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="adj_inventory_id">재고번호</label>
-                        <input id="adj_inventory_id" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <label class="label required" for="inventoryId">재고번호</label>
+                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="adj_storage_id">창고</label>
-                        <select id="adj_storage_id" name="storageId" required>
+                        <label class="label required" for="storageId">창고</label>
+                        <select id="storageId" name="storageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -205,23 +207,23 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="adj_qty">조정 수량(±)</label>
-                        <input id="adj_qty" name="adjQty" class="input" type="number" step="0.001" />
+                        <label class="label" for="adjQty">조정 수량(±)</label>
+                        <input id="adjQty" name="adjQty" class="input" type="number" step="0.001" />
                       </div>
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label" for="adj_amount">조정 금액(±)</label>
-                        <input id="adj_amount" name="adjAmount" class="input" type="number" step="0.01" />
+                        <label class="label" for="adjAmount">조정 금액(±)</label>
+                        <input id="adjAmount" name="adjAmount" class="input" type="number" step="0.01" />
                       </div>
                       <div class="form-row col-span-9">
-                        <label class="label" for="adj_note">비고</label>
-                        <input id="adj_note" name="note" class="input" maxlength="500" />
+                        <label class="label" for="note">비고</label>
+                        <input id="note" name="note" class="input" maxlength="500" />
                       </div>
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
+                  <div class="actions actions-top-medium">
                     <button class="btn" type="button" onclick="history.back()">취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">저장</button>
@@ -233,15 +235,15 @@
                   <table class="table">
                     <thead>
                       <tr>
-                        <th style="width:120px">일자</th>
-                        <th style="width:80px">유형</th>
-                        <th style="width:140px">재고번호</th>
-                        <th style="width:100px">창고</th>
-                        <th class="cell-right" style="width:100px">입고수량</th>
-                        <th class="cell-right" style="width:100px">출고수량</th>
-                        <th class="cell-right" style="width:120px">단가</th>
-                        <th class="cell-right" style="width:120px">금액</th>
-                        <th>비고</th>
+                        <th class="table-col-date-small">일자</th>
+                        <th class="table-col-type-medium">유형</th>
+                        <th class="table-col-id-large">재고번호</th>
+                        <th class="table-col-id-small">창고</th>
+                        <th class="cell-right table-col-amount-small">입고수량</th>
+                        <th class="cell-right table-col-amount-small">출고수량</th>
+                        <th class="cell-right table-col-amount-medium">단가</th>
+                        <th class="cell-right table-col-amount-medium">금액</th>
+                        <th class="table-col-info-small">비고</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -263,25 +265,15 @@
             </section>
           </div>
         </main>
+        
+        <!-- 인라인 스크립트는 inventory-tx.js로 이관됨 -->
+        
       </section>
       <footer>
         <div class="container">© 재고거래</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const tabs = document.querySelectorAll('.tab-btn');
-        const panels = document.querySelectorAll('.tx-panel');
-        tabs.forEach(btn => btn.addEventListener('click', () => {
-          tabs.forEach(b=>b.classList.remove('active'));
-          panels.forEach(p=>p.classList.remove('active'));
-          btn.classList.add('active');
-          const t = btn.getAttribute('data-tab');
-          document.querySelector(`.tx-panel[data-panel="${t}"]`)?.classList.add('active');
-        }));
-      });
-    </script>
+    
   </body>
   </html>
 

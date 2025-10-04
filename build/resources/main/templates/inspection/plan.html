@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>점검 계획 수립 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -65,9 +67,24 @@
                           <td class="cell-center line-no">1</td>
                           <td><input class="input" name="inspections[0].name" required maxlength="100" placeholder="예: 설비A 월간점검" /></td>
                           <td><input class="input" name="inspections[0].plant_id" maxlength="10" placeholder="예: EQP000123" /></td>
-                          <td><input class="input" name="inspections[0].job_id" maxlength="5" placeholder="예: INSP" /></td>
-                          <td><input class="input" name="inspections[0].site_id" maxlength="5" placeholder="예: SEOUL" /></td>
-                          <td><input class="input" name="inspections[0].dept_id" maxlength="5" placeholder="예: EQ" /></td>
+                          <td>
+                            <select class="input" name="inspections[0].job_id">
+                              <option value="">(선택)</option>
+                              <option th:each="job : ${jobTypes}" th:value="${job.code}" th:text="${job.code}">INSP</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select class="input" name="inspections[0].site_id">
+                              <option value="">(선택)</option>
+                              <option th:each="site : ${sites}" th:value="${site.siteId}" th:text="${site.siteId}">SEOUL</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select class="input" name="inspections[0].dept_id">
+                              <option value="">(선택)</option>
+                              <option th:each="dept : ${depts}" th:value="${dept.deptId}" th:text="${dept.deptId}">EQ</option>
+                            </select>
+                          </td>
                           <td><input class="input" name="inspections[0].member_id" maxlength="5" placeholder="예: M0001" /></td>
                           <td><input class="input" name="inspections[0].planned_date" type="date" required /></td>
                           <td class="cell-center">
@@ -97,7 +114,7 @@
         <div class="container">© 점검 계획</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const section = document.querySelector('[data-plan-items]');
@@ -122,21 +139,26 @@
 
         function addRow() {
           const i = tbody.querySelectorAll('.plan-item-row').length;
-          const tr = document.createElement('tr');
+          const firstRow = tbody.querySelector('.plan-item-row');
+          if (!firstRow) return;
+          
+          const tr = firstRow.cloneNode(true);
           tr.className = 'plan-item-row';
-          tr.innerHTML = `
-            <td class="cell-center line-no">${i + 1}</td>
-            <td><input class="input" name="inspections[${i}].name" required maxlength="100" placeholder="예: 설비A 월간점검" /></td>
-            <td><input class="input" name="inspections[${i}].plant_id" maxlength="10" placeholder="예: EQP000123" /></td>
-            <td><input class="input" name="inspections[${i}].job_id" maxlength="5" placeholder="예: INSP" /></td>
-            <td><input class="input" name="inspections[${i}].site_id" maxlength="5" placeholder="예: SEOUL" /></td>
-            <td><input class="input" name="inspections[${i}].dept_id" maxlength="5" placeholder="예: EQ" /></td>
-            <td><input class="input" name="inspections[${i}].member_id" maxlength="5" placeholder="예: M0001" /></td>
-            <td><input class="input" name="inspections[${i}].planned_date" type="date" required /></td>
-            <td class="cell-center">
-              <button type="button" class="btn sm danger" data-remove-item>삭제</button>
-              <input type="hidden" name="inspections[${i}].status" value="PLAN" />
-            </td>`;
+          
+          // 모든 input/select 필드 초기화
+          tr.querySelectorAll('input[type="text"], input[type="date"]').forEach(inp => inp.value = '');
+          tr.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
+          
+          // name 속성 업데이트
+          tr.querySelectorAll('input, select').forEach(el => {
+            const field = el.name.split('.').pop();
+            el.name = `inspections[${i}].${field}`;
+          });
+          
+          // 삭제 버튼 표시
+          const delBtn = tr.querySelector('[data-remove-item]');
+          if (delBtn) delBtn.style.display = 'inline-flex';
+          
           tbody.appendChild(tr);
           attachRowHandlers(tr);
           renumber();

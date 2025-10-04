@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>작업지시 목록 · CMMS</title>
+    
+    <!-- 공통 CSS 폴백 (서버 없이 디자인 확인용) -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -18,6 +20,7 @@
           </div>
         </div>
       </header>
+      
       <nav class="breadcrumbs">
         <div class="container">
           <a th:href="@{#}" href="#">작업관리</a>
@@ -25,83 +28,103 @@
           <span>작업지시</span>
         </div>
       </nav>
+      
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="workorder/list" data-module="workorder-list">
         <main>
           <div class="container">
             <section class="card">
               <div class="card-header">
                 <div class="card-title">작업지시 목록</div>
                 <div class="toolbar">
-                  <a class="btn" th:href="@{#}" href="#">정보보기</a>
-                  <a class="btn primary" th:href="@{/workorder/form}">새로 만들기</a>
+                  <a class="btn primary" th:href="@{/workorder/form}">새로운 작업지시</a>
                 </div>
               </div>
               <div class="card-body">
+                <!-- 필터 섹션 -->
                 <div class="section">
                   <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-3"><input class="input" placeholder="작업지시 번호" /></div>
-                    <div class="col-span-3"><input class="input" placeholder="설비 번호" /></div>
-                    <div class="col-span-2">
-                      <select class="input">
-                        <option value="">상태(전체)</option>
-                        <option value="PLAN">계획</option>
-                        <option value="ASGN">배정</option>
-                        <option value="PROC">진행</option>
-                        <option value="DONE">완료</option>
-                      </select>
+                  <form method="get" th:action="@{/workorder/list}" data-form-search>
+                    <div class="grid cols-12">
+                      <div class="col-span-3">
+                        <input class="input" placeholder="작업지시 번호" name="orderId" th:value="${orderId}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="설비 번호" name="plantId" th:value="${plantId}" />
+                      </div>
+                      <div class="col-span-2">
+                        <select class="input" name="status">
+                          <option value="">상태(전체)</option>
+                          <option value="PLAN" th:selected="${status == 'PLAN'}">계획</option>
+                          <option value="ASGN" th:selected="${status == 'ASGN'}">배정</option>
+                          <option value="PROC" th:selected="${status == 'PROC'}">진행</option>
+                          <option value="DONE" th:selected="${status == 'DONE'}">완료</option>
+                        </select>
+                      </div>
+                      <div class="col-span-2">
+                        <input class="input" type="date" name="plannedDateFrom" th:value="${plannedDateFrom}" title="계획일(From)" />
+                      </div>
+                      <div class="col-span-2">
+                        <input class="input" type="date" name="plannedDateTo" th:value="${plannedDateTo}" title="계획일(To)" />
+                      </div>
                     </div>
-                    <div class="col-span-2"><input class="input" type="date" title="계획일(From)" /></div>
-                    <div class="col-span-2"><input class="input" type="date" title="계획일(To)" /></div>
-                  </div>
-                  <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
-                    <button class="btn">초기화</button>
-                    <button class="btn">검색</button>
-                  </div>
+                    <div class="actions actions-right">
+                      <button type="button" class="btn" data-reset-form>초기화</button>
+                      <button type="submit" class="btn primary">검색</button>
+                    </div>
+                  </form>
                 </div>
 
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th style="width:140px">작업지시 번호</th>
-                      <th>작업명</th>
-                      <th style="width:140px">설비 번호</th>
-                      <th style="width:100px">작업유형</th>
-                      <th style="width:120px">계획일</th>
-                      <th style="width:120px">실적일</th>
-                      <th style="width:100px">상태</th>
-                      <th style="width:140px">액션</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr th:each="workorder : ${page.content}">
-                      <td><a th:href="@{/workorder/edit/{id}(id=${workorder.orderId})}" th:text="${workorder.orderId}">-</a></td>
-                      <td th:text="${workorder.name}">-</td>
-                      <td th:text="${workorder.plantId}">-</td>
-                      <td th:text="${workorder.jobId}">-</td>
-                      <td th:text="${workorder.plannedDate}">-</td>
-                      <td th:text="${workorder.actualDate}">-</td>
-                      <td>
-                        <span class="badge" th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
-                              th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">-</span>
-                      </td>
-                      <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/workorder/edit/{id}(id=${workorder.orderId})}">수정</a>
-                        <button class="btn btn-sm danger" 
-                                th:data-delete-url="@{/workorder/delete/{id}(id=${workorder.orderId})}"
-                                data-redirect="@{/workorder/list}"
-                                data-confirm="정말로 삭제하시겠습니까?">삭제</button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <!-- 목록 테이블 -->
+                <div class="data-table-container">
+                  <table class="table" data-table-list>
+                    <thead>
+                      <tr>
+                        <th class="table-col-code">작업지시 번호</th>
+                        <th>작업명</th>
+                        <th class="table-col-code">설비 번호</th>
+                        <th class="table-col-status">작업유형</th>
+                        <th class="table-col-date">계획일</th>
+                        <th class="table-col-date">실적일</th>
+                        <th class="table-col-status">상태</th>
+                        <th class="table-col-action">액션</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr th:each="workorder : ${page.content}" data-row-item>
+                        <td><a th:href="@{/workorder/detail/{id}(id=${workorder.orderId})}" th:text="${workorder.orderId}">-</a></td>
+                        <td th:text="${workorder.name}">-</td>
+                        <td th:text="${workorder.plantId}">-</td>
+                        <td th:text="${workorder.jobId}">-</td>
+                        <td th:text="${workorder.plannedDate}">-</td>
+                        <td th:text="${workorder.actualDate}">-</td>
+                        <td>
+                          <span class="badge" 
+                                th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
+                                th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">상태</span>
+                        </td>
+                        <td class="actions">
+                          <a class="btn btn-sm" th:href="@{/workorder/edit/{id}(id=${workorder.orderId})}">수정</a>
+                          <button class="btn btn-sm danger" 
+                                  th:data-delete-url="@{/workorder/delete/{id}(id=${workorder.orderId})}"
+                                  data-redirect="@{/workorder/list}"
+                                  data-confirm-message="정말로 삭제하시겠습니까?">삭제</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                <div class="row" style="margin-top:12px">
-                  <div class="spacer"></div>
-                  <div class="pagination">
-                    <button class="btn sm" disabled>이전</button>
-                    <button class="btn sm">다음</button>
+                  <!-- 페이지네이션 -->
+                  <div class="pagination-container" data-pagination>
+                    <div class="pagination">
+                      <button class="btn sm" th:disabled="${page.first}" 
+                              th:data-url="@{/workorder/list(page=${page.number - 1}, orderId=${orderId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
+                              data-nav-button="prev">이전</button>
+                      <span class="pagination-info" th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+                      <button class="btn sm" th:disabled="${page.last}" 
+                              th:data-url="@{/workorder/list(page=${page.number + 1}, orderId=${orderId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
+                              data-nav-button="next">다음</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -109,11 +132,12 @@
           </div>
         </main>
       </section>
+      
       <footer>
         <div class="container">© 작업관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
+    <!-- JavaScript 로드는 defaultLayout에서 통합 관리됨 -->
   </body>
-  </html>
-
+</html>

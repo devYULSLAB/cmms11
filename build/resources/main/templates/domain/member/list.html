@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>사용자 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -38,6 +40,7 @@
                 </div>
               </div>
               <div class="card-body">
+                <!-- 기존 필터 (주석 처리)
                 <div class="section">
                   <div class="section-title">필터</div>
                   <div class="grid cols-12">
@@ -61,16 +64,37 @@
                     </div>
                   </div>
                 </div>
+                -->
+                
+                <!-- 통합 검색 (q 파라미터 사용) -->
+                <div class="section">
+                  <div class="section-title">검색</div>
+                  <form method="get" th:action="@{/domain/member/list}">
+                    <div class="grid cols-12">
+                      <div class="col-span-9">
+                        <input class="input" 
+                               name="q" 
+                               th:value="${keyword}"
+                               placeholder="통합 검색 (사용자ID, 이름)" />
+                      </div>
+                      <div class="col-span-3" style="display:flex;gap:8px;justify-content:flex-end">
+                        <a class="btn" th:href="@{/domain/member/list}">초기화</a>
+                        <button type="submit" class="btn primary">검색</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
 
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:120px">사용자ID</th>
-                      <th>이름</th>
-                      <th style="width:140px">부서</th>
+                      <th style="width:100px">사용자ID</th>
+                      <th style="width:120px">이름</th>
+                      <th style="width:120px">부서</th>
+                      <th style="width:100px">직급</th>
+                      <th style="width:100px">직책</th>
                       <th style="width:200px">이메일</th>
-                      <th style="width:100px">사이트</th>
-                      <th style="width:100px">상태</th>
+                      <th style="width:80px">상태</th>
                       <th style="width:140px">액션</th>
                     </tr>
                   </thead>
@@ -79,8 +103,9 @@
                       <td><a th:href="@{/domain/member/edit/{id}(id=${member.memberId})}" th:text="${member.memberId}">-</a></td>
                       <td th:text="${member.name}">-</td>
                       <td th:text="${member.deptId}">-</td>
+                      <td th:text="${member.position ?: '-'}">-</td>
+                      <td th:text="${member.title ?: '-'}">-</td>
                       <td th:text="${member.email}">-</td>
-                      <td th:text="${member.siteId}">-</td>
                       <td>
                         <span class="badge" th:text="${member.deleteMark == 'N' ? '정상' : '중지'}" th:classappend="${member.deleteMark == 'N' ? 'badge' : 'badge danger'}">-</span>
                       </td>
@@ -111,7 +136,7 @@
         <div class="container">© 사용자 관리</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

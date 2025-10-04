@@ -18,4 +18,6 @@ public interface MemberRepository extends JpaRepository<Member, MemberId> {
                         @Param("deleteMark") String deleteMark,
                         @Param("q") String q,
                         Pageable pageable);
+    
+    Page<Member> findByIdCompanyIdAndDeptIdAndDeleteMark(String companyId, String deptId, String deleteMark, Pageable pageable);
 }

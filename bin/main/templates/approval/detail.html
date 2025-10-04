@@ -4,16 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>결재 상세 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
-    <style>
-      .doc-header{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-      .doc-title{font-size:20px;font-weight:700}
-      .meta-row{display:flex;gap:16px;color:var(--fg-muted)}
-      .approval-line{margin-top:12px}
-      .doc-body{padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-      .attachments a{display:inline-block;margin-right:8px}
-    </style>
+    <!-- 인라인 스타일 제거됨 - base.css로 이관 -->
   </head>
   <body>
     <div class="page">
@@ -37,9 +32,10 @@
       </nav>
       <main>
         <div class="container">
+          <section data-slot-root th:fragment="content" data-page="approval-detail" data-module="approval-detail">
           <section class="card">
             <div class="card-header">
-              <div class="row" style="width:100%;justify-content:space-between">
+              <div class="row actions-space-between">
                 <div class="card-title">결재 상세</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/approval/list}">목록</a>
@@ -64,45 +60,36 @@
                   <div>상태: <span class="badge" th:text="${approval.status == 'DRAFT' ? '작성중' : approval.status == 'SUBMITTED' ? '상신' : approval.status == 'IN_PROGRESS' ? '결재중' : approval.status == 'APPROVED' ? '완결' : '반려'}" 
                             th:classappend="${approval.status == 'DRAFT' ? 'badge' : approval.status == 'SUBMITTED' ? 'badge warning' : approval.status == 'IN_PROGRESS' ? 'badge warning' : approval.status == 'APPROVED' ? 'badge success' : 'badge danger'}">결재중</span></div>
                 </div>
-                <div class="approval-line">
+                <div class="approval-line" th:if="${approval.steps != null and !approval.steps.isEmpty()}">
                   <table class="table">
                     <thead>
                       <tr>
-                        <th style="width:60px">순서</th>
-                        <th>결재자</th>
-                        <th style="width:120px">구분</th>
-                        <th style="width:120px">결과</th>
-                        <th style="width:180px">일시</th>
-                        <th>의견</th>
+                        <th class="table-col-number">순서</th>
+                        <th class="table-col-name-medium">결재자</th>
+                        <th class="table-col-type-medium">구분</th>
+                        <th class="table-col-type-medium">결과</th>
+                        <th class="table-col-date-large">일시</th>
+                        <th class="table-col-info-small">의견</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>1</td>
-                        <td>kim (김철수)</td>
-                        <td>합의</td>
-                        <td><span class="badge">완료</span></td>
-                        <td>2025-09-01 12:00</td>
-                        <td>검토 완료</td>
-                      </tr>
-                      <tr>
-                        <td>2</td>
-                        <td>lee (이영희)</td>
-                        <td>결재</td>
-                        <td><span class="badge">대기</span></td>
-                        <td>-</td>
-                        <td></td>
-                      </tr>
-                      <tr>
-                        <td>3</td>
-                        <td>park (박민수)</td>
-                        <td>통보</td>
-                        <td><span class="badge">대기</span></td>
-                        <td>-</td>
-                        <td></td>
+                      <tr th:each="step, iterStat : ${approval.steps}">
+                        <td th:text="${step.stepNo}">1</td>
+                        <td th:text="${step.memberId}">-</td>
+                        <td th:text="${step.decision == 'APPROVAL' ? '결재' : step.decision == 'AGREE' ? '합의' : '통보'}">결재</td>
+                        <td>
+                          <span class="badge" 
+                                th:text="${step.decidedAt != null ? '완료' : '대기'}"
+                                th:classappend="${step.decidedAt != null ? 'badge success' : 'badge'}">대기</span>
+                        </td>
+                        <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
+                        <td th:text="${step.comment ?: ''}">-</td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+                <div class="notice" th:if="${approval.steps == null or approval.steps.isEmpty()}">
+                  결재선이 설정되지 않았습니다.
                 </div>
               </div>
 
@@ -113,12 +100,17 @@
                 <p>4. 비고: 설치 일정은 추후 협의</p>
               </div>
 
-              <div class="section" style="margin-top:12px">
+              <div class="section actions-top-small">
                 <div class="section-title">첨부</div>
-                <div id="attachments-container" th:if="${approval.fileGroupId}">
-                  <div class="loading">첨부 파일을 불러오는 중...</div>
-                </div>
-                <div th:unless="${approval.fileGroupId}" class="notice">
+                <ul class="attachments-list" th:if="${attachments != null and !attachments.isEmpty()}">
+                  <li class="attachment-item" th:each="file : ${attachments}">
+                    <span class="file-name" th:text="${file.originalName}">파일명.pdf</span>
+                    <span class="file-size" th:text="${#numbers.formatDecimal(file.size / 1024.0, 1, 1)} + ' KB'">100 KB</span>
+                    <a th:href="@{/api/files/{fileId}(fileId=${file.fileId}, groupId=${approval.fileGroupId})}" 
+                       class="btn-download" target="_blank">다운로드</a>
+                  </li>
+                </ul>
+                <div th:if="${attachments == null or attachments.isEmpty()}" class="notice">
                   첨부된 파일이 없습니다.
                 </div>
               </div>
@@ -130,66 +122,6 @@
         <div class="container">© 전자결재</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      // Detail 페이지에서 첨부 파일 로드
-      document.addEventListener('DOMContentLoaded', () => {
-        const container = document.getElementById('attachments-container');
-        const fileGroupId = /*[[${approval.fileGroupId}]]*/ null;
-        
-        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
-        
-        if (container && fileGroupId) {
-          console.log('Loading attachments for fileGroupId:', fileGroupId);
-          loadAttachments(fileGroupId, container);
-        } else {
-          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
-        }
-      });
-
-      async function loadAttachments(fileGroupId, container) {
-        try {
-          console.log('Fetching files for groupId:', fileGroupId);
-          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
-          console.log('Response status:', response.status, 'ok:', response.ok);
-          
-          if (!response.ok) throw new Error('조회 실패');
-          
-          const result = await response.json();
-          console.log('API response:', result);
-          
-          if (result.items.length === 0) {
-            console.log('No files found, showing empty message');
-            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-            return;
-          }
-          
-          const list = document.createElement('ul');
-          list.className = 'attachments-list';
-          
-          console.log('Creating list for', result.items.length, 'files');
-          result.items.forEach(item => {
-            console.log('Adding file item:', item);
-            const li = document.createElement('li');
-            li.className = 'attachment-item';
-            li.innerHTML = `
-              <span class="file-name">${item.originalName}</span>
-              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-            `;
-            list.appendChild(li);
-          });
-          
-          console.log('Replacing container content with list');
-          container.innerHTML = '';
-          container.appendChild(list);
-          
-        } catch (error) {
-          console.error('Load attachments error:', error);
-          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-        }
-      }
-    </script>
+    
   </body>
   </html>
-

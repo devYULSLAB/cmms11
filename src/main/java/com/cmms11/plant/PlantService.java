@@ -41,14 +41,17 @@ public class PlantService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PlantResponse> list(String q, Pageable pageable) {
+    public Page<PlantResponse> list(String plantId, String name, String makerName, String funcId, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Plant> page;
-        if (q == null || q.isBlank()) {
-            page = repository.findByIdCompanyIdAndDeleteMark(companyId, "N", pageable);
-        } else {
-            page = repository.search(companyId, "N", "%" + q + "%", pageable);
-        }
+        Page<Plant> page = repository.findByFilters(
+            companyId,
+            "N",
+            plantId,
+            name,
+            makerName,
+            funcId,
+            pageable
+        );
         return page.map(PlantResponse::from);
     }
 

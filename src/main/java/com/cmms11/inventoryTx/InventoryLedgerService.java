@@ -1,5 +1,6 @@
 package com.cmms11.inventoryTx;
 
+import com.cmms11.security.MemberUserDetailsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +33,7 @@ public class InventoryLedgerService {
      * 원장 조회
      */
     public List<InventoryLedgerResponse> getLedger(LedgerSearchRequest request) {
-        String companyId = "C0001"; // TODO: 실제 회사 ID로 변경
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         
         // 1. 거래이력 조회
         List<InventoryHistory> histories = getTransactionHistories(companyId, request);
@@ -45,7 +46,7 @@ public class InventoryLedgerService {
      * 원장 페이징 조회
      */
     public Page<InventoryLedgerResponse> getLedgerPage(LedgerSearchRequest request, Pageable pageable) {
-        String companyId = "C0001"; // TODO: 실제 회사 ID로 변경
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         
         // 1. 거래이력 페이징 조회
         Page<InventoryHistory> historyPage = getTransactionHistoriesPage(companyId, request, pageable);
@@ -174,6 +175,8 @@ public class InventoryLedgerService {
             
             // 원장 데이터 생성
             InventoryLedgerResponse ledger = new InventoryLedgerResponse(
+                    history.getStorageId(),
+                    history.getInventoryId(),
                     history.getTxDate().toString(),
                     history.getTxType(),
                     history.getRefNo(),

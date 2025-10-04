@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-storage-form" data-module="domain-storage-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +39,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/domain/storage/save}" th:data-redirect="@{/domain/storage/list}">
+                <form data-validate method="post" th:action="@{/domain/storage/save}" th:data-redirect="@{/domain/storage/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -48,7 +48,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label required" for="storage_id">창고 코드</label>
-                        <input id="storage_id" name="storageId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력" 
+                        <input id="storage_id" name="storageId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력 (예: STG01)" 
                               th:value="${storage.storageId}" th:readonly="${!isNew}" />
                       </div>
                       <div class="form-row col-span-8">
@@ -64,7 +64,8 @@
                     </div>
                   </div>
 
-                  <div class="row" style="margin-top:12px; gap:8px; justify-content:flex-end">
+                  <div class="actions" style="margin-top:12px">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>

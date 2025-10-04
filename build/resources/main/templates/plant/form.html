@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -76,7 +78,7 @@
                           <option value="">선택</option>
                           <option th:each="site : ${sites}"
                                   th:value="${site.siteId}"
-                                  th:text="${site.siteId + ' - ' + site.siteName}"
+                                  th:text="${site.siteId + ' - ' + site.name}"
                                   th:selected="${plant.siteId == site.siteId}">
                           </option>
                         </select>
@@ -87,7 +89,7 @@
                           <option value="">선택</option>
                           <option th:each="dept : ${depts}"
                                   th:value="${dept.deptId}"
-                                  th:text="${dept.deptId + ' - ' + dept.deptName}"
+                                  th:text="${dept.deptId + ' - ' + dept.name}"
                                   th:selected="${plant.deptId == dept.deptId}">
                           </option>
                         </select>
@@ -254,7 +256,7 @@
         <div class="container">© 설비 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
     
   </body>
   </html>

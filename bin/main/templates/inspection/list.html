@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>점검 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inspection-list" data-module="inspection-list">
         <main>
           <div class="container">
             <section class="card">
@@ -63,8 +65,8 @@
                         <input class="input" type="date" name="plannedDateTo" th:value="${plannedDateTo}" title="계획일(To)" />
                       </div>
                     </div>
-                    <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
-                      <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
+                    <div class="row actions actions-top-small">
+                      <button type="button" class="btn" data-reset-form>초기화</button>
                       <button type="submit" class="btn primary">검색</button>
                     </div>
                   </form>
@@ -73,19 +75,19 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">점검 번호</th>
+                      <th class="col-140">점검 번호</th>
                       <th>점검명</th>
-                      <th style="width:140px">설비 번호</th>
-                      <th style="width:100px">작업유형</th>
-                      <th style="width:140px">계획일</th>
-                      <th style="width:140px">실적일</th>
-                      <th style="width:100px">상태</th>
-                      <th style="width:140px">액션</th>
+                      <th class="col-140">설비 번호</th>
+                      <th class="col-100">작업유형</th>
+                      <th class="col-140">계획일</th>
+                      <th class="col-140">실적일</th>
+                      <th class="col-100">상태</th>
+                      <th class="col-140">액션</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr th:each="inspection : ${page.content}">
-                      <td><a th:href="@{/inspection/edit/{id}(id=${inspection.inspectionId})}" th:text="${inspection.inspectionId}">-</a></td>
+                      <td><a th:href="@{/inspection/detail/{id}(id=${inspection.inspectionId})}" th:text="${inspection.inspectionId}">-</a></td>
                       <td th:text="${inspection.name}">-</td>
                       <td th:text="${inspection.plantId}">-</td>
                       <td th:text="${inspection.jobId}">-</td>
@@ -106,12 +108,16 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/inspection/list?page=' + ${page.number - 1} + '&amp;inspectionId=&quot; + encodeURIComponent(&quot;${inspectionId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;) + &quot;&amp;plannedDateTo=&quot; + encodeURIComponent(&quot;${plannedDateTo}&quot;)'">이전</button>
+                    <button class="btn sm" th:disabled="${page.first}" 
+                            th:data-url="@{/inspection/list(page=${page.number - 1}, inspectionId=${inspectionId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/inspection/list?page=' + ${page.number + 1} + '&amp;inspectionId=&quot; + encodeURIComponent(&quot;${inspectionId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;) + &quot;&amp;plannedDateTo=&quot; + encodeURIComponent(&quot;${plannedDateTo}&quot;)'">다음</button>
+                    <button class="btn sm" th:disabled="${page.last}" 
+                            th:data-url="@{/inspection/list(page=${page.number + 1}, inspectionId=${inspectionId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>
@@ -123,7 +129,6 @@
         <div class="container">© 점검 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
-

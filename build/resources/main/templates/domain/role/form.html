@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title th:text="${isNew ? '권한 등록' : '권한 수정'} + ' · CMMS'">권한 등록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -111,6 +113,6 @@
         <div class="container">© 기본정보</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>

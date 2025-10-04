@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>부서 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -28,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-dept-form" data-module="domain-dept-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/domain/dept/save}" th:data-redirect="@{/domain/dept/list}">
+                <form data-validate method="post" th:action="@{/domain/dept/save}" th:data-redirect="@{/domain/dept/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -54,7 +56,7 @@
                       <div class="form-row col-span-4">
                         <label class="label required" for="name">부서명</label>
                         <input id="name" name="name" class="input" required maxlength="100" 
-                              th:value="${dept.deptName}" />
+                              th:value="${dept.name}" />
                       </div>
                       <div class="form-row col-span-4">
                         <label class="label" for="phone">전화번호</label>
@@ -62,15 +64,16 @@
                       </div>
                     </div>
                     <div class="grid cols-12">
-                      <div class="form-row col-span-4">
+                      <!-- <div class="form-row col-span-4">
                         <label class="label" for="address">주소</label>
                         <input id="address" name="address" class="input" maxlength="200" th:value="${dept.address}" />
-                      </div>
+                      </div> -->
                       <div class="form-row col-span-4">
                         <label class="label" for="parentDeptId">상위부서</label>
-                        <select id="parentDeptId" name="parentDeptId">
+                        <input id="parentDeptId" name="parentDeptId" class="input" maxlength="5" th:value="${dept.parentDeptId}" />
+                        <!-- <select id="parentDeptId" name="parentDeptId">
                           <option value="">(없음)</option>
-                        </select>
+                        </select> -->
                       </div>
                       <div class="form-row col-span-4">
                         <label class="label" for="status">상태</label>
@@ -87,7 +90,8 @@
                     </div>
                   </div>
 
-                  <div class="row" style="margin-top:12px; gap:8px; justify-content:flex-end">
+                  <div class="actions actions-top-small">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -103,7 +107,7 @@
         <div class="container">© 기본정보</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

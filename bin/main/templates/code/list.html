@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>공통코드 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="code-list" data-module="code-list">
         <main>
           <div class="container">
             <section class="card">
@@ -49,19 +51,22 @@
                     <div class="col-span-3"><input class="input" placeholder="코드타입" /></div>
                     <div class="col-span-5"><input class="input" placeholder="명칭" /></div>
                   </div>
-                  <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
-                    <button class="btn">초기화</button>
-                    <button class="btn">검색</button>
+                  <div class="row actions-top-small">
+                    <div class="spacer"></div>
+                    <div class="actions">
+                      <button class="btn">초기화</button>
+                      <button class="btn">검색</button>
+                    </div>
                   </div>
                 </div>
 
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:120px">코드타입</th>
+                      <th class="col-120">코드타입</th>
                       <th>명칭</th>
                       <th>비고</th>
-                      <th style="width:140px">액션</th>
+                      <th class="col-140">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -80,7 +85,7 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
                     <button class="btn sm" disabled>이전</button>
@@ -96,7 +101,6 @@
         <div class="container">© 공통코드</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
-

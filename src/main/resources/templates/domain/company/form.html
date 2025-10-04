@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>회사 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../../static/assets/css/base.css" />
   </head>
   <body>
@@ -28,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-company-form" data-module="domain-company-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/domain/company/save}" th:data-redirect="@{/domain/company/list}">
+                <form data-validate method="post" th:action="@{/domain/company/save}" th:data-redirect="@{/domain/company/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -48,7 +50,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-4">
                         <label class="label required" for="company_id">회사코드</label>
-                        <input id="company_id" name="companyId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력" 
+                        <input id="company_id" name="companyId" class="input" required maxlength="5" placeholder="영문/숫자 5자리 이내로 입력 (예: C0001)" 
                               th:value="${company.companyId}" th:readonly="${!isNew}" />
                       </div>
                       <div class="form-row col-span-8">
@@ -81,7 +83,8 @@
                     </div>
                   </div>
 
-                  <div class="row" style="margin-top:12px; gap:8px; justify-content:flex-end">
+                  <div class="actions actions-top-small">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -97,7 +100,7 @@
         <div class="container">© 기본정보</div>
       </footer>
     </div>
-    <script src="../../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

@@ -46,16 +46,18 @@ public class PlantController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/plant/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, 
-                          @RequestParam(name = "plantId", required = false) String plantId,
-                          @RequestParam(name = "deptId", required = false) String deptId,
+    public String listForm(@RequestParam(name = "plantId", required = false) String plantId,
+                          @RequestParam(name = "name", required = false) String name,
+                          @RequestParam(name = "makerName", required = false) String makerName,
+                          @RequestParam(name = "funcId", required = false) String funcId,
                           Pageable pageable, Model model) {
-        Page<PlantResponse> page = service.list(q, pageable);
+        Page<PlantResponse> page = service.list(plantId, name, makerName, funcId, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
         model.addAttribute("plantId", plantId);
-        model.addAttribute("deptId", deptId);
-        // 부서 목록 추가
+        model.addAttribute("name", name);
+        model.addAttribute("makerName", makerName);
+        model.addAttribute("funcId", funcId);
+        // 부서 목록 추가 (필터용 - 현재는 사용하지 않음)
         model.addAttribute("depts", deptService.list(null, Pageable.unpaged()).getContent());
         return "plant/list";
     }
@@ -91,6 +93,13 @@ public class PlantController {
         return "plant/form";
     }
 
+    @GetMapping("/plant/detail/{plantId}")
+    public String detailForm(@PathVariable String plantId, Model model) {
+        PlantResponse plant = service.get(plantId);
+        model.addAttribute("plant", plant);
+        return "plant/detail";
+    }
+
     @PostMapping("/plant/save")
     public String saveForm(@ModelAttribute PlantRequest request, @RequestParam(required = false) String isNew) {
         if ("true".equals(isNew)) {
@@ -110,8 +119,12 @@ public class PlantController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/plants")
-    public Page<PlantResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<PlantResponse> list(@RequestParam(name = "plantId", required = false) String plantId,
+                                    @RequestParam(name = "name", required = false) String name,
+                                    @RequestParam(name = "makerName", required = false) String makerName,
+                                    @RequestParam(name = "funcId", required = false) String funcId,
+                                    Pageable pageable) {
+        return service.list(plantId, name, makerName, funcId, pageable);
     }
 
     @ResponseBody

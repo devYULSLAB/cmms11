@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 public record DeptResponse(
     String deptId,
-    String deptName,
+    String name,
     String companyId,
     String phone,
     String address,

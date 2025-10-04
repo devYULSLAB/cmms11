@@ -50,14 +50,16 @@ public class InventoryController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/inventory/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, 
-                          @RequestParam(name = "inventoryId", required = false) String inventoryId,
+    public String listForm(@RequestParam(name = "inventoryId", required = false) String inventoryId,
+                          @RequestParam(name = "name", required = false) String name,
+                          @RequestParam(name = "makerName", required = false) String makerName,
                           @RequestParam(name = "deptId", required = false) String deptId,
                           Pageable pageable, Model model) {
-        Page<InventoryResponse> page = service.list(q, pageable);
+        Page<InventoryResponse> page = service.list(inventoryId, name, makerName, deptId, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
         model.addAttribute("inventoryId", inventoryId);
+        model.addAttribute("name", name);
+        model.addAttribute("makerName", makerName);
         model.addAttribute("deptId", deptId);
         // 부서 목록 추가
         model.addAttribute("depts", deptService.list(null, Pageable.unpaged()).getContent());
@@ -112,8 +114,12 @@ public class InventoryController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/inventories")
-    public Page<InventoryResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<InventoryResponse> list(@RequestParam(name = "inventoryId", required = false) String inventoryId,
+                                       @RequestParam(name = "name", required = false) String name,
+                                       @RequestParam(name = "makerName", required = false) String makerName,
+                                       @RequestParam(name = "deptId", required = false) String deptId,
+                                       Pageable pageable) {
+        return service.list(inventoryId, name, makerName, deptId, pageable);
     }
 
     @ResponseBody

@@ -46,6 +46,12 @@ public class Approval {
     @Column(name = "file_group_id", length = 10)
     private String fileGroupId;
 
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

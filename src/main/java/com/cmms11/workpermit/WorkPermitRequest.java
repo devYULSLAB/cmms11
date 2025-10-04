@@ -1,7 +1,10 @@
 package com.cmms11.workpermit;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 이름: WorkPermitRequest
@@ -26,6 +29,10 @@ public record WorkPermitRequest(
     String checksheetJson,
     @Size(max = 10) String status,
     @Size(max = 10) String fileGroupId,
-    @Size(max = 500) String note
+    @Size(max = 500) String note,
+    @Valid List<WorkPermitItemRequest> items
 ) {
+    public WorkPermitRequest {
+        items = (items == null) ? new ArrayList<>() : new ArrayList<>(items);
+    }
 }

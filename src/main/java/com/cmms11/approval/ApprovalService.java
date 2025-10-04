@@ -128,6 +128,50 @@ public class ApprovalService {
         repository.delete(entity);
     }
 
+    public ApprovalResponse approve(String approvalId) {
+        Approval entity = getExisting(approvalId);
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = currentMemberId();
+
+        // 결재 상태 업데이트
+        if ("SUBMIT".equals(entity.getStatus()) || "APPROVAL".equals(entity.getStatus())) {
+            entity.setStatus("COMPLETE");
+            entity.setCompletedAt(now);
+        }
+        entity.setUpdatedAt(now);
+        entity.setUpdatedBy(memberId);
+        
+        Approval saved = repository.save(entity);
+        
+        List<ApprovalStepResponse> steps = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
+            .stream()
+            .map(ApprovalStepResponse::from)
+            .collect(Collectors.toList());
+        return ApprovalResponse.from(saved, steps);
+    }
+
+    public ApprovalResponse reject(String approvalId) {
+        Approval entity = getExisting(approvalId);
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = currentMemberId();
+
+        // 반려 상태 업데이트
+        entity.setStatus("REJECT");
+        entity.setCompletedAt(now);
+        entity.setUpdatedAt(now);
+        entity.setUpdatedBy(memberId);
+        
+        Approval saved = repository.save(entity);
+        
+        List<ApprovalStepResponse> steps = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
+            .stream()
+            .map(ApprovalStepResponse::from)
+            .collect(Collectors.toList());
+        return ApprovalResponse.from(saved, steps);
+    }
+
     private Approval getExisting(String approvalId) {
         return repository
             .findByIdCompanyIdAndIdApprovalId(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)

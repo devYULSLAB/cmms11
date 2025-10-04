@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비 상세 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
   </head>
@@ -54,25 +56,27 @@
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
                     <!-- 1행: 설비번호, 설비명 -->
-                    <div class="stack col-span-3"><div class="label">설비번호</div><div>EQP000123</div></div>
-                    <div class="stack col-span-9"><div class="label">설비명</div><div>순환 펌프</div></div>
+                    <div class="stack col-span-3"><div class="label">설비번호</div><div th:text="${plant.plantId}">EQP000123</div></div>
+                    <div class="stack col-span-9"><div class="label">설비명</div><div th:text="${plant.name}">순환 펌프</div></div>
                     <!-- 2행: 자산유형, Site, 관리부서, 기능위치 -->
-                    <div class="stack col-span-3"><div class="label">자산유형</div><div>EQPMT</div></div>
-                    <div class="stack col-span-3"><div class="label">Site</div><div>SEOUL</div></div>
-                    <div class="stack col-span-3"><div class="label">관리부서</div><div>설비과</div></div>
-                    <div class="stack col-span-3"><div class="label">기능위치</div><div>PMP</div></div>
-                    <!-- 3행: 비고 -->
-                    <div class="stack col-span-12"><div class="label">비고</div><div>정기점검 대상 설비</div></div>
+                    <div class="stack col-span-3"><div class="label">자산유형</div><div th:text="${plant.assetId ?: '-'}">EQPMT</div></div>
+                    <div class="stack col-span-3"><div class="label">Site</div><div th:text="${plant.siteId ?: '-'}">SEOUL</div></div>
+                    <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${plant.deptId ?: '-'}">설비과</div></div>
+                    <div class="stack col-span-3"><div class="label">기능위치</div><div th:text="${plant.funcId ?: '-'}">PMP</div></div>
+                    <!-- 3행: 상태 -->
+                    <div class="stack col-span-12"><div class="label">상태</div><div><span class="badge" th:text="${plant.status == 'ACTIVE' ? '정상' : '중지'}" th:classappend="${plant.status == 'ACTIVE' ? 'badge' : 'badge danger'}">정상</span></div></div>
+                    <!-- 4행: 비고 -->
+                    <div class="stack col-span-12"><div class="label">비고</div><div th:text="${plant.note ?: '-'}">정기점검 대상 설비</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">사양 / 모델</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-4"><div class="label">제조사</div><div>Acme</div></div>
-                    <div class="stack col-span-4"><div class="label">모델</div><div>AX-100</div></div>
-                    <div class="stack col-span-4"><div class="label">시리얼</div><div>SN123456</div></div>
-                    <div class="stack col-span-12"><div class="label">스펙</div><div class="notice">압력 10~30 bar, 용량 40 m³/h</div></div>
+                    <div class="stack col-span-4"><div class="label">제조사</div><div th:text="${plant.makerName ?: '-'}">Acme</div></div>
+                    <div class="stack col-span-4"><div class="label">모델</div><div th:text="${plant.model ?: '-'}">AX-100</div></div>
+                    <div class="stack col-span-4"><div class="label">시리얼</div><div th:text="${plant.serial ?: '-'}">SN123456</div></div>
+                    <div class="stack col-span-12"><div class="label">스펙</div><div th:text="${plant.spec ?: '-'}">압력 10~30 bar, 용량 40 m³/h</div></div>
                   </div>
                 </div>
 
@@ -80,24 +84,24 @@
                   <div class="section-title">설치 / 감가상각</div>
                   <div class="grid cols-12">
                     <!-- 1행: 설치일 단독 표시 -->
-                    <div class="stack col-span-12"><div class="label">설치일</div><div>2022-06-01</div></div>
+                    <div class="stack col-span-12"><div class="label">설치일</div><div th:text="${plant.installDate ?: '-'}">2022-06-01</div></div>
                     <!-- 2행: 감가유형, 감가기간, 취득가, 잔존가 -->
-                    <div class="stack col-span-3"><div class="label">감가유형</div><div>SL</div></div>
-                    <div class="stack col-span-3"><div class="label">감가기간(년)</div><div>10</div></div>
-                    <div class="stack col-span-3"><div class="label">취득가</div><div>120,000,000</div></div>
-                    <div class="stack col-span-3"><div class="label">잔존가</div><div>12,000,000</div></div>
+                    <div class="stack col-span-3"><div class="label">감가유형</div><div th:text="${plant.depreId ?: '-'}">SL</div></div>
+                    <div class="stack col-span-3"><div class="label">감가기간(년)</div><div th:text="${plant.deprePeriod ?: '-'}">10</div></div>
+                    <div class="stack col-span-3"><div class="label">취득가</div><div th:text="${plant.purchaseCost != null ? #numbers.formatInteger(plant.purchaseCost, 0, 'COMMA') : '-'}">120,000,000</div></div>
+                    <div class="stack col-span-3"><div class="label">잔존가</div><div th:text="${plant.residualValue != null ? #numbers.formatInteger(plant.residualValue, 0, 'COMMA') : '-'}">12,000,000</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">운영 / 안전</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-3"><div class="label">점검대상</div><div><span class="badge">Y</span></div></div>
-                    <div class="stack col-span-3"><div class="label">PSM 대상</div><div><span class="badge">N</span></div></div>
-                    <div class="stack col-span-3"><div class="label">작업허가 대상</div><div><span class="badge">Y</span></div></div>
-                    <div class="stack col-span-3"><div class="label">점검주기(개월)</div><div>3</div></div>
-                    <div class="stack col-span-3"><div class="label">최종 점검일</div><div>2025-01-01</div></div>
-                    <div class="stack col-span-3"><div class="label">다음 점검일</div><div>2025-04-01</div></div>
+                    <div class="stack col-span-3"><div class="label">점검대상</div><div><span class="badge" th:text="${plant.inspectionYn}" th:classappend="${plant.inspectionYn == 'Y' ? 'badge' : 'badge danger'}">Y</span></div></div>
+                    <div class="stack col-span-3"><div class="label">PSM 대상</div><div><span class="badge" th:text="${plant.psmYn}" th:classappend="${plant.psmYn == 'Y' ? 'badge danger' : 'badge'}">N</span></div></div>
+                    <div class="stack col-span-3"><div class="label">작업허가 대상</div><div><span class="badge" th:text="${plant.workpermitYn}" th:classappend="${plant.workpermitYn == 'Y' ? 'badge danger' : 'badge'}">Y</span></div></div>
+                    <div class="stack col-span-3"><div class="label">점검주기(개월)</div><div th:text="${plant.inspectionInterval ?: '-'}">3</div></div>
+                    <div class="stack col-span-3"><div class="label">최종 점검일</div><div th:text="${plant.lastInspection ?: '-'}">2025-01-01</div></div>
+                    <div class="stack col-span-3"><div class="label">다음 점검일</div><div th:text="${plant.nextInspection ?: '-'}">2025-04-01</div></div>
                   </div>
                 </div>
 
@@ -124,16 +128,16 @@
                   <div class="section-title">1. 기본정보</div>
                   <table class="row-cols-4">
                     <tr>
-                      <th>설비번호</th><td id="p-eqp-no">EQP000123</td>
-                      <th>설비명</th><td id="p-eqp-name">순환 펌프</td>
+                      <th>설비번호</th><td id="p-eqp-no" th:text="${plant.plantId}">EQP000123</td>
+                      <th>설비명</th><td id="p-eqp-name" th:text="${plant.name}">순환 펌프</td>
                     </tr>
                     <tr>
-                      <th>자산유형</th><td id="p-asset-type">EQPMT</td>
-                      <th>Site</th><td id="p-site">SEOUL</td>
+                      <th>자산유형</th><td id="p-asset-type" th:text="${plant.assetId}">EQPMT</td>
+                      <th>Site</th><td id="p-site" th:text="${plant.siteId}">SEOUL</td>
                     </tr>
                     <tr>
-                      <th>관리자</th><td id="p-owner">설비팀</td>
-                      <th>기능위치</th><td id="p-floc">PMP</td>
+                      <th>관리자</th><td id="p-owner" th:text="${plant.deptId}">설비팀</td>
+                      <th>기능위치</th><td id="p-floc" th:text="${plant.funcId}">PMP</td>
                     </tr>
                   </table>
                 </div>
@@ -142,12 +146,12 @@
                   <div class="section-title">2. 규격 / 모델</div>
                   <table class="row-cols-4">
                     <tr>
-                      <th>제조사</th><td id="p-maker">Acme</td>
-                      <th>모델</th><td id="p-model">AX-100</td>
-                      <th>시리얼</th><td id="p-serial">SN123456</td>
+                      <th>제조사</th><td id="p-maker" th:text="${plant.makerName ?: '-'}">Acme</td>
+                      <th>모델</th><td id="p-model" th:text="${plant.model ?: '-'}">AX-100</td>
+                      <th>시리얼</th><td id="p-serial" th:text="${plant.serial ?: '-'}">SN123456</td>
                     </tr>
                     <tr>
-                      <th>스펙</th><td id="p-spec" colspan="5">압력 10~30 bar, 유량 40 m³/h</td>
+                      <th>스펙</th><td id="p-spec" colspan="5" th:text="${plant.spec ?: '-'}">압력 10~30 bar, 유량 40 m³/h</td>
                     </tr>
                   </table>
                 </div>
@@ -156,16 +160,16 @@
                   <div class="section-title">3. 설치 / 감가상각</div>
                   <table class="row-cols-4">
                     <tr>
-                      <th>설치일</th><td id="p-install-date">2022-06-01</td>
-                      <th>감가유형</th><td id="p-depr-type">SL</td>
+                      <th>설치일</th><td id="p-install-date" th:text="${plant.installDate ?: '-'}">2022-06-01</td>
+                      <th>감가유형</th><td id="p-depr-type" th:text="${plant.depreId ?: '-'}">SL</td>
                     </tr>
                     <tr>
-                      <th>감가기간(년)</th><td id="p-depr-years">10</td>
-                      <th>취득가</th><td id="p-acq-cost">120,000,000</td>
+                      <th>감가기간(년)</th><td id="p-depr-years" th:text="${plant.deprePeriod ?: '-'}">10</td>
+                      <th>취득가</th><td id="p-acq-cost" th:text="${plant.purchaseCost ?: '-'}">120,000,000</td>
                     </tr>
                     <tr>
-                      <th>잔존가</th><td id="p-residual">12,000,000</td>
-                      <th class="muted">비고</th><td id="p-install-note" class="muted">-</td>
+                      <th>잔존가</th><td id="p-residual" th:text="${plant.residualValue ?: '-'}">12,000,000</td>
+                      <th class="muted">비고</th><td id="p-install-note" class="muted" th:text="${plant.note ?: '-'}">-</td>
                     </tr>
                   </table>
                 </div>
@@ -174,16 +178,16 @@
                   <div class="section-title">4. 운영 / 점검</div>
                   <table class="row-cols-4">
                     <tr>
-                      <th>사용여부</th><td id="p-use">Y</td>
-                      <th>PSM 여부</th><td id="p-psm">N</td>
+                      <th>사용여부</th><td id="p-use" th:text="${plant.inspectionYn}">Y</td>
+                      <th>PSM 여부</th><td id="p-psm" th:text="${plant.psmYn}">N</td>
                     </tr>
                     <tr>
-                      <th>작업허가대상</th><td id="p-permit">Y</td>
-                      <th>점검주기(개월)</th><td id="p-pm-cycle">3</td>
+                      <th>작업허가대상</th><td id="p-permit" th:text="${plant.workpermitYn}">Y</td>
+                      <th>점검주기(개월)</th><td id="p-pm-cycle" th:text="${plant.inspectionInterval ?: '-'}">3</td>
                     </tr>
                     <tr>
-                      <th>최종 점검일</th><td id="p-last-pm">2025-01-01</td>
-                      <th>다음 점검일</th><td id="p-next-pm">2025-04-01</td>
+                      <th>최종 점검일</th><td id="p-last-pm" th:text="${plant.lastInspection ?: '-'}">2025-01-01</td>
+                      <th>다음 점검일</th><td id="p-next-pm" th:text="${plant.nextInspection ?: '-'}">2025-04-01</td>
                     </tr>
                   </table>
                 </div>
@@ -203,7 +207,7 @@
                   <table>
                     <tr>
                       <th>메모</th>
-                      <td class="note" id="p-note">공장 순환라인 주기 점검 대상 설비</td>
+                      <td class="note" id="p-note" th:text="${plant.note ?: '-'}">공장 순환라인 주기 점검 대상 설비</td>
                     </tr>
                   </table>
                 </div>
@@ -211,13 +215,8 @@
             </section>
           </div>
         </main>
-      </section>
-      <footer>
-        <div class="container">© 설비 관리</div>
-      </footer>
-    </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
+        
+        <script th:inline="javascript">
       // 출력일 표기 및 미리보기 종료 핸들러
       (function() {
         var d = new Date();
@@ -286,6 +285,12 @@
           container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
         }
       }
-    </script>
+        </script>
+      </section>
+      <footer>
+        <div class="container">© 설비 관리</div>
+      </footer>
+    </div>
+    
   </body>
   </html>

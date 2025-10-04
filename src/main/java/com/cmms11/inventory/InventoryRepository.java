@@ -29,6 +29,25 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
         @Param("keyword") String keyword,
         Pageable pageable
     );
+    
+    @Query(
+        "select i from Inventory i " +
+        "where i.id.companyId = :companyId " +
+        "and i.deleteMark = :deleteMark " +
+        "and (:inventoryId is null or :inventoryId = '' or i.id.inventoryId like concat('%', :inventoryId, '%')) " +
+        "and (:name is null or :name = '' or i.name like concat('%', :name, '%')) " +
+        "and (:makerName is null or :makerName = '' or i.makerName like concat('%', :makerName, '%')) " +
+        "and (:deptId is null or :deptId = '' or i.deptId like concat('%', :deptId, '%'))"
+    )
+    Page<Inventory> findByFilters(
+        @Param("companyId") String companyId,
+        @Param("deleteMark") String deleteMark,
+        @Param("inventoryId") String inventoryId,
+        @Param("name") String name,
+        @Param("makerName") String makerName,
+        @Param("deptId") String deptId,
+        Pageable pageable
+    );
 
     Optional<Inventory> findByIdCompanyIdAndIdInventoryId(String companyId, String inventoryId);
 }

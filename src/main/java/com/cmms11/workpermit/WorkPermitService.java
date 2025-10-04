@@ -26,11 +26,13 @@ public class WorkPermitService {
     private static final String MODULE_CODE = "P";
 
     private final WorkPermitRepository repository;
+    private final WorkPermitItemRepository itemRepository;
     private final AutoNumberService autoNumberService;
 
-    public WorkPermitService(WorkPermitRepository repository, AutoNumberService autoNumberService) {
+    public WorkPermitService(WorkPermitRepository repository, AutoNumberService autoNumberService, WorkPermitItemRepository itemRepository) {
         this.repository = repository;
         this.autoNumberService = autoNumberService;
+        this.itemRepository = itemRepository;
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +68,11 @@ public class WorkPermitService {
         return WorkPermitResponse.from(getExisting(permitId));
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<WorkPermitItem> getItems(String permitId) {
+        return itemRepository.findByPermit(com.cmms11.security.MemberUserDetailsService.DEFAULT_COMPANY, permitId);
+    }
+
     public WorkPermitResponse create(WorkPermitRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
@@ -80,7 +87,9 @@ public class WorkPermitService {
         entity.setUpdatedAt(now);
         entity.setUpdatedBy(memberId);
 
-        return WorkPermitResponse.from(repository.save(entity));
+        WorkPermit saved = repository.save(entity);
+        saveItems(saved.getId().getCompanyId(), saved.getId().getPermitId(), request);
+        return WorkPermitResponse.from(saved);
     }
 
     public WorkPermitResponse update(String permitId, WorkPermitRequest request) {
@@ -88,7 +97,9 @@ public class WorkPermitService {
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setUpdatedBy(currentMemberId());
-        return WorkPermitResponse.from(repository.save(entity));
+        WorkPermit saved = repository.save(entity);
+        saveItems(saved.getId().getCompanyId(), saved.getId().getPermitId(), request);
+        return WorkPermitResponse.from(saved);
     }
 
     public void delete(String permitId) {
@@ -118,6 +129,28 @@ public class WorkPermitService {
         entity.setStatus(request.status());
         entity.setFileGroupId(request.fileGroupId());
         entity.setNote(request.note());
+    }
+
+    private void saveItems(String companyId, String permitId, WorkPermitRequest request) {
+        // replace-all strategy for simplicity
+        itemRepository.deleteByPermit(companyId, permitId);
+        if (request.items() == null || request.items().isEmpty()) return;
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = currentMemberId();
+        int line = 1;
+        for (WorkPermitItemRequest r : request.items()) {
+            if (r == null) continue;
+            WorkPermitItem e = new WorkPermitItem();
+            e.setId(new WorkPermitItemId(companyId, permitId, line++));
+            e.setName(r.name());
+            e.setSignature(r.signature());
+            e.setNote(r.note());
+            e.setCreatedAt(now);
+            e.setCreatedBy(memberId);
+            e.setUpdatedAt(now);
+            e.setUpdatedBy(memberId);
+            itemRepository.save(e);
+        }
     }
 
     private String resolveId(String companyId, String requestedId, LocalDate referenceDate) {

@@ -1,0 +1,102 @@
+html, body { height: 100%; overflow: hidden; }
+/* Layout grid to keep footer fixed at bottom and content sized */
+.layout {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar content"
+    "footer footer";
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 250px 1fr;
+  height: 100vh; /* lock viewport height so only content scrolls */
+}
+.header { grid-area: header; }
+.sidebar { grid-area: sidebar; border-right:1px solid var(--border); padding:12px; overflow:auto; }
+.content { grid-area: content; overflow:auto; -webkit-overflow-scrolling: touch; }
+.footer { grid-area: footer; }
+/* Ensure a consistent visual height even when content is sparse */
+#layout-slot { min-height: 480px; }
+/* Sidebar menu */
+.sidemenu { display:block; }
+.menu-group { margin-bottom: 8px; border-radius: 6px; }
+.menu-title { display:flex; align-items:center; width:100%; padding:8px 10px; background: var(--bg-subtle); border:1px solid var(--border); border-radius:6px; cursor:pointer; font-weight:600; color:var(--fg); }
+.menu-title:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.menu-items { padding:6px 8px 4px 12px; }
+.menu-group:not(.open) .menu-items { display:none; }
+.menu-item { display:block; padding:6px 4px; color: var(--fg); text-decoration: none; border-radius:4px; }
+.menu-item:hover { background: var(--bg-subtle); }
+.menu-item.active { background: var(--accent-a10); color: var(--accent-contrast); }
+
+/* =============================================================================
+ * HEADER USER INFO AREA STANDARDIZATION
+ * =============================================================================
+ * 헤더의 사용자 정보 영역을 표준화하여 defaultLayout.html의 인라인 스타일을 클래스화
+ * 기존: <div style="display:flex;align-items:center;gap:12px">
+ * 개선: <div class="user-info-group">
+ */
+
+/* 사용자 정보 컨테이너 (기존 인라인 스타일을 클래스화) */
+.user-info-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 사용자 프로필 정보 (세로 배치) */
+.user-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 12px;
+}
+
+/* 사용자 이름 */
+.user-name {
+  font-weight: 600;
+}
+
+/* 사용자 상세 정보 (부서, 사이트 등) */
+.user-detail {
+  color: var(--fg-muted);
+}
+
+/* 게스트 사용자 스타일 */
+.guest-user {
+  color: var(--fg-muted);
+}
+
+/* 사용자 액션 버튼 그룹 */
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =============================================================================
+ * RESPONSIVE LAYOUT  
+ * =============================================================================
+ */
+
+@media (max-width: 860px){
+  .layout {
+    grid-template-areas:
+      "header"
+      "content"
+      "footer";
+    grid-template-columns: 1fr;
+  }
+  .sidebar { display:none; }
+  
+  /* 모바일에서 사용자 정보 영역 최적화 */
+  .user-info-group {
+    gap: 8px;
+  }
+  
+  .user-profile {
+    font-size: 11px;
+  }
+  
+  .user-actions {
+    gap: 8px;
+  }
+}

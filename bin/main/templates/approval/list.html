@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>결재 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,11 +28,12 @@
       </nav>
       <main>
         <div class="container">
+          <section data-slot-root th:fragment="content" data-page="approval-list" data-module="approval-list">
           <section class="card">
             <div class="card-header">
               <div class="card-title">결재 목록</div>
               <div class="toolbar">
-                <a class="btn primary" th:href="@{/approval/form}">작성</a>
+                <a class="btn primary" th:href="@{/approval/form}">새로 만들기</a>
               </div>
             </div>
             <div class="card-body">
@@ -44,7 +47,7 @@
                         <option value="DRAFT" th:selected="${status == 'DRAFT'}">작성중</option>
                         <option value="SUBMITTED" th:selected="${status == 'SUBMITTED'}">상신</option>
                         <option value="IN_PROGRESS" th:selected="${status == 'IN_PROGRESS'}">결재중</option>
-                        <option value="APPROVED" th:selected="${status == 'APPROVED'}">완결</option>
+                        <option value="APPROVED" th:selected="${status == 'APPROVED'}">결재완료</option>
                         <option value="REJECTED" th:selected="${status == 'REJECTED'}">반려</option>
                       </select>
                     </div>
@@ -54,9 +57,11 @@
                     <div class="col-span-3">
                       <input class="input" placeholder="기안자" name="createdBy" th:value="${createdBy}" />
                     </div>
-                    <div class="col-span-3" style="display:flex;gap:8px;justify-content:flex-end">
-                      <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
-                      <button type="submit" class="btn primary">검색</button>
+                    <div class="col-span-3">
+                      <div class="actions actions-left-align">
+                        <button type="button" class="btn" data-reset-form>초기화</button>
+                        <button type="submit" class="btn primary">검색</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -65,13 +70,13 @@
               <table class="table">
                 <thead>
                   <tr>
-                    <th style="width:140px">문서번호</th>
-                    <th>제목</th>
-                    <th style="width:120px">기안자</th>
-                    <th style="width:120px">상태</th>
-                    <th style="width:160px">상신일</th>
-                    <th style="width:160px">최종결재일</th>
-                    <th style="width:140px">액션</th>
+                    <th class="table-col-id-large">문서번호</th>
+                    <th class="table-col-name-medium">제목</th>
+                    <th class="table-col-type-large">기안자</th>
+                    <th class="table-col-type-medium">상태</th>
+                    <th class="table-col-date-large">상신일시</th>
+                    <th class="table-col-date-large">최종결재일시</th>
+                    <th class="table-col-action-medium">액션</th>
                   </tr>
                 </thead>
                   <tbody>
@@ -80,27 +85,33 @@
                       <td th:text="${approval.title}">-</td>
                       <td th:text="${approval.createdBy}">-</td>
                       <td>
-                        <span class="badge" th:text="${approval.status == 'DRAFT' ? '작성중' : approval.status == 'SUBMITTED' ? '상신' : approval.status == 'IN_PROGRESS' ? '결재중' : approval.status == 'APPROVED' ? '완결' : '반려'}" 
+                        <span class="badge" th:text="${approval.status == 'DRAFT' ? '작성중' : approval.status == 'SUBMITTED' ? '상신' : approval.status == 'IN_PROGRESS' ? '결재중' : approval.status == 'APPROVED' ? '결재완료' : '반려'}"
                               th:classappend="${approval.status == 'DRAFT' ? 'badge' : approval.status == 'SUBMITTED' ? 'badge warning' : approval.status == 'IN_PROGRESS' ? 'badge warning' : approval.status == 'APPROVED' ? 'badge success' : 'badge danger'}">-</span>
                       </td>
                       <td th:text="${approval.submittedAt}">-</td>
                       <td th:text="${approval.completedAt}">-</td>
                       <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/approval/detail/{id}(id=${approval.approvalId})}">상세</a>
                         <a class="btn btn-sm" th:href="@{/approval/edit/{id}(id=${approval.approvalId})}">수정</a>
-                        <button class="btn btn-sm danger" 
+                        <button class="btn btn-sm danger"
                                 th:data-delete-url="@{/approval/delete/{id}(id=${approval.approvalId})}"
                                 th:data-redirect="@{/approval/list}"
-                                data-confirm="정말로 삭제하시겠습니까?">삭제</button>
+                                data-confirm="정말 삭제하시겠습니까?">삭제</button>
                       </td>
                     </tr>
                   </tbody>
               </table>
 
-              <div class="pagination">
-                <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/approval/list?page=' + ${page.number - 1} + '&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;title=&quot; + encodeURIComponent(&quot;${title}&quot;) + &quot;&amp;createdBy=&quot; + encodeURIComponent(&quot;${createdBy}&quot;)'">이전</button>
-                <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/approval/list?page=' + ${page.number + 1} + '&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;title=&quot; + encodeURIComponent(&quot;${title}&quot;) + &quot;&amp;createdBy=&quot; + encodeURIComponent(&quot;${createdBy}&quot;)'">다음</button>
+              <div class="row actions-top-medium">
+                <div class="spacer"></div>
+                <div class="pagination">
+                  <button class="btn sm" th:disabled="${page.first}" 
+                          th:data-url="@{/approval/list(page=${page.number - 1}, status=${status}, title=${title}, createdBy=${createdBy})}"
+                          data-nav-button>이전</button>
+                  <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+                  <button class="btn sm" th:disabled="${page.last}" 
+                          th:data-url="@{/approval/list(page=${page.number + 1}, status=${status}, title=${title}, createdBy=${createdBy})}"
+                          data-nav-button>다음</button>
+                </div>
               </div>
             </div>
           </section>
@@ -110,7 +121,6 @@
         <div class="container">© 전자결재</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
-

@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>자재/재고 상세 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
   </head>
@@ -53,42 +55,32 @@
                 <div class="section">
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-3"><div class="label">자재 번호</div><div>I200000001</div></div>
-                    <div class="stack col-span-9"><div class="label">자재명</div><div>베어링 6204</div></div>
-                    <div class="stack col-span-3"><div class="label">자산유형</div><div>INVEN</div></div>
-                    <div class="stack col-span-3"><div class="label">관리부서</div><div>설비팀</div></div>
-                    <div class="stack col-span-6"><div class="label">비고</div><div class="muted">-</div></div>
+                    <div class="stack col-span-3"><div class="label">자재 번호</div><div th:text="${inventory.inventoryId}">I200000001</div></div>
+                    <div class="stack col-span-9"><div class="label">자재명</div><div th:text="${inventory.name}">베어링 6204</div></div>
+                    <div class="stack col-span-3"><div class="label">자산유형</div><div th:text="${inventory.assetId}">INVEN</div></div>
+                    <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${inventory.deptId}">설비팀</div></div>
+                    <div class="stack col-span-6"><div class="label">비고</div><div class="muted" th:text="${inventory.note ?: '-'}">-</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">규격 / 모델</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-4"><div class="label">제조사</div><div>ACME</div></div>
-                    <div class="stack col-span-4"><div class="label">모델</div><div>6204ZZ</div></div>
-                    <div class="stack col-span-4"><div class="label">시리얼</div><div>SN-123456</div></div>
-                    <div class="stack col-span-12"><div class="label">스펙</div><div>내경 20mm, 외경 47mm</div></div>
+                    <div class="stack col-span-4"><div class="label">제조사</div><div th:text="${inventory.makerName ?: '-'}">ACME</div></div>
+                    <div class="stack col-span-4"><div class="label">모델</div><div th:text="${inventory.model ?: '-'}">6204ZZ</div></div>
+                    <div class="stack col-span-4"><div class="label">시리얼</div><div th:text="${inventory.serial ?: '-'}">SN-123456</div></div>
+                    <div class="stack col-span-12"><div class="label">스펙</div><div th:text="${inventory.spec ?: '-'}">내경 20mm, 외경 47mm</div></div>
                   </div>
                 </div>
 
                 <div class="section">
                   <div class="section-title">첨부</div>
-                  <table class="row-cols-3">
-                    <tr>
-                      <th>첨부 건수</th><td id="inv-file-count">0</td>
-                      <th>비고</th><td id="inv-file-note" colspan="3">-</td>
-                    </tr>
-                  </table>
-                </div>
-
-                <div class="section">
-                  <div class="section-title">메모</div>
-                  <table>
-                    <tr>
-                      <th>메모</th>
-                      <td class="note">-</td>
-                    </tr>
-                  </table>
+                  <div id="attachments-container" th:if="${inventory.fileGroupId}">
+                    <div class="loading">첨부 파일을 불러오는 중...</div>
+                  </div>
+                  <div th:unless="${inventory.fileGroupId}" class="notice">
+                    첨부된 파일이 없습니다.
+                  </div>
                 </div>
 
                 <!-- 출력 양식 (예시) -->
@@ -99,10 +91,15 @@
                       <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
                     </header>
                     <div class="doc-body">
-                      <div class="row"><strong>자재 번호</strong><span class="spacer"></span><span>I200000001</span></div>
-                      <div class="row"><strong>자재명</strong><span class="spacer"></span><span>베어링 6204</span></div>
-                      <div class="row"><strong>자산유형</strong><span class="spacer"></span><span>INVEN</span></div>
-                      <div class="row"><strong>관리부서</strong><span class="spacer"></span><span>설비팀</span></div>
+                      <div class="row"><strong>자재 번호</strong><span class="spacer"></span><span th:text="${inventory.inventoryId}">I200000001</span></div>
+                      <div class="row"><strong>자재명</strong><span class="spacer"></span><span th:text="${inventory.name}">베어링 6204</span></div>
+                      <div class="row"><strong>자산유형</strong><span class="spacer"></span><span th:text="${inventory.assetId}">INVEN</span></div>
+                      <div class="row"><strong>관리부서</strong><span class="spacer"></span><span th:text="${inventory.deptId}">설비팀</span></div>
+                      <div class="row"><strong>제조사</strong><span class="spacer"></span><span th:text="${inventory.makerName ?: '-'}">ACME</span></div>
+                      <div class="row"><strong>모델</strong><span class="spacer"></span><span th:text="${inventory.model ?: '-'}">6204ZZ</span></div>
+                      <div class="row"><strong>시리얼</strong><span class="spacer"></span><span th:text="${inventory.serial ?: '-'}">SN-123456</span></div>
+                      <div class="row"><strong>스펙</strong><span class="spacer"></span><span th:text="${inventory.spec ?: '-'}">내경 20mm, 외경 47mm</span></div>
+                      <div class="row"><strong>비고</strong><span class="spacer"></span><span th:text="${inventory.note ?: '-'}">-</span></div>
                     </div>
                   </div>
                 </section>
@@ -110,13 +107,8 @@
             </section>
           </div>
         </main>
-      </section>
-      <footer>
-        <div class="container">© 자재/재고</div>
-      </footer>
-    </div>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
+        
+        <script th:inline="javascript">
       (function() {
         var d = new Date();
         var z = function(n){ return (n<10? ('0'+n) : n); };
@@ -125,8 +117,71 @@
         if (el) el.textContent = ts;
         window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
         document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
+        
+        // Detail 페이지에서 첨부 파일 로드
+        document.addEventListener('DOMContentLoaded', () => {
+          const container = document.getElementById('attachments-container');
+          const fileGroupId = /*[[${inventory.fileGroupId}]]*/ null;
+          
+          console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
+          
+          if (container && fileGroupId) {
+            console.log('Loading attachments for fileGroupId:', fileGroupId);
+            loadAttachments(fileGroupId, container);
+          } else {
+            console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
+          }
+        });
+
+        async function loadAttachments(fileGroupId, container) {
+          try {
+            console.log('Fetching files for groupId:', fileGroupId);
+            const response = await fetch(`/api/files?groupId=${fileGroupId}`);
+            console.log('Response status:', response.status, 'ok:', response.ok);
+            
+            if (!response.ok) throw new Error('조회 실패');
+            
+            const result = await response.json();
+            console.log('API response:', result);
+            
+            if (result.items.length === 0) {
+              console.log('No files found, showing empty message');
+              container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
+              return;
+            }
+            
+            const list = document.createElement('ul');
+            list.className = 'attachments-list';
+            
+            console.log('Creating list for', result.items.length, 'files');
+            result.items.forEach(item => {
+              console.log('Adding file item:', item);
+              const li = document.createElement('li');
+              li.className = 'attachment-item';
+              li.innerHTML = `
+                <span class="file-name">${item.originalName}</span>
+                <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
+                <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
+              `;
+              list.appendChild(li);
+            });
+            
+            console.log('Replacing container content with list');
+            container.innerHTML = '';
+            container.appendChild(list);
+            
+          } catch (error) {
+            console.error('Load attachments error:', error);
+            container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
+          }
+        }
       })();
-    </script>
+        </script>
+      </section>
+      <footer>
+        <div class="container">© 자재/재고</div>
+      </footer>
+    </div>
+    
   </body>
   </html>
-

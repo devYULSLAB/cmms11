@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  */
 public record SiteResponse(
     String siteId,
-    String siteName,
+    String name,
     String companyId,
     String phone,
     String address,

@@ -24,8 +24,15 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Member> list(String q, Pageable pageable) {
+    public Page<Member> list(String q, String deptId, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        
+        // 부서 필터가 있으면 부서로 검색
+        if (deptId != null && !deptId.isBlank()) {
+            return repository.findByIdCompanyIdAndDeptIdAndDeleteMark(companyId, deptId, "N", pageable);
+        }
+        
+        // 일반 검색
         if (q == null || q.isBlank()) {
             return repository.findByIdCompanyIdAndDeleteMark(companyId, "N", pageable);
         }
@@ -73,6 +80,8 @@ public class MemberService {
         existing.setEmail(member.getEmail());
         existing.setPhone(member.getPhone());
         existing.setSiteId(member.getSiteId());
+        existing.setPosition(member.getPosition());
+        existing.setTitle(member.getTitle());
         existing.setNote(member.getNote());
 
         Optional.ofNullable(member.getDeleteMark()).ifPresent(existing::setDeleteMark);

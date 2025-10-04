@@ -1,9 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>결재 작성 · CMMS</title>
+    <title>결재 작성 - CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <style>
       .editor-toolbar{display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--border);border-bottom:none;border-radius:6px 6px 0 0;background:var(--bg-subtle);padding:6px}
@@ -11,27 +13,29 @@
       .editor{border:1px solid var(--border);border-radius:0 0 6px 6px;min-height:260px;padding:12px;background:var(--surface);}
       .editor:focus{outline:2px solid var(--focus);outline-offset:2px}
       .approver-table th,.approver-table td{text-align:left}
-      .approver-controls{display:flex;gap:8px;align-items:end}
       .stack .hint{color:var(--fg-muted);font-size:12px}
-      .approver-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);margin-bottom:8px}
-      .approver-item .order{flex:0 0 30px;text-align:center;font-weight:bold;color:var(--accent)}
-      .approver-item .info{flex:1;display:flex;flex-direction:column;gap:4px}
-      .approver-item .member-id{font-weight:bold;color:var(--fg)}
-      .approver-item .member-details{font-size:12px;color:var(--fg-muted)}
-      .approver-item .decision{flex:0 0 80px;text-align:center}
+      .approver-item{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);margin-bottom:6px}
+      .approver-item .order{flex:0 0 30px;text-align:center;font-weight:bold;color:var(--accent);font-size:14px}
+      .approver-item .member-id{flex:0 0 80px;font-weight:600;color:var(--fg);font-size:13px}
+      .approver-item .member-name{flex:0 0 100px;font-size:13px}
+      .approver-item .member-dept{flex:0 0 80px;font-size:12px;color:var(--fg-muted)}
+      .approver-item .decision{flex:0 0 60px;text-align:center}
       .approver-item .actions{flex:0 0 auto;display:flex;gap:4px}
-      .approver-item .decision-badge{padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold}
+      .approver-item .decision-badge{padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold}
       .approver-item .decision-badge.approval{background:var(--success-bg);color:var(--success-fg)}
       .approver-item .decision-badge.agree{background:var(--warning-bg);color:var(--warning-fg)}
       .approver-item .decision-badge.inform{background:var(--info-bg);color:var(--info-fg)}
-      [data-attachments] { border: none; }
+      /* Attachments styling */
+      .form-row[data-attachments] { border: none; margin-top:12px }
+      .form-row[data-attachments] .row { width:100%; justify-content:flex-start }
+      .form-row[data-attachments] .attachments-list { width:100%; box-sizing:border-box; margin-left:0 }
     </style>
   </head>
   <body>
     <div class="page">
       <header class="appbar">
         <div class="appbar-inner">
-          <div class="brand">전자결재</div>
+          <div class="brand">시스템관리</div>
           <div class="spacer"></div>
           <div class="meta">
             <span class="badge">작성</span>
@@ -40,7 +44,7 @@
       </header>
       <nav class="breadcrumbs">
         <div class="container">
-          <a th:href="@{/}">전자결재</a>
+          <a th:href="@{/}">시스템관리</a>
           <span class="sep">/</span>
           <span>결재 작성</span>
         </div>
@@ -59,7 +63,7 @@
                   <a class="btn" th:href="@{/approval/list}">목록</a>
                   <button class="btn" type="submit" name="action" value="draft">임시저장</button>
                   <button class="btn primary" type="submit" name="action" value="submit">
-                    <span th:text="${isNew ? '상신' : '수정'}">상신</span>
+                    <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                   </button>
                 </div>
               </div>
@@ -83,7 +87,7 @@
                   </div>
                   <div class="form-row col-span-3">
                     <label class="label" for="refId">참조 ID</label>
-                    <input id="refId" name="refId" class="input" type="text" placeholder="참조 ID" 
+                    <input id="refId" name="refId" class="input" type="text" placeholder="예: O250101001" 
                           th:value="${approval.refId}" />
                   </div>
                   <div class="form-row col-span-3">
@@ -97,26 +101,18 @@
                       </option>
                     </select>
                   </div>
-                  <!-- 결재선 -->
+                  <!-- 결재선-->
                   <div class="form-row col-span-12">
                     <label class="label">결재선</label>
-                    <div class="approver-controls">
-                      <div class="stack">
-                        <label class="label" for="member-id-input">결재자 ID</label>
-                        <input id="member-id-input" class="input" type="text" placeholder="예: 사용자ID" />
-                      </div>
-                      <div class="stack">
-                        <label class="label" for="decision-select">구분</label>
-                        <select id="decision-select">
-                          <option value="APPROVAL">결재</option>
-                          <option value="AGREE">합의</option>
-                          <option value="INFORM">통보</option>
-                        </select>
-                      </div>
-                      <div class="stack">
-                        <label class="label" for="">추가</label>
-                        <button class="btn" type="button" id="add-approver">추가</button>
-                      </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                      <input id="member-id-input" class="input" type="text" placeholder="결재자 ID" style="flex:1;min-width:150px" />
+                      <button class="btn" type="button" id="btn-org-picker" title="조직도에서 선택">👥</button>
+                      <select id="decision-select" style="flex:0 0 120px">
+                        <option value="APPROVAL">결재</option>
+                        <option value="AGREE">합의</option>
+                        <option value="INFORM">통보</option>
+                      </select>
+                      <button class="btn" type="button" id="add-approver">추가</button>
                     </div>
                   </div>
                   <div class="form-row col-span-12">
@@ -135,7 +131,7 @@
                       <button class="btn sm" type="button" data-cmd="italic"><em>I</em></button>
                       <button class="btn sm" type="button" data-cmd="underline"><u>U</u></button>
                       <span class="spacer" style="flex:0 0 12px"></span>
-                      <button class="btn sm" type="button" data-cmd="insertUnorderedList">• 목록</button>
+                      <button class="btn sm" type="button" data-cmd="insertUnorderedList">목록</button>
                       <button class="btn sm" type="button" data-cmd="insertOrderedList">1. 목록</button>
                       <span class="spacer" style="flex:0 0 12px"></span>
                       <button class="btn sm" type="button" data-cmd="undo">실행취소</button>
@@ -149,17 +145,20 @@
                   </div>                        
 
                   <div class="form-row col-span-12" data-attachments>
-                    <label class="label"></label>
-                    <div class="row" style="gap:8px;align-items:center">
-                      <input id="attachments-input" type="file" multiple style="display:none" />
-                      <button class="btn" type="button" data-attachments-add>파일 선택</button>
+                    <label class="label">첨부</label>
+                    <div>
+                      <div class="row" style="gap:8px;align-items:center">
+                        <input id="attachments-input" class="visually-hidden" type="file" 
+                               multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                        <button class="btn" type="button" data-attachments-add>
+                          파일 선택
+                          <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                        </button>
+                      </div>
+                      <ul class="attachments-list" style="margin-top:8px; width:100%; box-sizing:border-box" aria-live="polite" aria-label="첨부 파일 목록">
+                        <li class="empty">첨부 파일이 없습니다.</li>
+                      </ul>
                     </div>
-                  </div>
-                  <div class="form-row col-span-12">
-                    <label class="label"></label>
-                    <ul class="attachments-list" style="margin-top:8px; width:100%; box-sizing:border-box">
-                      <li class="empty">첨부 파일이 없습니다.</li>
-                    </ul>
                   </div>                  
                 </div>
               </div>
@@ -171,7 +170,7 @@
         <div class="container">© 전자결재</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
     <script>
       // 간단한 에디터 동작
       document.querySelectorAll('.editor-toolbar [data-cmd]').forEach(btn => {
@@ -182,7 +181,7 @@
         });
       });
 
-      // 제출 시 본문 동기화
+      // 본문 동기화
       const form = document.querySelector('form');
       form.addEventListener('submit', () => {
         document.getElementById('content').value = document.getElementById('editor').innerHTML;
@@ -192,16 +191,24 @@
       const approverItems = document.getElementById('approver-items');
       let approverCount = 0;
 
-      // 사용자 정보 조회 (실제로는 API 호출)
+      // 사용자 정보 조회 (API 호출)
       async function fetchMemberInfo(memberId) {
-        // 임시 데이터 - 실제로는 API 호출
-        const mockData = {
-          'admin': { name: '관리자', deptId: 'IT', deptName: 'IT부서' },
-          'kim': { name: '김철수', deptId: 'HR', deptName: '인사부서' },
-          'lee': { name: '이영희', deptId: 'FN', deptName: '재무부서' },
-          'park': { name: '박민수', deptId: 'OP', deptName: '운영부서' }
-        };
-        return mockData[memberId] || { name: '알 수 없음', deptId: 'N/A', deptName: 'N/A' };
+        try {
+          const response = await fetch(`/api/members/${memberId}`);
+          if (!response.ok) {
+            return { name: '알 수 없음', deptId: 'N/A', position: '', title: '' };
+          }
+          const member = await response.json();
+          return {
+            name: member.name || '알 수 없음',
+            deptId: member.deptId || 'N/A',
+            position: member.position || '',
+            title: member.title || ''
+          };
+        } catch (error) {
+          console.error('Member fetch error:', error);
+          return { name: '알 수 없음', deptId: 'N/A', position: '', title: '' };
+        }
       }
 
       function renumber() {
@@ -260,16 +267,15 @@
         
         item.innerHTML = `
           <div class="order">${approverCount + 1}</div>
-          <div class="info">
-            <div class="member-id">${memberId}</div>
-            <div class="member-details">${memberInfo.name} / ${memberInfo.deptId} / ${memberInfo.deptName}</div>
-          </div>
+          <div class="member-id">${memberId}</div>
+          <div class="member-name">${memberInfo.name || '-'}</div>
+          <div class="member-dept">${memberInfo.deptId || '-'}</div>
           <div class="decision">
             <span class="decision-badge ${decisionClass}">${decisionText}</span>
           </div>
           <div class="actions">
-            <button class="btn sm" type="button" data-move="up" title="위로">↑</button>
-            <button class="btn sm" type="button" data-move="down" title="아래로">↓</button>
+            <button class="btn sm" type="button" data-move="up" title="위로">▲</button>
+            <button class="btn sm" type="button" data-move="down" title="아래로">▼</button>
             <button class="btn sm danger" type="button" data-remove title="삭제">×</button>
           </div>
         `;
@@ -313,7 +319,67 @@
           document.getElementById('add-approver').click();
         }
       });
+
+      // 조직도 팝업 열기
+      document.getElementById('btn-org-picker').addEventListener('click', () => {
+        const width = 900;
+        const height = 600;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        
+        window.open(
+          '/common/org-picker',
+          'orgPicker',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+      });
+
+      // 팝업에서 조직원 선택 시 호출되는 콜백
+      window.onMemberSelected = async function(member) {
+        // 멤버 ID를 입력 필드에 설정
+        document.getElementById('member-id-input').value = member.memberId;
+        
+        // 자동으로 결재선에 추가
+        const decisionSelect = document.getElementById('decision-select');
+        const decision = decisionSelect.value;
+        
+        // 중복 방지
+        const existing = Array.from(approverItems.querySelectorAll('.approver-item')).some(item => 
+          item.dataset.memberId === member.memberId && item.dataset.decision === decision
+        );
+        if (existing) { 
+          alert('이미 추가된 결재자입니다.'); 
+          return; 
+        }
+        
+        removeEmpty();
+        const item = document.createElement('div');
+        item.className = 'approver-item';
+        item.dataset.memberId = member.memberId;
+        item.dataset.decision = decision;
+        
+        const decisionText = decision === 'APPROVAL' ? '결재' : decision === 'AGREE' ? '합의' : '통보';
+        const decisionClass = decision === 'APPROVAL' ? 'approval' : decision === 'AGREE' ? 'agree' : 'inform';
+        
+        item.innerHTML = `
+          <div class="order">${approverCount + 1}</div>
+          <div class="member-id">${member.memberId}</div>
+          <div class="member-name">${member.name || '-'}</div>
+          <div class="member-dept">${member.deptName || '-'}</div>
+          <div class="decision">
+            <span class="decision-badge ${decisionClass}">${decisionText}</span>
+          </div>
+          <div class="actions">
+            <button class="btn sm" type="button" data-move="up" title="위로">▲</button>
+            <button class="btn sm" type="button" data-move="down" title="아래로">▼</button>
+            <button class="btn sm danger" type="button" data-remove title="삭제">×</button>
+          </div>
+        `;
+        
+        approverItems.appendChild(item);
+        approverCount++;
+        document.getElementById('member-id-input').value = ''; // 입력 필드 초기화
+      };
     </script>
   </body>
   </html>
-

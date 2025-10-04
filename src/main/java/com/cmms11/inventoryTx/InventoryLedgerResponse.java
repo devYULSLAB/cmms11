@@ -10,6 +10,8 @@ import java.math.BigDecimal;
  * 프로그램 개요: 재고원장 응답 DTO.
  */
 public record InventoryLedgerResponse(
+    String storageId,
+    String inventoryId,
     String txDate,
     String txType,
     String refNo,

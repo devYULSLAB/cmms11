@@ -1,6 +1,7 @@
 package com.cmms11.inventoryTx;
 
 import com.cmms11.common.seq.AutoNumberService;
+import com.cmms11.security.MemberUserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -221,7 +222,7 @@ public class InventoryTxService {
      * 재고 가용성 검증
      */
     private void validateStockAvailability(InventoryTxRequest request) {
-        String companyId = "C0001"; // TODO: 실제 회사 ID로 변경
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         
         BigDecimal currentQty = stockRepository.findQtyByIdCompanyIdAndIdInventoryIdAndIdStorageId(
                 companyId, request.inventoryId(), request.storageId());
@@ -242,7 +243,7 @@ public class InventoryTxService {
      * 거래 이력 생성
      */
     private InventoryHistory createTransactionHistory(InventoryTxRequest request) {
-        String companyId = "C0001"; // TODO: 실제 회사 ID로 변경
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         String historyId = autoNumberService.generateTxId(companyId, "H", request.txDate());
         
         InventoryHistory history = new InventoryHistory();
@@ -270,7 +271,7 @@ public class InventoryTxService {
      * 재고 업데이트
      */
     private void updateStock(InventoryTxRequest request) {
-        String companyId = "C0001"; // TODO: 실제 회사 ID로 변경
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         String storageId = request.storageId();
         String inventoryId = request.inventoryId();
         

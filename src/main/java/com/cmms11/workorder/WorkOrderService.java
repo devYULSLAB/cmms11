@@ -27,10 +27,12 @@ public class WorkOrderService {
 
     private final WorkOrderRepository repository;
     private final AutoNumberService autoNumberService;
+    private final WorkOrderItemRepository itemRepository;
 
-    public WorkOrderService(WorkOrderRepository repository, AutoNumberService autoNumberService) {
+    public WorkOrderService(WorkOrderRepository repository, AutoNumberService autoNumberService, WorkOrderItemRepository itemRepository) {
         this.repository = repository;
         this.autoNumberService = autoNumberService;
+        this.itemRepository = itemRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +86,9 @@ public class WorkOrderService {
         entity.setUpdatedAt(now);
         entity.setUpdatedBy(memberId);
 
-        return WorkOrderResponse.from(repository.save(entity));
+        WorkOrder saved = repository.save(entity);
+        saveItems(saved.getId().getCompanyId(), saved.getId().getOrderId(), request);
+        return WorkOrderResponse.from(saved);
     }
 
     public WorkOrderResponse update(String orderId, WorkOrderRequest request) {
@@ -92,7 +96,9 @@ public class WorkOrderService {
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
         entity.setUpdatedBy(currentMemberId());
-        return WorkOrderResponse.from(repository.save(entity));
+        WorkOrder saved = repository.save(entity);
+        saveItems(saved.getId().getCompanyId(), saved.getId().getOrderId(), request);
+        return WorkOrderResponse.from(saved);
     }
 
     public void delete(String orderId) {
@@ -122,6 +128,33 @@ public class WorkOrderService {
         entity.setStatus(request.status());
         entity.setFileGroupId(request.fileGroupId());
         entity.setNote(request.note());
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<WorkOrderItem> getItems(String orderId) {
+        return itemRepository.findByOrder(MemberUserDetailsService.DEFAULT_COMPANY, orderId);
+    }
+
+    private void saveItems(String companyId, String orderId, WorkOrderRequest request) {
+        itemRepository.deleteByOrder(companyId, orderId);
+        if (request.items() == null || request.items().isEmpty()) return;
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = currentMemberId();
+        int line = 1;
+        for (WorkOrderItemRequest r : request.items()) {
+            if (r == null) continue;
+            WorkOrderItem e = new WorkOrderItem();
+            e.setId(new WorkOrderItemId(companyId, orderId, line++));
+            e.setName(r.name());
+            e.setMethod(r.method());
+            e.setResult(r.result());
+            e.setNote(r.note());
+            e.setCreatedAt(now);
+            e.setCreatedBy(memberId);
+            e.setUpdatedAt(now);
+            e.setUpdatedBy(memberId);
+            itemRepository.save(e);
+        }
     }
 
     private String resolveId(String companyId, String requestedId, LocalDate referenceDate) {

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>조직도 선택</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
+    <link rel="stylesheet" href="../../static/assets/css/base.css" />
+    <style>
+      body{margin:0;padding:0;overflow:hidden}
+      .org-picker{display:flex;height:100vh;background:var(--bg)}
+      .org-left{flex:0 0 320px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column}
+      .org-right{flex:1;display:flex;flex-direction:column;background:var(--surface)}
+      .org-header{padding:16px;border-bottom:1px solid var(--border);background:var(--bg-subtle)}
+      .org-header h3{margin:0;font-size:16px;font-weight:600}
+      .org-body{flex:1;overflow-y:auto;padding:12px}
+      .org-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+      
+      /* 부서 트리 */
+      .dept-tree{list-style:none;padding:0;margin:0}
+      .dept-tree ul{list-style:none;padding-left:20px;margin:4px 0}
+      .dept-item{padding:8px 12px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s}
+      .dept-item:hover{background:var(--bg-hover)}
+      .dept-item.active{background:var(--primary);color:#fff;font-weight:600}
+      .dept-item .toggle{flex:0 0 16px;cursor:pointer;user-select:none;font-size:12px}
+      .dept-item .toggle.empty{visibility:hidden}
+      .dept-item .name{flex:1}
+      .dept-item .count{flex:0 0 auto;font-size:11px;color:var(--fg-muted);background:var(--bg-subtle);padding:2px 6px;border-radius:3px}
+      .dept-item.active .count{background:rgba(255,255,255,0.2);color:#fff}
+      
+      /* 조직원 목록 */
+      .member-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+      .member-card{border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all 0.2s;background:var(--surface)}
+      .member-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+      .member-card.selected{border-color:var(--primary);background:var(--primary-bg)}
+      .member-card .member-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+      .member-card .member-name{font-weight:600;font-size:15px}
+      .member-card .member-id{font-size:11px;color:var(--fg-muted);background:var(--bg-subtle);padding:2px 6px;border-radius:3px}
+      .member-card .member-info{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--fg-muted)}
+      .member-card .member-info .row{display:flex;gap:8px}
+      .member-card .member-info .label{flex:0 0 50px;font-weight:500;color:var(--fg)}
+      .member-card .member-info .value{flex:1}
+      
+      .search-box{padding:12px;border-bottom:1px solid var(--border)}
+      .search-box input{width:100%;box-sizing:border-box}
+      .empty-state{text-align:center;padding:48px 24px;color:var(--fg-muted)}
+      .empty-state .icon{font-size:48px;margin-bottom:16px;opacity:0.3}
+    </style>
+  </head>
+  <body>
+    <div class="org-picker">
+      <!-- 좌측: 부서 계층 -->
+      <div class="org-left">
+        <div class="org-header">
+          <h3>부서</h3>
+        </div>
+        <div class="search-box">
+          <input type="text" class="input" id="dept-search" placeholder="부서 검색..." />
+        </div>
+        <div class="org-body">
+          <ul class="dept-tree" id="dept-tree">
+            <!-- JavaScript로 동적 생성 -->
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 우측: 조직원 목록 -->
+      <div class="org-right">
+        <div class="org-header">
+          <h3 id="selected-dept-name">부서를 선택하세요</h3>
+        </div>
+        <div class="search-box">
+          <input type="text" class="input" id="member-search" placeholder="조직원 검색..." />
+        </div>
+        <div class="org-body">
+          <div class="member-list" id="member-list">
+            <div class="empty-state">
+              <div class="icon">👥</div>
+              <div>좌측에서 부서를 선택하세요</div>
+            </div>
+          </div>
+        </div>
+        <div class="org-footer">
+          <button class="btn" type="button" onclick="window.close()">취소</button>
+          <button class="btn primary" type="button" id="btn-select">선택</button>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // 선택된 멤버
+      let selectedMember = null;
+      let selectedDeptId = null;
+      
+      // 부서 데이터 (서버에서 로드)
+      let deptData = [];
+      
+      // 부서 데이터 로드
+      async function loadDeptData() {
+        try {
+          const response = await fetch('/api/domain/depts?size=1000');
+          const data = await response.json();
+          deptData = data.content || data; // Page 또는 List 대응
+          return deptData;
+        } catch (error) {
+          console.error('Failed to load dept data:', error);
+          return [];
+        }
+      }
+      
+      // 부서 계층 구조 생성
+      function buildDeptTree(parentId = null) {
+        const children = deptData.filter(d => d.parentDeptId === parentId);
+        if (children.length === 0) return '';
+        
+        let html = '<ul>';
+        children.forEach(dept => {
+          const hasChildren = deptData.some(d => d.parentDeptId === dept.deptId);
+          const subTree = buildDeptTree(dept.deptId);
+          
+          html += `
+            <li>
+              <div class="dept-item" data-dept-id="${dept.deptId}">
+                <span class="toggle ${hasChildren ? '' : 'empty'}">${hasChildren ? '▶' : ''}</span>
+                <span class="name">${dept.name}</span>
+              </div>
+              ${subTree}
+            </li>
+          `;
+        });
+        html += '</ul>';
+        return html;
+      }
+      
+      // 조직원 목록 표시
+      async function displayMembers(deptId) {
+        selectedDeptId = deptId;
+        const dept = deptData.find(d => d.deptId === deptId);
+        
+        document.getElementById('selected-dept-name').textContent = dept ? dept.name : '부서';
+        
+        const memberList = document.getElementById('member-list');
+        
+        try {
+          // API로 조직원 목록 조회
+          const response = await fetch(`/api/members?deptId=${deptId}&size=1000`);
+          const data = await response.json();
+          const members = data.content || data;
+          
+          if (!members || members.length === 0) {
+            memberList.innerHTML = `
+              <div class="empty-state">
+                <div class="icon">👤</div>
+                <div>조직원이 없습니다</div>
+              </div>
+            `;
+            return;
+          }
+          
+          memberList.innerHTML = members.map(m => {
+            return `
+              <div class="member-card" 
+                   data-member-id="${m.memberId}"
+                   data-name="${m.name || ''}"
+                   data-dept-id="${m.deptId || ''}"
+                   data-position="${m.position || ''}"
+                   data-title="${m.title || ''}"
+                   data-email="${m.email || ''}"
+                   data-phone="${m.phone || ''}">
+                <div class="member-header">
+                  <div class="member-name">${m.name || '-'}</div>
+                  <div class="member-id">${m.memberId}</div>
+                </div>
+                <div class="member-info">
+                  <div class="row">
+                    <div class="label">직급</div>
+                    <div class="value">${m.position || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">직책</div>
+                    <div class="value">${m.title || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">이메일</div>
+                    <div class="value">${m.email || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">전화</div>
+                    <div class="value">${m.phone || '-'}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } catch (error) {
+          console.error('Failed to load members:', error);
+          memberList.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">⚠️</div>
+              <div>조직원 로드 실패</div>
+            </div>
+          `;
+        }
+      }
+      
+      // 초기화
+      document.addEventListener('DOMContentLoaded', async () => {
+        // 부서 데이터 로드
+        await loadDeptData();
+        
+        // 부서 트리 렌더링
+        document.getElementById('dept-tree').innerHTML = buildDeptTree();
+        
+        // 부서 클릭 이벤트
+        document.getElementById('dept-tree').addEventListener('click', (e) => {
+          const deptItem = e.target.closest('.dept-item');
+          const toggle = e.target.closest('.toggle');
+          
+          if (toggle && !toggle.classList.contains('empty')) {
+            // 토글 클릭 - 하위 부서 펼치기/접기
+            const ul = deptItem.parentElement.querySelector('ul');
+            if (ul) {
+              ul.style.display = ul.style.display === 'none' ? 'block' : 'none';
+              toggle.textContent = ul.style.display === 'none' ? '▶' : '▼';
+            }
+          } else if (deptItem) {
+            // 부서 선택
+            document.querySelectorAll('.dept-item').forEach(item => item.classList.remove('active'));
+            deptItem.classList.add('active');
+            displayMembers(deptItem.dataset.deptId);
+          }
+        });
+        
+        // 조직원 클릭 이벤트
+        document.getElementById('member-list').addEventListener('click', (e) => {
+          const card = e.target.closest('.member-card');
+          if (card) {
+            document.querySelectorAll('.member-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            const dept = deptData.find(d => d.deptId === selectedDeptId);
+            
+            selectedMember = {
+              memberId: card.dataset.memberId,
+              name: card.dataset.name,
+              deptId: selectedDeptId,
+              deptName: dept ? dept.name : '',
+              position: card.dataset.position,
+              title: card.dataset.title,
+              email: card.dataset.email,
+              phone: card.dataset.phone
+            };
+          }
+        });
+        
+        // 선택 버튼
+        document.getElementById('btn-select').addEventListener('click', () => {
+          if (!selectedMember) {
+            alert('조직원을 선택하세요');
+            return;
+          }
+          
+          // 부모 창으로 데이터 전달
+          if (window.opener && window.opener.onMemberSelected) {
+            window.opener.onMemberSelected(selectedMember);
+          }
+          window.close();
+        });
+        
+        // 부서 검색
+        document.getElementById('dept-search').addEventListener('input', (e) => {
+          const keyword = e.target.value.toLowerCase();
+          document.querySelectorAll('.dept-item').forEach(item => {
+            const name = item.querySelector('.name').textContent.toLowerCase();
+            item.style.display = name.includes(keyword) ? 'flex' : 'none';
+          });
+        });
+        
+        // 조직원 검색
+        document.getElementById('member-search').addEventListener('input', (e) => {
+          const keyword = e.target.value.toLowerCase();
+          document.querySelectorAll('.member-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(keyword) ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
+

@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>작업허가 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="workpermit-list" data-module="workpermit-list">
         <main>
           <div class="container">
             <section class="card">
@@ -69,8 +71,8 @@
                         <input class="input" type="date" name="plannedDateFrom" th:value="${plannedDateFrom}" title="계획일(From)" />
                       </div>
                     </div>
-                    <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
-                      <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
+                    <div class="row actions actions-top-small">
+                      <button type="button" class="btn" data-reset-form>초기화</button>
                       <button type="submit" class="btn primary">검색</button>
                     </div>
                   </form>
@@ -91,7 +93,7 @@
                   </thead>
                   <tbody>
                     <tr th:each="workpermit : ${page.content}">
-                      <td><a th:href="@{/workpermit/edit/{id}(id=${workpermit.permitId})}" th:text="${workpermit.permitId}">-</a></td>
+                      <td><a th:href="@{/workpermit/detail/{id}(id=${workpermit.permitId})}" th:text="${workpermit.permitId}">-</a></td>
                       <td th:text="${workpermit.name}">-</td>
                       <td th:text="${workpermit.plantId}">-</td>
                       <td th:text="${workpermit.jobId}">-</td>
@@ -112,12 +114,16 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/workpermit/list?page=' + ${page.number - 1} + '&amp;permitId=&quot; + encodeURIComponent(&quot;${permitId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;jobId=&quot; + encodeURIComponent(&quot;${jobId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;)'">이전</button>
+                    <button class="btn sm" th:disabled="${page.first}" 
+                            th:data-url="@{/workpermit/list(page=${page.number - 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom})}"
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/workpermit/list?page=' + ${page.number + 1} + '&amp;permitId=&quot; + encodeURIComponent(&quot;${permitId}&quot;) + &quot;&amp;plantId=&quot; + encodeURIComponent(&quot;${plantId}&quot;) + &quot;&amp;jobId=&quot; + encodeURIComponent(&quot;${jobId}&quot;) + &quot;&amp;status=&quot; + encodeURIComponent(&quot;${status}&quot;) + &quot;&amp;plannedDateFrom=&quot; + encodeURIComponent(&quot;${plannedDateFrom}&quot;)'">다음</button>
+                    <button class="btn sm" th:disabled="${page.last}" 
+                            th:data-url="@{/workpermit/list(page=${page.number + 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom})}"
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>
@@ -129,7 +135,6 @@
         <div class="container">© 작업관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
-

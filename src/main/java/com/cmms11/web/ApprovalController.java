@@ -4,7 +4,10 @@ import com.cmms11.approval.ApprovalRequest;
 import com.cmms11.approval.ApprovalResponse;
 import com.cmms11.approval.ApprovalService;
 import com.cmms11.code.CodeService;
+import com.cmms11.file.FileGroupResponse;
+import com.cmms11.file.FileService;
 import jakarta.validation.Valid;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -13,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -20,10 +24,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 이름: ApprovalController
@@ -37,10 +39,12 @@ public class ApprovalController {
 
     private final ApprovalService service;
     private final CodeService codeService;
+    private final FileService fileService;
 
-    public ApprovalController(ApprovalService service, CodeService codeService) {
+    public ApprovalController(ApprovalService service, CodeService codeService, FileService fileService) {
         this.service = service;
         this.codeService = codeService;
+        this.fileService = fileService;
     }
 
     // 웹 컨트롤러 화면 제공
@@ -69,6 +73,20 @@ public class ApprovalController {
     public String detailForm(@PathVariable String approvalId, Model model) {
         ApprovalResponse approval = service.get(approvalId);
         model.addAttribute("approval", approval);
+        
+        // 첨부 파일 목록 조회
+        if (StringUtils.hasText(approval.fileGroupId())) {
+            try {
+                FileGroupResponse fileGroup = fileService.getGroup(approval.fileGroupId());
+                model.addAttribute("attachments", fileGroup.items());
+            } catch (Exception e) {
+                // 파일 조회 실패 시 빈 목록
+                model.addAttribute("attachments", Collections.emptyList());
+            }
+        } else {
+            model.addAttribute("attachments", Collections.emptyList());
+        }
+        
         return "approval/detail";
     }
 
@@ -94,6 +112,18 @@ public class ApprovalController {
     @PostMapping("/approval/delete/{approvalId}")
     public String deleteForm(@PathVariable String approvalId) {
         service.delete(approvalId);
+        return "redirect:/approval/list";
+    }
+
+    @PostMapping("/approval/approve/{approvalId}")
+    public String approveForm(@PathVariable String approvalId) {
+        service.approve(approvalId);
+        return "redirect:/approval/list";
+    }
+
+    @PostMapping("/approval/reject/{approvalId}")
+    public String rejectForm(@PathVariable String approvalId) {
+        service.reject(approvalId);
         return "redirect:/approval/list";
     }
 
@@ -152,6 +182,8 @@ public class ApprovalController {
             null, // refId
             null, // content
             null, // fileGroupId
+            null, // submittedAt
+            null, // completedAt
             null, // createdAt
             null, // createdBy
             null, // updatedAt

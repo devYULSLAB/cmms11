@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>자재/재고 등록/수정 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -76,7 +78,7 @@
                           <option value="">선택</option>
                           <option th:each="dept : ${depts}"
                                   th:value="${dept.deptId}"
-                                  th:text="${dept.deptId + ' - ' + dept.deptName}"
+                                  th:text="${dept.deptId + ' - ' + dept.name}"
                                   th:selected="${inventory.deptId == dept.deptId}">
                           </option>
                         </select>
@@ -119,15 +121,18 @@
                   <!-- 첨부 -->
                   <div class="section" data-attachments>
                     <div class="section-title">첨부</div>
+                    <input type="hidden" name="fileGroupId" th:value="${inventory.fileGroupId}" />
                     <div class="attachments">
-                      <input id="attachments-input" class="visually-hidden" type="file" multiple aria-hidden="true" />
-                      <button type="button" class="btn" data-attachments-add>파일 선택</button>
-                      <div class="hint">선택한 파일이 아래 목록에 표시됩니다</div>
-                      <ul class="attachments-list" aria-live="polite" aria-label="첨부파일 목록">
-                        <li class="empty">첨부파일이 없습니다.</li>
-                      </ul>
-                    </div>
-                    <input type="hidden" id="fileGroupId" name="fileGroupId" />
+                        <input id="attachments-input" class="visually-hidden" type="file" 
+                               multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                        <button type="button" class="btn" data-attachments-add>
+                          파일 선택
+                          <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                        </button>
+                        <ul class="attachments-list" aria-live="polite" aria-label="첨부된 파일 목록">
+                          <li class="empty">첨부된 파일이 없습니다.</li>
+                        </ul>
+                      </div>
                   </div>
 
                   <div class="actions" style="margin-top:16px">
@@ -147,7 +152,7 @@
         <div class="container">© 자재/재고</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

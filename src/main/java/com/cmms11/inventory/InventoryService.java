@@ -46,15 +46,17 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<InventoryResponse> list(String keyword, Pageable pageable) {
+    public Page<InventoryResponse> list(String inventoryId, String name, String makerName, String deptId, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Inventory> page;
-        if (keyword == null || keyword.isBlank()) {
-            page = repository.findByIdCompanyIdAndDeleteMark(companyId, "N", pageable);
-        } else {
-            String trimmed = "%" + keyword.trim() + "%";
-            page = repository.search(companyId, "N", trimmed, pageable);
-        }
+        Page<Inventory> page = repository.findByFilters(
+            companyId,
+            "N",
+            inventoryId,
+            name,
+            makerName,
+            deptId,
+            pageable
+        );
         return page.map(InventoryResponse::from);
     }
 

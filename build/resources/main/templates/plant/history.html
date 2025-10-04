@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비 이력 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -201,7 +203,7 @@
         <div class="container">© 설비 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
     <script>
       let selectedPlantId = null;
 
@@ -214,7 +216,7 @@
         }
 
         try {
-          const response = await fetch(`/api/plants?q=${encodeURIComponent(plantId)}&size=10`);
+          const response = await fetch(`/api/plants?plantId=${encodeURIComponent(plantId)}&size=10`);
           const data = await response.json();
           
           const resultsSection = document.getElementById('plant-search-results');

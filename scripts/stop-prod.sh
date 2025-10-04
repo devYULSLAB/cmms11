@@ -7,24 +7,43 @@ set -e
 
 echo "Stopping CMMS11 Production Server..."
 
-# Stop the systemd service
-if systemctl is-active --quiet cmms11; then
-    echo "Stopping CMMS11 service..."
-    sudo systemctl stop cmms11
-    echo "CMMS11 service stopped successfully!"
-else
-    echo "CMMS11 service is not running"
+# Set consistent working directory
+REPO_ROOT="/opt/cmms11"
+LOG_DIR="$REPO_ROOT/logs"
+PID_FILE="$LOG_DIR/app.pid"
+
+# Check if PID file exists
+if [ ! -f "$PID_FILE" ]; then
+    echo "PID file not found. CMMS11 may not be running"
+    exit 0
 fi
 
-# Disable the service (optional - comment out if you want it to start on boot)
-# sudo systemctl disable cmms11
+PID=$(cat "$PID_FILE")
 
-# Kill any remaining Java processes (fallback)
-echo "Checking for remaining Java processes..."
-pkill -f "cmms11" || echo "No remaining CMMS11 processes found"
+# Check if process exists
+if ! ps -p $PID > /dev/null 2>&1; then
+    echo "CMMS11 is not running (stale PID file)"
+    rm -f "$PID_FILE"
+    exit 0
+fi
 
-# Stop Gradle daemon
-echo "Stopping Gradle daemon..."
-./gradlew --stop
+# Stop the process
+echo "Stopping CMMS11 (PID: $PID)..."
+kill $PID
+sleep 5
 
-echo "CMMS11 Production Server stopped successfully!"
+# Check if still running
+if ps -p $PID > /dev/null 2>&1; then
+    echo "Force stopping CMMS11..."
+    kill -9 $PID
+    sleep 2
+fi
+
+# Final check
+if ps -p $PID > /dev/null 2>&1; then
+    echo "Error: Failed to stop CMMS11 (PID: $PID)"
+    exit 1
+else
+    rm -f "$PID_FILE"
+    echo "CMMS11 Production Server stopped successfully!"
+fi

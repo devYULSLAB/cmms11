@@ -5,6 +5,8 @@ import com.cmms11.domain.member.MemberId;
 import com.cmms11.domain.member.MemberService;
 import com.cmms11.domain.dept.DeptService;
 import com.cmms11.domain.dept.DeptResponse;
+import com.cmms11.domain.site.SiteService;
+import com.cmms11.domain.site.SiteResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,16 +31,20 @@ import org.springframework.validation.annotation.Validated;
 public class MemberController {
     private final MemberService service;
     private final DeptService deptService;
+    private final SiteService siteService;
 
-    public MemberController(MemberService service, DeptService deptService) {
+    public MemberController(MemberService service, DeptService deptService, SiteService siteService) {
         this.service = service;
         this.deptService = deptService;
+        this.siteService = siteService;
     }
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/domain/member/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<Member> page = service.list(q, pageable);
+    public String listForm(@RequestParam(name = "q", required = false) String q, 
+                          @RequestParam(name = "deptId", required = false) String deptId,
+                          Pageable pageable, Model model) {
+        Page<Member> page = service.list(q, deptId, pageable);
         model.addAttribute("page", page);
         model.addAttribute("keyword", q);
         return "domain/member/list";
@@ -51,6 +57,9 @@ public class MemberController {
         // 부서 목록 추가
         Page<DeptResponse> depts = deptService.list(null, PageRequest.of(0, 1000));
         model.addAttribute("depts", depts.getContent());
+        // 사이트 목록 추가
+        Page<SiteResponse> sites = siteService.list(null, PageRequest.of(0, 1000));
+        model.addAttribute("sites", sites.getContent());
         return "domain/member/form";
     }
 
@@ -62,6 +71,9 @@ public class MemberController {
         // 부서 목록 추가
         Page<DeptResponse> depts = deptService.list(null, PageRequest.of(0, 1000));
         model.addAttribute("depts", depts.getContent());
+        // 사이트 목록 추가
+        Page<SiteResponse> sites = siteService.list(null, PageRequest.of(0, 1000));
+        model.addAttribute("sites", sites.getContent());
         return "domain/member/form";
     }
 
@@ -85,8 +97,10 @@ public class MemberController {
     // API 엔드포인트 제공
     @ResponseBody
     @GetMapping("/api/members")
-    public Page<Member> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
+    public Page<Member> list(@RequestParam(name = "q", required = false) String q,
+                             @RequestParam(name = "deptId", required = false) String deptId,
+                             Pageable pageable) {
+        return service.list(q, deptId, pageable);
     }
 
     @ResponseBody
@@ -105,6 +119,8 @@ public class MemberController {
         member.setEmail(req.email);
         member.setPhone(req.phone);
         member.setSiteId(req.siteId);
+        member.setPosition(req.position);
+        member.setTitle(req.title);
         member.setNote(req.note);
         if (req.deleteMark != null) {
             member.setDeleteMark(req.deleteMark);
@@ -134,6 +150,12 @@ public class MemberController {
         @Size(max = 5)
         private String siteId;
 
+        @Size(max = 50)
+        private String position;
+
+        @Size(max = 50)
+        private String title;
+
         @Size(max = 500)
         private String note;
 
@@ -155,6 +177,8 @@ public class MemberController {
             form.setEmail(member.getEmail());
             form.setPhone(member.getPhone());
             form.setSiteId(member.getSiteId());
+            form.setPosition(member.getPosition());
+            form.setTitle(member.getTitle());
             form.setNote(member.getNote());
             form.setDeleteMark(member.getDeleteMark());
             return form;
@@ -168,6 +192,8 @@ public class MemberController {
             member.setEmail(email);
             member.setPhone(phone);
             member.setSiteId(siteId);
+            member.setPosition(position);
+            member.setTitle(title);
             member.setNote(note);
             member.setDeleteMark(deleteMark != null ? deleteMark : "N");
             return member;
@@ -244,6 +270,22 @@ public class MemberController {
         public void setDeleteMark(String deleteMark) {
             this.deleteMark = deleteMark;
         }
+
+        public String getPosition() {
+            return position;
+        }
+
+        public void setPosition(String position) {
+            this.position = position;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
     }
 
     public static class MemberCreateRequest {
@@ -253,6 +295,8 @@ public class MemberController {
         public String email;
         public String phone;
         public String siteId;
+        public String position;
+        public String title;
         public String note;
         public String password; // raw password, will be encoded
         public String deleteMark; // optional, default N

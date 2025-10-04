@@ -254,6 +254,7 @@ src/main/resources/
   - 삭제/위험동작은 data-confirm으로 확인 절차 제공
   - 테이블 행 클릭 이동과 앵커 병행 제공으로 키보드/마우스 모두 지원
 
+
 ## 6) 메뉴 Tree 
 
 CMMS 메인 메뉴
@@ -270,24 +271,6 @@ CMMS 메인 메뉴
 
 ### 모듈별 상세 기능
 
-#### Inspection (점검) 모듈
-- **기능**: 설비 점검 계획 수립, 진행 관리, 완료 처리
-- **상태**: PLAN → PROC → DONE
-- **필터**: 점검번호, 설비번호, 상태, 계획일 범위
-- **첨부**: 점검 결과 사진, 보고서 등
-
-#### WorkOrder (작업지시) 모듈  
-- **기능**: 작업 지시서 생성, 담당자 배정, 진행 관리, 완료 처리
-- **상태**: PLAN → ASGN → PROC → DONE
-- **필터**: 작업지시번호, 설비번호, 상태, 계획일 범위
-- **첨부**: 작업 지시서, 안전 수칙, 작업 결과 등
-
-#### WorkPermit (작업허가) 모듈
-- **기능**: 위험작업 허가서 발급, 안전 관리, 완료 처리
-- **상태**: PLAN → ASGN → PROC → DONE  
-- **필터**: 작업허가번호, 설비번호, 상태, 계획일 범위
-- **첨부**: 안전 계획서, 허가서, 점검 결과 등
-
 ### 자동번호 채번 규칙 (메뉴별)
 - **Master ID**: `{moduleCode(1)}{000000}{3자리시퀀스}` or `{moduleCode(1)}{9자리시퀀스}`
   - Plant(설비): moduleCode=1 → 1000000001
@@ -302,27 +285,24 @@ CMMS 메인 메뉴
 ### 상태 코드 (Status Codes)
 
 #### Inspection (점검) 상태
+- 정책: {관리자 계획 생성|계획 없이 바로 실행}{점검 완료 후 결재 상신|완료 후 확정 저장} 
 - **PLAN**: 계획 - 점검 계획이 수립된 상태
 - **PROC**: 진행 - 점검이 진행 중인 상태  
 - **DONE**: 완료 - 점검이 완료된 상태
 
 #### WorkOrder (작업지시) 상태
+- 정책: {관리자가 작업지시 생성 후 결재 상신|관리자가 작업지시 생성 후 확정 저장}{작업 완료 후 결재 상신|완료 후 확정 저장}
 - **PLAN**: 계획 - 작업 계획이 수립된 상태
 - **ASGN**: 배정 - 작업이 담당자에게 배정된 상태
 - **PROC**: 진행 - 작업이 진행 중인 상태
 - **DONE**: 완료 - 작업이 완료된 상태
 
 #### WorkPermit (작업허가) 상태
+- 정책: {시스템 없이 수작업 작업안전 관리|별도의 수작업 양식지를 포함하여 작성 후 첨부하여 결재 상신}{결재 상신|담당자 확정}[작업허가서 출력하여 작업장에 배치]
 - **PLAN**: 계획 - 작업허가 계획이 수립된 상태
 - **ASGN**: 배정 - 작업허가가 담당자에게 배정된 상태
 - **PROC**: 진행 - 작업허가가 진행 중인 상태
 - **DONE**: 완료 - 작업허가가 완료된 상태
-
-#### 상태 전환 규칙
-- **PLAN** → **ASGN**: 계획에서 담당자 배정으로 전환
-- **ASGN** → **PROC**: 배정에서 작업 시작으로 전환
-- **PROC** → **DONE**: 진행에서 완료로 전환
-- **DONE**: 최종 상태 (추가 전환 없음)
 
 #### UI 표시 규칙
 - **PLAN**: 기본 배지 (회색)
@@ -333,3 +313,78 @@ CMMS 메인 메뉴
 ## 파일 업로드 보완 사항 (중요)
 - 그룹 ID 폴백: 항목에 fileGroupId가 없을 수 있으므로 다음 순서로 해석합니다: (1) 렌더 시 전달된 groupId (2) 섹션/폼의 input[name=" fileGroupId\] 값 (3) 항목의 fileGroupId. 이로 인해 링크의 groupId=undefined 문제를 방지합니다.
 - 삭제 메서드: 기본은 DELETE /api/files/{fileId}?groupId=... 입니다. 서버가 POST 삭제만 허용한다면 전역 위젯을 해당 규격으로 맞춰야 합니다.
+
+## 템플릿 자산 링크/출력 가이드
+
+Thymeleaf SSR과 브라우저에서 템플릿을 직접 열 때(비‑SSR) 모두 잘 동작하도록, 링크를 이중으로 선언하는 패턴을 권장합니다.
+
+### th:href / href, th:src / src
+
+- 원칙
+  - SSR(Thymeleaf) 실행 시: `th:href`, `th:src` 사용. 절대 경로(`/assets/...`).
+  - 비‑SSR(템플릿 파일 직접 열람) 시: `href`, `src`는 상대 경로(`../../static/assets/...`) 폴백.
+
+- CSS 예시
+```
+<link rel="stylesheet" th:href="@{/assets/css/base.css}"  href="../../static/assets/css/base.css" />
+<link rel="stylesheet" th:href="@{/assets/css/print.css}" href="../../static/assets/css/print.css" />
+```
+
+- JS 예시
+```
+<script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
+```
+
+- 주의
+  - 실행 환경에서 `/static`을 포함한 절대 경로는 잘못입니다. SSR 경로는 `/assets/...`만 사용.
+  - 레이아웃(`templates/layout/defaultLayout.html`)을 쓰는 경우, 전역 CSS/JS는 레이아웃 `<head>`에서 로드합니다.
+
+### 출력(인쇄) 뷰
+
+- 구조
+  - CSS: `/assets/css/print.css`
+  - DOM: `<section class="print-form"><div class="doc">...</div></section>`
+  - 화면 기본: `.print-form { display: none; }`
+  - 미리보기: `body.print-preview .print-form { display: block; }` + 본문 카드 숨김
+
+- 토글 패턴
+  - 미리보기: `onclick="document.body.classList.add('print-preview')"`
+  - 인쇄: `onclick="window.print()"`
+  - 종료: `afterprint` 이벤트, `Esc` 키로 `print-preview` 제거
+
+- 날짜 표기
+  - `#print-date` 요소에 스크립트로 인쇄 시각 주입
+
+### Thymeleaf 인라인 JS(th:inline="javascript")
+
+`/*[[...]]*/` 형태로 Thymeleaf 변수를 JS에 주입할 때는 해당 `<script>`에 `th:inline="javascript"`를 선언해야 합니다.
+
+- 예시
+```
+<script th:inline="javascript">
+  const fileGroupId = /*[[${memo.fileGroupId}]]*/ null;
+  // ...
+<\/script>
+```
+
+- 누락 시 증상
+  - 변수가 치환되지 않아 `null`로 남고, 첨부 목록/출력 등 후속 로직이 동작하지 않음
+
+## 7) SPA 네비게이션 시스템 상세 구조
+
+### 공통 번들
+- `app.js`: SPA 네비게이션과 `window.cmms.moduleLoader`를 통해 페이지 전용 스크립트를 지연 로딩한다.
+- `common.js`: TableManager, FormManager 등 공통 UI 유틸을 제공한다.
+
+### 모듈 로더
+- URL의 첫 번째 세그먼트를 키로 `moduleMap`에서 스크립트 경로를 찾는다.
+- `navigation.loadContent()` 이후 `loadModule(currentContentUrl)`을 호출하여 최초 접근 시에만 스크립트를 주입한다.
+- `/domain/...`처럼 매핑되지 않은 경로는 로더가 건너뛴다. 필요하면 `moduleMap`이나 `extractModuleId()`를 확장한다.
+
+### 파일 업로드 초기화
+- `initializeFileUploadWidgets` 한 곳에서 `[data-attachments]` 컨테이너를 초기화하고 `__fileUploadInitialized` 플래그로 중복 실행을 막는다.
+- 각 페이지 모듈(`workorder.js` 등)은 공통 초기화에 맡기고 별도의 초기화 코드를 두지 않는다.
+
+### CSRF 처리
+- fetch 래퍼가 동일 출처 비-GET 요청에 `X-CSRF-TOKEN`을 자동 주입하고 hidden 필드를 동기화한다.
+- 페이지 모듈은 별도의 CSRF 헤더 처리 없이 fetch를 사용하면 된다.

@@ -3,18 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>자재/재고 목록 · CMMS</title>
+    <title>재고/자재 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
     <div class="page">
       <header class="appbar">
         <div class="appbar-inner">
-          <div class="brand">자재/재고</div>
+          <div class="brand">재고/자재</div>
           <div class="spacer"></div>
           <div class="meta">
             <span class="badge">memberId</span>
-            <span>운영팀</span>
+            <span>운영자</span>
           </div>
         </div>
       </header>
@@ -22,16 +24,16 @@
         <div class="container">
           <a th:href="@{#}" href="#">자산정보</a>
           <span class="sep">/</span>
-          <span>자재/재고</span>
+          <span>재고/자재</span>
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-list" data-module="inventory-list">
         <main>
           <div class="container">
             <section class="card">
                 <div class="card-header">
-                <div class="card-title">자재/재고 목록</div>
+                <div class="card-title">재고/자재 목록</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{#}" href="#">정보보기</a>
                   <a class="btn" th:href="@{/inventory/uploadForm}">일괄 등록</a>
@@ -44,24 +46,27 @@
                   <form method="get" th:action="@{/inventory/list}">
                     <div class="grid cols-12">
                       <div class="col-span-3">
-                        <input class="input" placeholder="자재 번호" name="inventoryId" th:value="${inventoryId}" />
+                        <input class="input" placeholder="재고 번호" name="inventoryId" th:value="${inventoryId}" />
                       </div>
-                      <div class="col-span-4">
-                        <input class="input" placeholder="자재명 또는 규격" name="q" th:value="${keyword}" />
+                      <div class="col-span-3">
+                        <input class="input" placeholder="재고명" name="name" th:value="${name}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="제조사" name="makerName" th:value="${makerName}" />
                       </div>
                       <div class="col-span-3">
                         <select class="input" name="deptId">
                           <option value="">관리부서(선택)</option>
-                          <option th:each="dept : ${depts}" 
-                                  th:value="${dept.deptId}" 
-                                  th:text="${dept.deptName}"
+                          <option th:each="dept : ${depts}"
+                                  th:value="${dept.deptId}"
+                                  th:text="${dept.name}"
                                   th:selected="${deptId == dept.deptId}"></option>
                         </select>
                       </div>
-                      <div class="col-span-2" style="display:flex;gap:8px;justify-content:flex-end">
-                        <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
-                        <button type="submit" class="btn primary">검색</button>
-                      </div>
+                    </div>
+                    <div class="row actions actions-top-small">
+                      <a class="btn" th:href="@{/inventory/list}">초기화</a>
+                      <button type="submit" class="btn primary">검색</button>
                     </div>
                   </form>
                 </div>
@@ -69,13 +74,13 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">자재 번호</th>
-                      <th>자재명</th>
-                      <th style="width:120px">자산유형</th>
-                      <th style="width:120px">관리부서</th>
-                      <th style="width:160px">모델</th>
-                      <th style="width:220px">규격</th>
-                      <th style="width:140px">액션</th>
+                      <th class="col-140">재고 번호</th>
+                      <th>재고명</th>
+                      <th class="col-120">자산유형</th>
+                      <th class="col-120">관리부서</th>
+                      <th class="col-160">모델</th>
+                      <th class="col-220">규격</th>
+                      <th class="col-140">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -87,23 +92,26 @@
                       <td th:text="${inventory.model}">-</td>
                       <td th:text="${inventory.spec}">-</td>
                       <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/inventory/detail/{id}(id=${inventory.inventoryId})}">상세</a>
                         <a class="btn btn-sm" th:href="@{/inventory/edit/{id}(id=${inventory.inventoryId})}">수정</a>
-                        <button class="btn btn-sm danger" 
+                        <button class="btn btn-sm danger"
                                 th:data-delete-url="@{/inventory/delete/{id}(id=${inventory.inventoryId})}"
                                 data-redirect="@{/inventory/list}"
-                                data-confirm="정말로 삭제하시겠습니까?">삭제</button>
+                                data-confirm="정말 삭제하시겠습니까?">삭제</button>
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/inventory/list?page=' + ${page.number - 1} + '&amp;q=&quot; + encodeURIComponent(&quot;${keyword}&quot;) + &quot;&amp;inventoryId=&quot; + encodeURIComponent(&quot;${inventoryId}&quot;) + &quot;&amp;deptId=&quot; + encodeURIComponent(&quot;${deptId}&quot;)'">이전</button>
+                    <button class="btn sm" th:disabled="${page.first}" 
+                            th:data-url="@{/inventory/list(page=${page.number - 1}, inventoryId=${inventoryId}, name=${name}, makerName=${makerName}, deptId=${deptId})}"
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/inventory/list?page=' + ${page.number + 1} + '&amp;q=&quot; + encodeURIComponent(&quot;${keyword}&quot;) + &quot;&amp;inventoryId=&quot; + encodeURIComponent(&quot;${inventoryId}&quot;) + &quot;&amp;deptId=&quot; + encodeURIComponent(&quot;${deptId}&quot;)'">다음</button>
+                    <button class="btn sm" th:disabled="${page.last}" 
+                            th:data-url="@{/inventory/list(page=${page.number + 1}, inventoryId=${inventoryId}, name=${name}, makerName=${makerName}, deptId=${deptId})}"
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>
@@ -112,10 +120,9 @@
         </main>
       </section>
       <footer>
-        <div class="container">© 자재/재고</div>
+        <div class="container">© 재고/자재</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
-

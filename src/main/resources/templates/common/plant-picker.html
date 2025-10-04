@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>설비 선택</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
+    <link rel="stylesheet" href="../../static/assets/css/base.css" />
+    <style>
+      body{margin:0;padding:0;overflow:hidden}
+      .plant-picker{display:flex;height:100vh;background:var(--bg)}
+      .plant-left{flex:0 0 280px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column}
+      .plant-right{flex:1;display:flex;flex-direction:column;background:var(--surface)}
+      .plant-header{padding:16px;border-bottom:1px solid var(--border);background:var(--bg-subtle)}
+      .plant-header h3{margin:0;font-size:16px;font-weight:600}
+      .plant-body{flex:1;overflow-y:auto;padding:12px}
+      .plant-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+      
+      /* 기능위치 목록 */
+      .func-list{list-style:none;padding:0;margin:0}
+      .func-item{padding:10px 14px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s;margin-bottom:4px}
+      .func-item:hover{background:var(--bg-hover)}
+      .func-item.active{background:var(--primary);color:#fff;font-weight:600}
+      .func-item .func-id{flex:0 0 80px;font-weight:600;font-size:13px}
+      .func-item .func-name{flex:1;font-size:13px}
+      .func-item.active .func-name{color:#fff}
+      
+      /* 설비 목록 */
+      .plant-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+      .plant-card{border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all 0.2s;background:var(--surface)}
+      .plant-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+      .plant-card.selected{border-color:var(--primary);background:var(--primary-bg);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+      .plant-card .plant-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+      .plant-card .plant-id{font-weight:600;font-size:14px;color:var(--primary)}
+      .plant-card.selected .plant-id{color:var(--primary-dark)}
+      .plant-card .plant-name{font-weight:600;font-size:15px;margin-bottom:8px}
+      .plant-card .plant-info{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--fg-muted)}
+      .plant-card .plant-info .row{display:flex;gap:8px}
+      .plant-card .plant-info .label{flex:0 0 60px;font-weight:500;color:var(--fg)}
+      .plant-card .plant-info .value{flex:1;word-break:break-all}
+      
+      .search-box{padding:12px;border-bottom:1px solid var(--border)}
+      .search-box input{width:100%;box-sizing:border-box}
+      .empty-state{text-align:center;padding:48px 24px;color:var(--fg-muted)}
+      .empty-state .icon{font-size:48px;margin-bottom:16px;opacity:0.3}
+    </style>
+  </head>
+  <body>
+    <div class="plant-picker">
+      <!-- 좌측: 기능위치 목록 -->
+      <div class="plant-left">
+        <div class="plant-header">
+          <h3>기능위치</h3>
+        </div>
+        <div class="search-box">
+          <input type="text" class="input" id="func-search" placeholder="기능위치 검색..." />
+        </div>
+        <div class="plant-body">
+          <ul class="func-list" id="func-list">
+            <li class="func-item active" data-func-id="">
+              <div class="func-id">(전체)</div>
+              <div class="func-name">전체 설비</div>
+            </li>
+            <!-- JavaScript로 동적 생성 -->
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 우측: 설비 목록 -->
+      <div class="plant-right">
+        <div class="plant-header">
+          <h3 id="selected-func-name">전체 설비</h3>
+        </div>
+        <div class="search-box">
+          <input type="text" class="input" id="plant-search" placeholder="설비번호/설비명 검색..." />
+        </div>
+        <div class="plant-body">
+          <div class="plant-list" id="plant-list">
+            <div class="empty-state">
+              <div class="icon">🏭</div>
+              <div>좌측에서 기능위치를 선택하세요</div>
+            </div>
+          </div>
+        </div>
+        <div class="plant-footer">
+          <button class="btn" type="button" onclick="window.close()">취소</button>
+          <button class="btn primary" type="button" id="btn-select">선택</button>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // 선택된 설비
+      let selectedPlant = null;
+      let selectedFuncId = '';
+      
+      // 기능위치 데이터 (서버에서 로드)
+      let funcData = [];
+      
+      // 기능위치 데이터 로드
+      async function loadFuncData() {
+        try {
+          const response = await fetch('/api/domain/funcs?size=1000');
+          const data = await response.json();
+          funcData = data.content || data;
+          return funcData;
+        } catch (error) {
+          console.error('Failed to load func data:', error);
+          return [];
+        }
+      }
+      
+      // 기능위치 목록 렌더링
+      function renderFuncList() {
+        const funcList = document.getElementById('func-list');
+        const existingAll = funcList.querySelector('[data-func-id=""]');
+        
+        funcData.forEach(func => {
+          const li = document.createElement('li');
+          li.className = 'func-item';
+          li.dataset.funcId = func.funcId;
+          li.innerHTML = `
+            <div class="func-id">${func.funcId}</div>
+            <div class="func-name">${func.name || '-'}</div>
+          `;
+          funcList.appendChild(li);
+        });
+      }
+      
+      // 설비 목록 표시
+      async function displayPlants(funcId) {
+        selectedFuncId = funcId;
+        const func = funcData.find(f => f.funcId === funcId);
+        
+        document.getElementById('selected-func-name').textContent = 
+          funcId ? (func ? func.name : '기능위치') : '전체 설비';
+        
+        const plantList = document.getElementById('plant-list');
+        
+        try {
+          // API로 설비 목록 조회
+          const params = new URLSearchParams({ size: 1000 });
+          if (funcId) params.append('funcId', funcId);
+          
+          const response = await fetch(`/api/plants?${params}`);
+          const data = await response.json();
+          const plants = data.content || data;
+          
+          if (!plants || plants.length === 0) {
+            plantList.innerHTML = `
+              <div class="empty-state">
+                <div class="icon">🏭</div>
+                <div>설비가 없습니다</div>
+              </div>
+            `;
+            return;
+          }
+          
+          plantList.innerHTML = plants.map(p => `
+            <div class="plant-card" 
+                 data-plant-id="${p.plantId}"
+                 data-name="${p.name || ''}"
+                 data-func-id="${p.funcId || ''}"
+                 data-dept-id="${p.deptId || ''}"
+                 data-maker-name="${p.makerName || ''}"
+                 data-serial="${p.serial || ''}">
+              <div class="plant-header">
+                <div class="plant-id">${p.plantId}</div>
+              </div>
+              <div class="plant-name">${p.name || '-'}</div>
+              <div class="plant-info">
+                <div class="row">
+                  <div class="label">기능위치</div>
+                  <div class="value">${p.funcId || '-'}</div>
+                </div>
+                <div class="row">
+                  <div class="label">부서</div>
+                  <div class="value">${p.deptId || '-'}</div>
+                </div>
+                <div class="row">
+                  <div class="label">제조사</div>
+                  <div class="value">${p.makerName || '-'}</div>
+                </div>
+                <div class="row">
+                  <div class="label">시리얼</div>
+                  <div class="value">${p.serial || '-'}</div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } catch (error) {
+          console.error('Failed to load plants:', error);
+          plantList.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">⚠️</div>
+              <div>설비 로드 실패</div>
+            </div>
+          `;
+        }
+      }
+      
+      // 초기화
+      document.addEventListener('DOMContentLoaded', async () => {
+        // 기능위치 데이터 로드
+        await loadFuncData();
+        
+        // 기능위치 목록 렌더링
+        renderFuncList();
+        
+        // 전체 설비 자동 로드
+        displayPlants('');
+        
+        // 기능위치 클릭 이벤트
+        document.getElementById('func-list').addEventListener('click', (e) => {
+          const funcItem = e.target.closest('.func-item');
+          if (funcItem) {
+            document.querySelectorAll('.func-item').forEach(item => item.classList.remove('active'));
+            funcItem.classList.add('active');
+            displayPlants(funcItem.dataset.funcId);
+          }
+        });
+        
+        // 설비 클릭 이벤트
+        document.getElementById('plant-list').addEventListener('click', (e) => {
+          const card = e.target.closest('.plant-card');
+          if (card) {
+            document.querySelectorAll('.plant-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            selectedPlant = {
+              plantId: card.dataset.plantId,
+              name: card.dataset.name,
+              funcId: card.dataset.funcId,
+              deptId: card.dataset.deptId,
+              makerName: card.dataset.makerName,
+              serial: card.dataset.serial
+            };
+          }
+        });
+        
+        // 선택 버튼
+        document.getElementById('btn-select').addEventListener('click', () => {
+          if (!selectedPlant) {
+            alert('설비를 선택하세요');
+            return;
+          }
+          
+          // 부모 창으로 데이터 전달
+          if (window.opener && window.opener.onPlantSelected) {
+            window.opener.onPlantSelected(selectedPlant);
+          }
+          window.close();
+        });
+        
+        // 기능위치 검색
+        document.getElementById('func-search').addEventListener('input', (e) => {
+          const keyword = e.target.value.toLowerCase();
+          document.querySelectorAll('.func-item').forEach(item => {
+            if (item.dataset.funcId === '') return; // (전체) 항목은 항상 표시
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(keyword) ? 'flex' : 'none';
+          });
+        });
+        
+        // 설비 검색
+        document.getElementById('plant-search').addEventListener('input', (e) => {
+          const keyword = e.target.value.toLowerCase();
+          document.querySelectorAll('.plant-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(keyword) ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
+

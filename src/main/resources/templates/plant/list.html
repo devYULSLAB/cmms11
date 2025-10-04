@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비 목록 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
   </head>
   <body>
@@ -26,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="plant-list" data-module="plant-list">
         <main>
           <div class="container">
             <section class="card">
@@ -41,27 +43,26 @@
               <div class="card-body">
                 <div class="section">
                   <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-3">
-                      <input class="input" placeholder="설비번호" name="plantId" th:value="${plantId}" />
-                    </div>         
-                    <div class="col-span-3">
-                      <input class="input" placeholder="검색어(번호/이름)" name="q" th:value="${keyword}" />
-                    </div>   
-                    <div class="col-span-3">
-                      <select name="deptId">
-                        <option value="">부서 전체</option>
-                        <option th:each="dept : ${depts}" 
-                                th:value="${dept.deptId}" 
-                                th:text="${dept.deptName}"
-                                th:selected="${deptId == dept.deptId}"></option>
-                      </select>
+                  <form method="get" th:action="@{/plant/list}">
+                    <div class="grid cols-12">
+                      <div class="col-span-3">
+                        <input class="input" placeholder="설비번호" name="plantId" th:value="${plantId}" />
+                      </div>         
+                      <div class="col-span-3">
+                        <input class="input" placeholder="설비명" name="name" th:value="${name}" />
+                      </div>   
+                      <div class="col-span-3">
+                        <input class="input" placeholder="제조사" name="makerName" th:value="${makerName}" />
+                      </div>
+                      <div class="col-span-3">
+                        <input class="input" placeholder="기능위치" name="funcId" th:value="${funcId}" />
+                      </div>
                     </div>
-                    <div class="col-span-3" style="display:flex;gap:8px;justify-content:flex-end">
-                      <button class="btn">초기화</button>
-                      <button class="btn">검색</button>
+                    <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
+                      <a class="btn" th:href="@{/plant/list}">초기화</a>
+                      <button type="submit" class="btn primary">검색</button>
                     </div>
-                  </div>
+                  </form>
                 </div>
 
                 <table class="table">
@@ -78,7 +79,7 @@
                   </thead>
                   <tbody>
                     <tr th:each="plant : ${page.content}">
-                      <td><a th:href="@{/plant/edit/{id}(id=${plant.plantId})}" th:text="${plant.plantId}">-</a></td>
+                      <td><a th:href="@{/plant/detail/{id}(id=${plant.plantId})}" th:text="${plant.plantId}">-</a></td>
                       <td th:text="${plant.name}">-</td>
                       <td th:text="${plant.deptId}">-</td>
                       <td th:text="${plant.makerName}">-</td>
@@ -95,12 +96,16 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
-                  <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" th:onclick="'location.href=&quot;/plant/list?page=' + ${page.number - 1} + '&amp;q=&quot; + encodeURIComponent(&quot;${keyword}&quot;)'">이전</button>
+                  <div class="pagination" data-pagination>
+                    <button class="btn sm" th:disabled="${page.first}" 
+                            th:data-url="@{/plant/list(page=${page.number - 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" th:onclick="'location.href=&quot;/plant/list?page=' + ${page.number + 1} + '&amp;q=&quot; + encodeURIComponent(&quot;${keyword}&quot;)'">다음</button>
+                    <button class="btn sm" th:disabled="${page.last}" 
+                            th:data-url="@{/plant/list(page=${page.number + 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>
@@ -112,7 +117,7 @@
         <div class="container">© 설비 관리</div>
       </footer>
     </div>
-    <script src="../../static/assets/js/app.js"></script>
+    
   </body>
   </html>
 

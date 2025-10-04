@@ -1,93 +1,85 @@
-# CMMS11 운영 서버 환경 점검 사항
+# CMMS11 운영 서버 배포 가이드
 
-## 1. 서버 환경 점검
+## 🚀 빠른 배포 가이드
 
-### 시스템 요구사항
-- **OS**: Ubuntu 20.04 LTS 이상
-- **Java**: OpenJDK 17 이상
-- **메모리**: 최소 4GB RAM (권장 8GB)
-- **디스크**: 최소 20GB 여유 공간
-- **CPU**: 최소 2코어
-
-### 필수 소프트웨어 설치
+### 1. 서버 환경 준비
 ```bash
-# Java 설치 확인
-java -version
-javac -version
-
-# MariaDB 설치 및 설정
+# 시스템 요구사항: Ubuntu 22.04+, Java 21+, 4GB RAM, 20GB 디스크
 sudo apt update
-sudo apt install mariadb-server mariadb-client
-
-# 방화벽 설정
-sudo ufw allow 8080/tcp
-sudo ufw allow 3306/tcp
-sudo ufw enable
+sudo apt install openjdk-21-jdk mariadb-server mariadb-client
+# sudo ufw allow 8080/tcp && sudo ufw allow 3306/tcp && sudo ufw enable
 ```
 
-## 2. 데이터베이스 설정
-
-### MariaDB 설정
-```sql
--- 프로덕션 데이터베이스 생성
-CREATE DATABASE cmms11 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 프로덕션 사용자 생성
-CREATE USER 'cmms11_prod'@'localhost' IDENTIFIED BY '강력한_비밀번호';
-GRANT ALL PRIVILEGES ON cmms11.* TO 'cmms11_prod'@'localhost';
-FLUSH PRIVILEGES;
-
--- 보안 설정
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
-```
-
-### 데이터베이스 백업 설정
+### 2. 데이터베이스 설정
 ```bash
-# 백업 스크립트 생성
+# MariaDB 설정
+sudo mysql_secure_installation
+sudo mysql -e "CREATE DATABASE cmms11 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo mysql -e "CREATE USER 'cmms11_prod'@'localhost' IDENTIFIED BY '강력한_비밀번호';" //운영 기준 
+sudo mysql -e "GRANT ALL PRIVILEGES ON cmms11.* TO 'cmms11_prod'@'localhost';"
+```
+
+### 3. 애플리케이션 배포
+```bash
+# 디렉토리 구조 생성
+sudo mkdir -p /opt/cmms11/{storage/uploads,logs,scripts}
+sudo chown -R $USER:$USER /opt/cmms11
+
+# JAR 파일 빌드 및 배포
+./gradlew bootJar --no-daemon
+scp build/libs/cmms11-*.jar user@server:/opt/cmms11/
+
+# 설정 파일 배치
+sudo cp application-prod.yml /opt/cmms11/application.yml
+sudo chown $USER:$USER /opt/cmms11/application.yml
+```
+
+### 4. 서비스 시작
+```bash
+# systemd 서비스 설정
+sudo tee /etc/systemd/system/cmms11.service > /dev/null <<EOF
+[Unit]
+Description=CMMS11 Application
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=/opt/cmms11
+ExecStart=/usr/bin/java -Xms1g -Xmx2g -Dfile.encoding=UTF-8 -jar /opt/cmms11/cmms11-*.jar --spring.profiles.active=prod
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 서비스 시작
+sudo systemctl daemon-reload
+sudo systemctl enable cmms11
+sudo systemctl start cmms11
+sudo systemctl status cmms11
+```
+
+## 📋 상세 설정 가이드
+
+### 1. 데이터베이스 백업 설정
+```bash
+# 자동 백업 설정
 sudo mkdir -p /opt/backups/cmms11
 sudo chown $USER:$USER /opt/backups/cmms11
 
-# crontab에 백업 작업 추가
-crontab -e
-# 매일 새벽 2시에 백업
-0 2 * * * mysqldump -u cmms11_prod -p'비밀번호' cmms11 > /opt/backups/cmms11/cmms11_$(date +\%Y\%m\%d).sql
+# crontab에 백업 작업 추가 (매일 새벽 2시)
+echo "0 2 * * * mysqldump -u cmms11_prod -p'비밀번호' cmms11 > /opt/backups/cmms11/cmms11_\$(date +\%Y\%m\%d).sql" | crontab -
 ```
 
-## 3. 애플리케이션 배포
-
-### 디렉토리 구조 설정
+### 2. 보안 설정
 ```bash
-sudo mkdir -p /opt/cmms11/{storage/uploads,logs,backups}
-sudo chown -R $USER:$USER /opt/cmms11
-```
-
-### 환경 변수 설정
-```bash
-# /etc/environment에 추가
-sudo nano /etc/environment
-# 추가할 내용:
-DB_PASSWORD=강력한_데이터베이스_비밀번호
-AWS_S3_BUCKET=prodYULSLAB-bucket
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-```
-
-## 4. 보안 설정
-
-### SSL/TLS 인증서 설정
-```bash
-# Let's Encrypt 인증서 설치 (Nginx 사용 시)
+# SSL 인증서 설정 (Let's Encrypt)
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
-```
 
-### 방화벽 설정
-```bash
-# 필요한 포트만 열기
+# 방화벽 설정 (필요시)
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow ssh
@@ -97,12 +89,10 @@ sudo ufw allow 8080/tcp
 sudo ufw enable
 ```
 
-## 5. 모니터링 설정
-
-### 로그 로테이션 설정
+### 3. 모니터링 설정
 ```bash
-sudo nano /etc/logrotate.d/cmms11
-# 내용:
+# 로그 로테이션 설정
+sudo tee /etc/logrotate.d/cmms11 > /dev/null <<EOF
 /opt/cmms11/logs/*.log {
     daily
     missingok
@@ -115,101 +105,108 @@ sudo nano /etc/logrotate.d/cmms11
         systemctl reload cmms11
     endscript
 }
-```
+EOF
 
-### 시스템 모니터링
-```bash
-# htop 설치
+# 시스템 모니터링 도구 설치
 sudo apt install htop
-
-# 디스크 사용량 모니터링
-df -h
-du -sh /opt/cmms11/*
-
-# 메모리 사용량 확인
-free -h
 ```
 
-## 6. 성능 최적화
-
-### JVM 튜닝
+### 4. 성능 최적화
 ```bash
-# application-prod.yml에서 JAVA_OPTS 조정
-JAVA_OPTS="-Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
-```
+# JVM 튜닝 (application.yml에서 설정)
+JAVA_OPTS="-Xms1g -Xmx2g -Dfile.encoding=UTF-8 -Djava.security.egd=file:/dev/./urandom"
 
-### MariaDB 최적화
-```bash
-sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
-# 주요 설정:
+# MariaDB 최적화
+sudo tee -a /etc/mysql/mariadb.conf.d/50-server.cnf > /dev/null <<EOF
 [mysqld]
 innodb_buffer_pool_size = 1G
 innodb_log_file_size = 256M
 max_connections = 200
 query_cache_size = 64M
+EOF
+sudo systemctl restart mariadb
 ```
 
-## 7. 백업 및 복구
+## 🔧 관리 명령어
 
-### 자동 백업 스크립트
+### 서비스 관리
 ```bash
-#!/bin/bash
-# /opt/scripts/backup-cmms11.sh
-
-BACKUP_DIR="/opt/backups/cmms11"
-DATE=$(date +%Y%m%d_%H%M%S)
-DB_NAME="cmms11"
-DB_USER="cmms11_prod"
-DB_PASS="비밀번호"
-
-# 데이터베이스 백업
-mysqldump -u$DB_USER -p$DB_PASS $DB_NAME > $BACKUP_DIR/db_$DATE.sql
-
-# 파일 백업
-tar -czf $BACKUP_DIR/files_$DATE.tar.gz /opt/cmms11/storage/uploads
-
-# 오래된 백업 삭제 (30일 이상)
-find $BACKUP_DIR -name "*.sql" -mtime +30 -delete
-find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
-```
-
-## 8. 배포 체크리스트
-
-### 배포 전 확인사항
-- [ ] 데이터베이스 연결 테스트
-- [ ] 파일 업로드 디렉토리 권한 확인
-- [ ] 로그 디렉토리 권한 확인
-- [ ] 환경 변수 설정 확인
-- [ ] 방화벽 설정 확인
-- [ ] SSL 인증서 유효성 확인
-
-### 배포 후 확인사항
-- [ ] 애플리케이션 정상 시작 확인
-- [ ] 웹 페이지 접근 테스트
-- [ ] 데이터베이스 연결 테스트
-- [ ] 파일 업로드/다운로드 테스트
-- [ ] 로그 파일 생성 확인
-- [ ] 백업 스크립트 실행 테스트
-
-## 9. 장애 대응
-
-### 일반적인 문제 해결
-```bash
-# 서비스 상태 확인
+# 서비스 시작/중지/재시작
+sudo systemctl start cmms11
+sudo systemctl stop cmms11
+sudo systemctl restart cmms11
 sudo systemctl status cmms11
 
 # 로그 확인
 sudo journalctl -u cmms11 -f
-
-# 포트 사용 확인
-sudo netstat -tlnp | grep :8080
-
-# 프로세스 확인
-ps aux | grep java
+tail -f /opt/cmms11/logs/app.out
 ```
 
-### 긴급 복구 절차
-1. 서비스 중지: `sudo systemctl stop cmms11`
-2. 백업에서 복구: `mysql -u cmms11_prod -p cmms11 < backup.sql`
-3. 서비스 재시작: `sudo systemctl start cmms11`
-4. 상태 확인: `sudo systemctl status cmms11`
+### 배포 업데이트
+```bash
+# 1. JAR 파일 빌드 및 배포
+./gradlew bootJar --no-daemon
+scp build/libs/cmms11-*.jar user@server:/opt/cmms11/
+
+# 2. 서비스 재시작
+sudo systemctl restart cmms11
+
+# 3. 상태 확인
+sudo systemctl status cmms11
+curl http://localhost:8080/health
+```
+
+### 장애 대응
+```bash
+# 프로세스 확인
+ps aux | grep java
+sudo netstat -tlnp | grep :8080
+
+# 로그 분석
+sudo journalctl -u cmms11 --since "1 hour ago"
+tail -f /opt/cmms11/logs/app.out
+
+# 긴급 복구
+sudo systemctl stop cmms11
+mysql -u cmms11_prod -p cmms11 < /opt/backups/cmms11/backup.sql
+sudo systemctl start cmms11
+```
+
+## ✅ 배포 체크리스트
+
+### 배포 전 확인사항
+- [ ] JAR 파일 빌드 완료 (`./gradlew bootJar --no-daemon`)
+- [ ] application-prod.yml 설정 파일 준비
+- [ ] 데이터베이스 연결 테스트
+- [ ] 방화벽 설정 확인
+- [ ] SSL 인증서 유효성 확인
+
+### 배포 후 확인사항
+- [ ] 애플리케이션 정상 시작 확인 (`sudo systemctl status cmms11`)
+- [ ] 웹 페이지 접근 테스트 (`curl http://localhost:8080/health`)
+- [ ] 데이터베이스 연결 테스트
+- [ ] 파일 업로드/다운로드 테스트
+- [ ] 로그 파일 생성 확인 (`tail -f /opt/cmms11/logs/app.out`)
+
+## 📁 디렉토리 구조
+
+```
+/opt/cmms11/
+├── *.jar                    # JAR 파일들 (와일드카드)
+├── application.yml          # 설정 파일 (자동 발견)
+├── logs/                    # 로그 디렉토리
+│   └── app.out             # 로그 파일
+├── scripts/                # 실행 스크립트들
+├── storage/                # 파일 저장소
+│   └── uploads/            # 업로드 파일들
+└── backups/                # 백업 파일들
+```
+
+## 🔗 관련 스크립트
+
+- **start-dev.sh**: 개발 환경 JAR 실행 (`/opt/cmms11/` 기준)
+- **stop-dev.sh**: 개발 환경 프로세스 중지
+- **start-prod.sh**: 운영 환경 JAR 실행 (`/opt/cmms11/` 기준)
+- **PRODUCTION_CHECKLIST.md**: 운영 배포 가이드
+
+모든 스크립트는 `/opt/cmms11/` 기준으로 일관된 구조를 사용합니다.

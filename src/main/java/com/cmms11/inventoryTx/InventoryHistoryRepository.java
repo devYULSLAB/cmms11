@@ -1,15 +1,16 @@
 package com.cmms11.inventoryTx;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 /**
  * 이름: InventoryHistoryRepository
@@ -186,4 +187,16 @@ public interface InventoryHistoryRepository extends JpaRepository<InventoryHisto
             @Param("txType") String txType,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
+    
+    /**
+     * 특정 재고/창고의 최초 거래 날짜 조회
+     */
+    @Query("SELECT MIN(h.txDate) FROM InventoryHistory h " +
+           "WHERE h.id.companyId = :companyId " +
+           "AND h.storageId = :storageId " +
+           "AND h.inventoryId = :inventoryId")
+    Optional<LocalDate> findFirstTxDateByCompanyIdAndStorageIdAndInventoryId(
+            @Param("companyId") String companyId,
+            @Param("storageId") String storageId,
+            @Param("inventoryId") String inventoryId);
 }
