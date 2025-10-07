@@ -73,13 +73,6 @@
                         <label class="label" for="phone">전화번호</label>
                         <input id="phone" name="phone" class="input" type="tel" maxlength="30" th:value="${site.phone}" />
                       </div>
-                      <div class="form-row col-span-4">
-                        <label class="label" for="status">상태</label>
-                        <select id="status" name="status">
-                          <option value="ACTIVE" th:selected="${site.status == 'ACTIVE'}">정상</option>
-                          <option value="INACTIVE" th:selected="${site.status == 'INACTIVE'}">중지</option>
-                        </select>
-                      </div>
                     </div>
                     <div class="form-row col-span-12">
                       <label class="label" for="address">주소</label>

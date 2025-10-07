@@ -109,10 +109,14 @@ src/main/resources/
     css/
       base.css           # 기본 스타일 (반응형)
       print.css          # 인쇄용 스타일
+      layout.css         # 레이아웃 스타일
     js/
-      app.js            # SPA 네비게이션, 공통 UX
-      common.js         # 공통 유틸리티
-      dashboard.js      # KPI 대시보드
+      main.js            # ES 모듈 엔트리 포인트
+      core/              # 핵심 시스템 (csrf, navigation, module-loader, pages, utils)
+      api/               # API 계층 (auth, storage)
+      ui/                # UI 컴포넌트 (notification, file-upload, file-list, etc.)
+      pages/             # 페이지별 모듈 (plant.js, memo.js, etc.)
+      app.js             # 레거시 (롤백용, 주석 처리)
     samples/
       plant-upload-sample.csv
       inventory-upload-sample.csv
@@ -253,15 +257,32 @@ CMMS 시스템은 **사용자-역할(1:1)-허가(1:N)** 구조의 RBAC 모델을
 ### 4.1 인증 및 권한 관리
 
 #### 4.1.1 로그인 시스템
-- **로그인 페이지**: `/auth/login.html`
-- **처리 URL**: `/api/auth/login` (Spring Security formLogin)
-- **파라미터**: `member_id`(사용자ID), `password`
-- **사용자 식별**: 
-  - 기본 회사코드: `C0001`
-  - 멀티 회사: `회사코드:사용자ID` 형태 (예: `C0002:admin`)
-- **성공 시**: `/layout/defaultLayout.html?content=/dashboard/index.html`
-- **실패 시**: `/auth/login.html?error=1`
-- **로그아웃**: `/api/auth/logout` → `/auth/login.html`
+
+**로그인 페이지 처리 흐름**:
+1. **페이지 로드**: `/auth/login.html`
+   - ES 모듈 방식으로 최소한의 JavaScript만 로드 (`core/csrf.js`, `ui/validator.js`)
+   - HTML5 폼 검증 활성화 (`data-validate` 속성)
+2. **폼 제출**: `POST /api/auth/login`
+   - 파라미터: `member_id`(사용자ID), `password`, `_csrf`(CSRF 토큰)
+3. **Spring Security 처리**: `SecurityConfig.filterChain()`
+   - CSRF 토큰 검증 (`CookieCsrfTokenRepository`)
+   - 사용자 인증 (`MemberUserDetailsService.loadUserByUsername()`)
+   - 비밀번호 검증 (`BCryptPasswordEncoder`)
+4. **성공 처리**: 
+   - 리다이렉트: `/layout/defaultLayout.html?content=/memo/list`
+   - 세션 생성 및 CSRF 쿠키 설정
+5. **실패 처리**: 
+   - 리다이렉트: `/auth/login.html?error=1`
+   - 에러 메시지 표시
+
+**사용자 식별 규칙**: 
+- 기본 회사코드: `C0001`
+- 멀티 회사: `회사코드:사용자ID` 형태 (예: `C0002:admin`)
+
+**로그아웃 처리**:
+- URL: `/api/auth/logout` → `/auth/login.html`
+- 세션 무효화 및 쿠키 삭제
+- JSON 응답으로 SPA 호환
 
 #### 4.1.2 RBAC 권한 관리
 ```java
@@ -314,15 +335,56 @@ public class KpiAlertService {
 
 ### 4.3 SPA 내비게이션 시스템
 
-#### 4.3.1 defaultLayout 구조
-- **파일**: `src/main/resources/templates/layout/defaultLayout.html`
-- **동작**: 쿼리스트링 `content` 경로를 fetch로 로딩하여 `#layout-slot`에 삽입
-- **History API**: 링크 클릭을 가로채서 경로만 변경, SPA 느낌 제공
-- **브라우저 네비게이션**: 뒤/앞으로 가기(popstate) 지원
+#### 4.3.1 defaultLayout 구조 및 초기화 과정
+
+**파일**: `src/main/resources/templates/layout/defaultLayout.html`
+
+**인라인 스크립트의 역할과 동작 순서**:
+
+1. **서버 사이드 데이터 주입** (Thymeleaf `th:inline="javascript"`):
+   ```javascript
+   // 초기 콘텐츠 설정 (서버에서 전달)
+   window.initialContent = '/memo/list';  // Thymeleaf로 동적 설정
+   
+   // 파일 업로드 설정 (서버 설정값 전달)
+   window.fileUploadConfig = {
+       maxSize: 10485760,
+       allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', ...],
+       maxSizeFormatted: '10MB',
+       profile: 'default'
+   };
+   ```
+   **이유**: 서버 설정값을 클라이언트로 전달하기 위함. 환경별(dev/prod) 설정 차이를 반영.
+
+2. **프로필 편집 팝업 처리** (즉시 실행 함수):
+   ```javascript
+   (function() {
+       const profileButton = document.getElementById("btn-profile-edit");
+       profileButton.addEventListener("click", () => {
+           // 팝업 창 열기
+           window.open("/common/profile-edit", ...);
+       });
+       
+       // 팝업에서 메시지 수신 (postMessage API)
+       window.addEventListener("message", (event) => {
+           if (event.data.type === "PROFILE_UPDATED") {
+               // 헤더의 사용자 정보 업데이트
+               document.querySelector(".user-detail").textContent = ...;
+           }
+       });
+   })();
+   ```
+   **이유**: 팝업-부모 창 간 통신을 위한 이벤트 리스너를 즉시 등록. ES 모듈 로드 전에 동작해야 함.
+
+**SPA 동작 방식**:
+- **초기 로드**: `window.initialContent`로 지정된 페이지를 `#layout-slot`에 삽입
+- **네비게이션**: `core/navigation.js`의 `navigate()` 함수로 새 콘텐츠 동적 삽입
+- **History API**: `pushState()`로 URL 변경, `popstate` 이벤트로 뒤/앞으로 가기 지원
+- **모듈 로딩**: URL 기반으로 필요한 페이지 모듈(`pages/*.js`) 동적 로드
 
 #### 4.3.2 신규 화면 추가 규칙
-  - `templates/<feature>/<view>.html`에 화면 정의
-  - 레이아웃에서 `?content=/<feature>/<view>.html`로 연결
+- `templates/<feature>/<view>.html`에 화면 정의
+- 레이아웃에서 `?content=/<feature>/<view>.html`로 연결
 - 표준 화면: `list.html`, `form.html`, `detail.html`
 
 ### 4.4 자동번호 채번 시스템
@@ -360,42 +422,115 @@ public class KpiAlertService {
 ### 4.5 파일 관리 시스템
 
 #### 4.5.1 파일 업로드 아키텍처
-- **전역 위젯**: `static/assets/js/app.js`의 자동 초기화
-- **SPA 호환**: `#layout-slot` 주입 환경에서 일관된 동작
-- **표준 마크업**: `[data-attachments]` 속성 기반 자동 처리
-- **권한 기반 접근**: 업로드자와 승인된 사용자만 접근 가능
+
+**모듈 구조**:
+- **UI 모듈**: `ui/file-upload.js` - 파일 선택, 표시, 검증
+- **Navigation**: `core/navigation.js` - Form submit 시 자동 업로드
+- **서버**: `FileController`, `FileService` - 파일 저장 및 관리
+
+**자동 업로드 메커니즘**:
+1. 사용자가 Form에서 파일 선택 (UI)
+2. Submit 버튼 클릭
+3. `navigation.js`가 자동으로 파일 감지
+4. Form submit 전에 `/api/files`로 파일 업로드
+5. 응답으로 받은 `fileGroupId`를 hidden field에 설정
+6. Form 데이터 전송 (fileGroupId 포함)
+7. 서버에서 fileGroupId로 파일 연결
+
+**특징**:
+- ✅ **자동화**: Form에 `[data-file-upload]` 속성만 추가하면 자동 동작
+- ✅ **SPA 호환**: 동적 콘텐츠 로드 환경에서 일관된 동작
+- ✅ **선택적**: 파일이 없어도 Form 정상 동작
+- ✅ **권한 기반 접근**: 업로드자와 승인된 사용자만 접근 가능
 
 #### 4.5.2 표준 마크업 구조
-```html
-<!-- 편집 가능 화면 -->
-<div class="section" data-attachments>
-  <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
-  <div class="attachments">
-    <input id="attachments-input" class="visually-hidden" type="file" multiple />
-    <button type="button" class="btn" data-attachments-add>파일 선택</button>
-    <ul class="attachments-list" aria-live="polite">
-      <li class="empty">첨부 파일이 없습니다.</li>
-    </ul>
-  </div>
-</div>
 
-<!-- 읽기 전용 화면 -->
-<div class="section" data-attachments data-readonly>
-  <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
-  <ul class="attachments-list" aria-live="polite"></ul>
+```html
+<!-- Form 페이지 (편집 가능) -->
+<form data-validate method="post" th:action="@{/memo/save}">
+  <!-- 기본 필드들 -->
+  <input type="hidden" name="fileGroupId" th:value="${memo.fileGroupId}" />
+  
+  <!-- 파일 업로드 영역 -->
+  <div class="section" data-file-upload>
+    <div class="section-title">첨부</div>
+    <div class="attachments">
+      <input id="attachments-input" class="visually-hidden" type="file" 
+             multiple accept=".jpg,.png,.pdf,.doc,.xls,.hwp,.zip" />
+      <button type="button" class="btn" data-attachments-add>
+        파일 선택
+        <small class="hint">(최대 10MB)</small>
+      </button>
+      <ul class="file-list" aria-live="polite">
+        <li class="empty">첨부된 파일이 없습니다.</li>
+      </ul>
+    </div>
+  </div>
+  
+  <button type="submit" class="btn primary">저장</button>
+</form>
+
+<!-- Detail 페이지 (읽기 전용) -->
+<div class="section">
+  <div class="section-title">첨부</div>
+  <div data-file-list 
+       th:if="${memo.fileGroupId}"
+       th:attr="data-file-group-id=${memo.fileGroupId}">
+    <div class="file-list"></div>
+  </div>
 </div>
 ```
 
-#### 4.5.3 REST API 엔드포인트
-- **업로드**: `POST /api/files` (multipart/form-data, key=`files`)
-- **목록 조회**: `GET /api/files?groupId={fileGroupId}`
-- **다운로드**: `GET /api/files/{fileId}?groupId={fileGroupId}`
-- **삭제**: `DELETE /api/files/{fileId}?groupId={fileGroupId}`
+#### 4.5.3 JavaScript API
 
-#### 4.5.4 파일 그룹 관리
-- **fileGroupId**: 모듈 코드 기반 10자리 고정 길이 (F250119001 형식)
-- **저장 정보**: 원본명, 서명, 크기, 해시, 경로
-- **보안**: 권한 기반 접근, 서명 URL, 감사 로그
+**ui/file-upload.js**:
+```javascript
+// Form에서 파일 자동 추출 및 업로드
+const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+// 반환: "F250107001" 또는 null (파일 없으면)
+
+// 저수준 API 호출 (내부용)
+const fileGroupId = await window.cmms.fileUpload.uploadToServer(formData);
+```
+
+**core/navigation.js**:
+- `data-validate` form의 submit 이벤트에 자동으로 파일 업로드 적용
+- 유효성 검사 → 파일 업로드 → Form submit 순서로 실행
+
+#### 4.5.4 REST API 엔드포인트
+
+- **업로드**: `POST /api/files` 
+  - Content-Type: `multipart/form-data`
+  - 파라미터: `files` (MultipartFile[]), `refEntity` (선택), `refId` (선택)
+  - 응답: `{ fileGroupId: "F250107001", items: [...] }`
+  
+- **목록 조회**: `GET /api/files?groupId={fileGroupId}`
+  - 응답: `{ fileGroupId, items: [{ id, originalName, size, ... }] }`
+  
+- **다운로드**: `GET /api/files/{fileId}?groupId={fileGroupId}`
+  - 응답: 파일 바이너리 (Content-Disposition: attachment)
+  
+- **삭제**: `DELETE /api/files/{fileId}?groupId={fileGroupId}`
+  - 응답: 204 No Content
+
+#### 4.5.5 파일 그룹 관리
+
+**fileGroupId 생성**:
+- 형식: `F` + `YYMMDD` + `순번(3자리)` = 10자리
+- 예시: `F250107001` (2025년 1월 7일 첫 번째 파일 그룹)
+- 생성 시점: 파일 업로드 API 호출 시 (`POST /api/files`)
+- 조건: 파일이 1개 이상 있을 때만 생성
+
+**저장 정보**:
+- `file_group`: fileGroupId, refEntity, refId, 생성일시, 생성자
+- `file_item`: fileId, 원본명, 저장명, 확장자, MIME, 크기, 해시(SHA256), 저장 경로
+
+**보안**:
+- 권한 기반 접근 제어
+- 경로 traversal 방지 (normalize, startsWith 검증)
+- 파일 크기 제한 (기본 10MB)
+- 허용 확장자 검증
+- 업로드 시 SHA256 체크섬 계산
 
 ### 4.6 엑셀 I/O 시스템
 
@@ -537,13 +672,22 @@ public class KpiAlertService {
 
 #### 5.4.2 커스텀 검증
 ```javascript
-// app.js에서 자동 처리
-document.querySelector('form[data-validate]').addEventListener('submit', function(e) {
-  if (!this.checkValidity()) {
-    e.preventDefault();
-    // 첫 번째 오류 필드로 포커스 이동
-  }
-});
+// ui/validator.js에서 자동 처리
+export function initValidator() {
+  document.addEventListener('submit', (e) => {
+    const form = e.target.closest('form[data-validate]');
+    if (!form) return;
+    
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      // 첫 번째 오류 필드로 포커스 이동
+      const firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) {
+        firstInvalid.focus();
+      }
+    }
+  }, { capture: true });
+}
 ```
 
 ### 5.5 모바일 최적화

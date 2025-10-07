@@ -35,7 +35,6 @@ public record PlantRequest(
     LocalDate lastInspection,
     LocalDate nextInspection,
     @Size(max = 10) String fileGroupId,
-    @Size(max = 500) String note,
-    @Size(max = 10) String status
+    @Size(max = 500) String note
 ) {
 }

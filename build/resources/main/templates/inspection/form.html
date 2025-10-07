@@ -184,7 +184,7 @@
                   </div>
 
                   <!-- 첨부 -->
-                  <div class="section" data-attachments>
+                  <div class="section" data-file-upload>
                     <div class="section-title">첨부</div>
                     <input type="hidden" name="fileGroupId" th:value="${inspection.fileGroupId}" />
                     <div class="attachments">
@@ -194,7 +194,7 @@
                         첨부 파일 추가
                         <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
                       </button>
-                      <ul class="attachments-list" aria-live="polite" aria-label="첨부 파일 목록">
+                      <ul class="file-list" aria-live="polite" aria-label="첨부 파일 목록">
                         <li class="empty">첨부 파일이 없습니다.</li>
                       </ul>
                     </div>

@@ -62,9 +62,7 @@
                     <div class="stack col-span-3"><div class="label">Site</div><div th:text="${plant.siteId ?: '-'}">SEOUL</div></div>
                     <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${plant.deptId ?: '-'}">설비과</div></div>
                     <div class="stack col-span-3"><div class="label">기능위치</div><div th:text="${plant.funcId ?: '-'}">PMP</div></div>
-                    <!-- 3행: 상태 -->
-                    <div class="stack col-span-12"><div class="label">상태</div><div><span class="badge" th:text="${plant.status == 'ACTIVE' ? '정상' : '중지'}" th:classappend="${plant.status == 'ACTIVE' ? 'badge' : 'badge danger'}">정상</span></div></div>
-                    <!-- 4행: 비고 -->
+                    <!-- 비고 -->
                     <div class="stack col-span-12"><div class="label">비고</div><div th:text="${plant.note ?: '-'}">정기점검 대상 설비</div></div>
                   </div>
                 </div>
@@ -112,6 +110,7 @@
                        data-empty-text="첨부된 파일이 없습니다."
                        data-loading-text="첨부 파일을 불러오는 중..."
                        data-error-text="첨부 파일을 불러올 수 없습니다.">
+                    <div class="file-list"></div>
                   </div>
                   <div th:unless="${plant.fileGroupId}" class="notice">
                     첨부된 파일이 없습니다.

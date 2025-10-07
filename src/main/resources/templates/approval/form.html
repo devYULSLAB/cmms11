@@ -73,7 +73,7 @@
                     <label class="label" for="status">상태</label>
                     <select id="status" name="status">
                       <option value="">(선택)</option>
-                      <option value="DRAFT" th:selected="${!approval.status or approval.status == ''}">임시저장</option>
+                      <option value="DRAFT" th:selected="${#strings.isEmpty(approval.status)}">임시저장</option>
                       <option value="SUBMIT">상신</option>
                       <option th:each="status : ${statusList}"
                               th:value="${status.code}"

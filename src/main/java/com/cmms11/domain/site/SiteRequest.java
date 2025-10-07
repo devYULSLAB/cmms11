@@ -16,7 +16,6 @@ public record SiteRequest(
     @Size(max = 5) String companyId,
     @Size(max = 30) String phone,
     @Size(max = 200) String address,
-    @Size(max = 20) String status,
     @Size(max = 500) String note
 ) {
 }

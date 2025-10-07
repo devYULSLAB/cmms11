@@ -121,7 +121,6 @@ public class DeptController {
             null,
             null,
             null,
-            "ACTIVE",
             null,
             "N",
             null,

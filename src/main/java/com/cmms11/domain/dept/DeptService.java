@@ -67,7 +67,6 @@ public class DeptService {
             dept.setName(request.name());
             dept.setPhone(request.phone());
             dept.setAddress(request.address());
-            dept.setStatus(request.status());
             dept.setParentId(request.parentDeptId());
             dept.setNote(request.note());
             dept.setDeleteMark("N");
@@ -81,7 +80,6 @@ public class DeptService {
         dept.setName(request.name());
         dept.setPhone(request.phone());
         dept.setAddress(request.address());
-        dept.setStatus(request.status());
         dept.setParentId(request.parentDeptId());
         dept.setNote(request.note());
         dept.setDeleteMark("N");
@@ -97,7 +95,6 @@ public class DeptService {
         existing.setName(request.name());
         existing.setPhone(request.phone());
         existing.setAddress(request.address());
-        existing.setStatus(request.status());
         existing.setParentId(request.parentDeptId());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());

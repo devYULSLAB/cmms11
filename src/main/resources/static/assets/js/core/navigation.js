@@ -226,13 +226,12 @@ export function initNavigation() {
         validateForms.forEach((form) => {
           if (form.__cmmsValidateHandled) return;
           form.__cmmsValidateHandled = true;
-          form.addEventListener('submit', (e) => {
+          form.addEventListener('submit', async (e) => {
             try {
               e.preventDefault();
               const action = form.getAttribute('action') || '';
               const method = (form.getAttribute('method') || 'post').toUpperCase();
               const redirectTo = form.getAttribute('data-redirect');
-              const formData = new FormData(form);
               
               // 유효성 검사
               if (window.cmms && window.cmms.common && window.cmms.common.Validator) {
@@ -243,30 +242,53 @@ export function initNavigation() {
                 }
               }
               
-              fetch(action, {
+              // 파일 업로드 처리 (file-upload.js 모듈 사용)
+              if (window.cmms?.fileUpload) {
+                try {
+                  const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+                  if (fileGroupId) {
+                    // fileGroupId를 hidden field에 설정
+                    let fileGroupIdInput = form.querySelector('[name="fileGroupId"]');
+                    if (fileGroupIdInput) {
+                      fileGroupIdInput.value = fileGroupId;
+                    }
+                  }
+                } catch (uploadError) {
+                  console.error('File upload failed:', uploadError);
+                  if (window.cmms?.notification) {
+                    window.cmms.notification.error('파일 업로드에 실패했습니다.');
+                  }
+                  return; // 파일 업로드 실패 시 form submit 중단
+                }
+              }
+              
+              // Form 데이터 생성
+              const formData = new FormData(form);
+              
+              // Form submit
+              const res = await fetch(action, {
                 method,
                 body: formData,
                 credentials: 'same-origin'
-              }).then((res) => {
-                if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
-                if (!res.ok) throw new Error('Submit failed: ' + res.status);
-                if (redirectTo) {
-                  this.navigate(redirectTo);
-                } else {
-                  // 성공 알림
-                  if (window.cmms && window.cmms.notification) {
-                    window.cmms.notification.success('저장되었습니다.');
-                  }
-                }
-              }).catch((err) => {
-                console.error(err);
-                const notice = document.createElement('div');
-                notice.className = 'notice danger';
-                notice.textContent = '요청에 실패했습니다. 다시 시도해주세요.';
-                form.prepend(notice);
               });
+              
+              if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
+              if (!res.ok) throw new Error('Submit failed: ' + res.status);
+              
+              if (redirectTo) {
+                this.navigate(redirectTo);
+              } else {
+                // 성공 알림
+                if (window.cmms?.notification) {
+                  window.cmms.notification.success('저장되었습니다.');
+                }
+              }
             } catch (err) {
               console.error(err);
+              const notice = document.createElement('div');
+              notice.className = 'notice danger';
+              notice.textContent = '요청에 실패했습니다. 다시 시도해주세요.';
+              form.prepend(notice);
             }
           });
         });

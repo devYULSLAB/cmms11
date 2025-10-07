@@ -176,7 +176,6 @@ public class InventoryService {
         String serial = CsvUtils.getString(record, headerIndex, "serial");
         String fileGroupId = CsvUtils.getString(record, headerIndex, "file_group_id");
         String note = CsvUtils.getString(record, headerIndex, "note");
-        String status = CsvUtils.getString(record, headerIndex, "status");
         return new InventoryRequest(
             inventoryId,
             name,
@@ -187,8 +186,7 @@ public class InventoryService {
             model,
             serial,
             fileGroupId,
-            note,
-            status
+            note
         );
     }
 
@@ -209,7 +207,6 @@ public class InventoryService {
         entity.setSerial(request.serial());
         entity.setFileGroupId(request.fileGroupId());
         entity.setNote(request.note());
-        entity.setStatus(request.status());
     }
 
     private String currentMemberId() {

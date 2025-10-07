@@ -10,9 +10,6 @@ spring:
     open-in-view: true  # 뷰 렌더링 중 지연 로딩 허용 (명시적 설정)
     hibernate:
       ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MariaDB106Dialect
   flyway:
     enabled: false
   datasource:

@@ -25,9 +25,6 @@ public class Site {
     @Column(length = 200)
     private String address;
 
-    @Column(length = 20)
-    private String status = "ACTIVE";
-
     @Column(length = 500)
     private String note;
 

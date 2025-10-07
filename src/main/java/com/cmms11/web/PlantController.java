@@ -1,7 +1,6 @@
 package com.cmms11.web;
 
 import com.cmms11.common.upload.BulkUploadResult;
-import com.cmms11.plant.Plant;
 import com.cmms11.plant.PlantRequest;
 import com.cmms11.plant.PlantResponse;
 import com.cmms11.plant.PlantService;
@@ -187,7 +186,6 @@ public class PlantController {
             null, // nextInspection
             null, // fileGroupId
             null, // note
-            "ACTIVE", // status
             "N", // deleteMark
             null, // createdAt
             null, // createdBy

@@ -141,6 +141,12 @@ export function initFileUpload() {
         container.appendChild(fileList);
       }
       
+      // 파일 추가 전에 empty 메시지 제거
+      const emptyItem = fileList.querySelector('.empty');
+      if (emptyItem) {
+        emptyItem.remove();
+      }
+      
       files.forEach(file => {
         const listItem = this.createFileListItem(file);
         fileList.appendChild(listItem);
@@ -154,18 +160,20 @@ export function initFileUpload() {
      */
     createFileListItem: function(file) {
       const li = document.createElement('li');
-      li.className = 'file-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+      li.className = 'attachment-item';
       
       const fileInfo = document.createElement('div');
+      fileInfo.className = 'file-name';
       fileInfo.innerHTML = `
-        <strong>${file.name}</strong>
-        <small class="text-muted d-block">${this.formatFileSize(file.size)}</small>
+        ${file.name}
+        <div class="file-size">${this.formatFileSize(file.size)}</div>
       `;
       
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-sm btn-outline-danger';
+      removeBtn.className = 'btn btn-remove';
       removeBtn.innerHTML = '×';
+      removeBtn.title = '삭제';
       removeBtn.addEventListener('click', () => {
         li.remove();
       });
@@ -222,12 +230,20 @@ export function initFileUpload() {
     },
     
     /**
-     * 파일 업로드
+     * 파일 업로드 (범용) - 현재 미사용
+     * 
+     * 📝 주석 처리 이유:
+     * - 현재 프로젝트에서 사용하지 않음
+     * - uploadFormFiles + uploadToServer로 대체됨
+     * - 향후 커스텀 업로드 UI 필요 시 활성화 가능
+     * 
+     * @deprecated 사용하지 않음. uploadFormFiles 사용 권장
      * @param {Array} files - 업로드할 파일 배열
      * @param {string} endpoint - 업로드 엔드포인트
      * @param {Object} options - 업로드 옵션
      * @returns {Promise} 업로드 Promise
      */
+    /*
     uploadFiles: async function(files, endpoint, options = {}) {
       const config = Object.assign({
         showProgress: true,
@@ -295,6 +311,62 @@ export function initFileUpload() {
           window.cmms.notification.error('파일 업로드에 실패했습니다.');
         }
         
+        throw error;
+      }
+    },
+    */
+    
+    /**
+     * Form의 파일을 서버에 업로드
+     * @param {HTMLFormElement} form - 대상 form
+     * @returns {Promise<string|null>} fileGroupId 또는 null
+     */
+    uploadFormFiles: async function(form) {
+      const fileUploadContainer = form.querySelector('[data-file-upload]');
+      if (!fileUploadContainer) return null;
+      
+      const fileInput = fileUploadContainer.querySelector('input[type="file"]');
+      if (!fileInput || fileInput.files.length === 0) return null;
+      
+      const formData = new FormData();
+      Array.from(fileInput.files).forEach(file => {
+        formData.append('files', file);
+      });
+      
+      // refEntity, refId 추가 (있으면)
+      const refEntityInput = form.querySelector('[name="refEntity"]');
+      const refIdInput = form.querySelector('[name="refId"]');
+      if (refEntityInput && refEntityInput.value) {
+        formData.append('refEntity', refEntityInput.value);
+      }
+      if (refIdInput && refIdInput.value) {
+        formData.append('refId', refIdInput.value);
+      }
+      
+      return await this.uploadToServer(formData);
+    },
+    
+    /**
+     * 파일을 서버에 업로드
+     * @param {FormData} formData - 업로드할 FormData
+     * @returns {Promise<string>} fileGroupId
+     */
+    uploadToServer: async function(formData) {
+      try {
+        const response = await fetch('/api/files', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+          throw new Error('File upload failed: ' + response.status);
+        }
+        
+        const result = await response.json();
+        return result.fileGroupId;
+      } catch (error) {
+        console.error('File upload error:', error);
         throw error;
       }
     }

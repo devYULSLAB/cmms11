@@ -37,13 +37,13 @@ export function initFileList() {
       // 파일 목록 로드
       this.loadFileList(container);
       
-      // 새로고침 버튼 이벤트
-      const refreshBtn = container.querySelector('[data-refresh-file-list]');
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-          this.loadFileList(container);
-        });
-      }
+      // 새로고침 버튼 이벤트 (현재 사용 안 함)
+      // const refreshBtn = container.querySelector('[data-refresh-file-list]');
+      // if (refreshBtn) {
+      //   refreshBtn.addEventListener('click', () => {
+      //     this.loadFileList(container);
+      //   });
+      // }
     },
     
     /**
@@ -51,8 +51,11 @@ export function initFileList() {
      * @param {HTMLElement} container - 파일 목록 컨테이너
      */
     loadFileList: async function(container) {
-      const endpoint = container.getAttribute('data-file-list-endpoint');
-      if (!endpoint) return;
+      // data-file-group-id에서 endpoint 생성
+      const fileGroupId = container.getAttribute('data-file-group-id');
+      if (!fileGroupId) return;
+      
+      const endpoint = `/api/files?groupId=${fileGroupId}`;
       
       try {
         const response = await fetch(endpoint, {
@@ -63,7 +66,9 @@ export function initFileList() {
           throw new Error(`Failed to load file list: ${response.status}`);
         }
         
-        const files = await response.json();
+        const result = await response.json();
+        // API 응답이 { items: [...] } 형태이므로 items 추출
+        const files = result.items || [];
         this.displayFileList(container, files);
         
       } catch (error) {
@@ -82,7 +87,7 @@ export function initFileList() {
       if (!fileListElement) return;
       
       if (files.length === 0) {
-        fileListElement.innerHTML = '<p class="text-muted">등록된 파일이 없습니다.</p>';
+        fileListElement.innerHTML = '<p class="notice">등록된 파일이 없습니다.</p>';
         return;
       }
       
@@ -103,20 +108,16 @@ export function initFileList() {
       const uploadDate = this.formatDate(file.uploadDate);
       
       return `
-        <div class="file-item border rounded p-3 mb-2" data-file-id="${file.id}">
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="file-info flex-grow-1">
-              <div class="file-name fw-bold">${file.originalName}</div>
-              <div class="file-meta text-muted small">
-                <span class="file-size">${fileSize}</span>
-                <span class="mx-2">•</span>
-                <span class="upload-date">${uploadDate}</span>
-                ${file.description ? `<div class="file-description mt-1">${file.description}</div>` : ''}
-              </div>
+        <div class="attachment-item" data-file-id="${file.id}">
+          <div class="file-name">
+            <strong>${file.originalName}</strong>
+            <div class="file-size" style="margin-top: 4px;">
+              ${fileSize} • ${uploadDate}
             </div>
-            <div class="file-actions">
-              ${this.createFileActions(file)}
-            </div>
+            ${file.description ? `<div style="margin-top: 4px; color: var(--muted);">${file.description}</div>` : ''}
+          </div>
+          <div class="file-actions">
+            ${this.createFileActions(file)}
           </div>
         </div>
       `;
@@ -128,42 +129,15 @@ export function initFileList() {
      * @returns {string} 액션 버튼 HTML
      */
     createFileActions: function(file) {
-      const actions = [];
-      
-      // 다운로드 버튼
-      actions.push(`
-        <button class="btn btn-sm btn-outline-primary" 
+      // 다운로드 버튼만 제공
+      return `
+        <button class="btn btn-download" 
                 data-action="download" 
                 data-file-id="${file.id}"
                 title="다운로드">
-          📥
+          📥 다운로드
         </button>
-      `);
-      
-      // 미리보기 버튼 (이미지 파일인 경우)
-      if (this.isImageFile(file.originalName)) {
-        actions.push(`
-          <button class="btn btn-sm btn-outline-info" 
-                  data-action="preview" 
-                  data-file-id="${file.id}"
-                  data-file-url="${file.url}"
-                  title="미리보기">
-            👁️
-          </button>
-        `);
-      }
-      
-      // 삭제 버튼
-      actions.push(`
-        <button class="btn btn-sm btn-outline-danger" 
-                data-action="delete" 
-                data-file-id="${file.id}"
-                title="삭제">
-          🗑️
-        </button>
-      `);
-      
-      return actions.join(' ');
+      `;
     },
     
     /**
@@ -171,7 +145,7 @@ export function initFileList() {
      * @param {HTMLElement} container - 파일 목록 컨테이너
      */
     bindFileItemEvents: function(container) {
-      const fileItems = container.querySelectorAll('.file-item');
+      const fileItems = container.querySelectorAll('.attachment-item');
       
       fileItems.forEach(item => {
         const buttons = item.querySelectorAll('[data-action]');
@@ -183,17 +157,8 @@ export function initFileList() {
             const action = button.getAttribute('data-action');
             const fileId = button.getAttribute('data-file-id');
             
-            switch (action) {
-              case 'download':
-                this.downloadFile(fileId);
-                break;
-              case 'preview':
-                const fileUrl = button.getAttribute('data-file-url');
-                this.previewFile(fileUrl);
-                break;
-              case 'delete':
-                this.deleteFile(fileId, item);
-                break;
+            if (action === 'download') {
+              this.downloadFile(fileId, container);
             }
           });
         });
@@ -203,9 +168,21 @@ export function initFileList() {
     /**
      * 파일 다운로드
      * @param {string} fileId - 파일 ID
+     * @param {HTMLElement} container - 파일 목록 컨테이너
      */
-    downloadFile: function(fileId) {
-      const downloadUrl = `/api/files/download/${fileId}`;
+    downloadFile: function(fileId, container) {
+      // container에서 fileGroupId 가져오기
+      const fileGroupId = container.getAttribute('data-file-group-id');
+      
+      if (!fileGroupId) {
+        console.error('fileGroupId not found');
+        if (window.cmms?.notification) {
+          window.cmms.notification.error('파일 그룹 ID를 찾을 수 없습니다.');
+        }
+        return;
+      }
+      
+      const downloadUrl = `/api/files/${fileId}?groupId=${fileGroupId}`;
       
       // 새 창에서 다운로드
       const link = document.createElement('a');
@@ -216,61 +193,13 @@ export function initFileList() {
       document.body.removeChild(link);
     },
     
-    /**
-     * 파일 미리보기
-     * @param {string} fileUrl - 파일 URL
-     */
-    previewFile: function(fileUrl) {
-      // 모달로 이미지 미리보기
-      const modal = document.createElement('div');
-      modal.className = 'modal fade';
-      modal.setAttribute('tabindex', '-1');
-      modal.innerHTML = `
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">파일 미리보기</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-              <img src="${fileUrl}" class="img-fluid" alt="파일 미리보기">
-            </div>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      if (window.bootstrap && window.bootstrap.Modal) {
-        const bsModal = new window.bootstrap.Modal(modal);
-        bsModal.show();
-        
-        modal.addEventListener('hidden.bs.modal', () => {
-          modal.remove();
-        });
-      } else {
-        // Fallback: 직접 표시
-        modal.style.display = 'block';
-        modal.classList.add('show');
-        
-        const closeBtn = modal.querySelector('.btn-close');
-        closeBtn.addEventListener('click', () => {
-          modal.remove();
-        });
-        
-        modal.addEventListener('click', (e) => {
-          if (e.target === modal) {
-            modal.remove();
-          }
-        });
-      }
-    },
     
     /**
-     * 파일 삭제
+     * 파일 삭제 (현재 사용 안 함 - 리스트 페이지에서는 삭제 기능 불필요)
      * @param {string} fileId - 파일 ID
      * @param {HTMLElement} fileItem - 파일 항목 요소
      */
+    /*
     deleteFile: async function(fileId, fileItem) {
       // 삭제 확인
       if (window.cmms && window.cmms.common && window.cmms.common.ConfirmDialog) {
@@ -309,6 +238,7 @@ export function initFileList() {
         }
       }
     },
+    */
     
     /**
      * 에러 표시
@@ -319,24 +249,13 @@ export function initFileList() {
       const fileListElement = container.querySelector('.file-list');
       if (fileListElement) {
         fileListElement.innerHTML = `
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-triangle"></i>
+          <div class="notice" style="color: var(--danger); border-color: var(--danger);">
             ${message}
           </div>
         `;
       }
     },
     
-    /**
-     * 이미지 파일 여부 확인
-     * @param {string} filename - 파일명
-     * @returns {boolean} 이미지 파일 여부
-     */
-    isImageFile: function(filename) {
-      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-      const extension = filename.split('.').pop().toLowerCase();
-      return imageExtensions.includes(extension);
-    },
     
     /**
      * 파일 크기 포맷팅

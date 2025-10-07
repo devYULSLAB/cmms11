@@ -160,8 +160,19 @@ window.cmms.moduleLoader = {
     const pathParts = path.split('/');
     const moduleName = pathParts[1];
     
-    // 매핑 테이블에 있는지 확인
-    return this.moduleMap[moduleName] ? moduleName : null;
+    // 매핑 테이블에 있는지 확인 (원본 그대로 우선)
+    if (this.moduleMap[moduleName]) {
+      return moduleName;
+    }
+    
+    // 카멜케이스를 케밥케이스로 변환해서 재시도
+    // 예: inventoryTx -> inventory-tx
+    const kebabCase = moduleName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    if (this.moduleMap[kebabCase]) {
+      return kebabCase;
+    }
+    
+    return null;
   },
   
   /**
@@ -414,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.cmms.csrf = {
   refreshForms: syncCsrfHiddenFields,
   readToken: readCsrfTokenFromCookie,
+  getToken: readCsrfTokenFromCookie, // getToken 별칭 추가 (auth.js 호환)
   shouldAttachHeader: shouldAttachCsrfHeader,
   toCsrfError: function(response) {
     if (typeof createCsrfForbiddenError === 'function') {

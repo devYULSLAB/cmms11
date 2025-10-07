@@ -225,7 +225,7 @@
                     </div>
                   </div>
                   <!-- 첨부 -->
-                  <div class="section" data-attachments>
+                  <div class="section" data-file-upload>
                     <div class="section-title">첨부</div>
                     <input type="hidden" name="fileGroupId" th:value="${plant.fileGroupId}" />
                     <div class="attachments">
@@ -235,7 +235,7 @@
                           파일 선택
                           <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
                         </button>
-                        <ul class="attachments-list" aria-live="polite" aria-label="첨부된 파일 목록">
+                        <ul class="file-list" aria-live="polite" aria-label="첨부된 파일 목록">
                           <li class="empty">첨부된 파일이 없습니다.</li>
                         </ul>
                       </div>

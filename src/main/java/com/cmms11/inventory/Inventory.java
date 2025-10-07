@@ -46,9 +46,6 @@ public class Inventory {
     @Column(name = "delete_mark", length = 1)
     private String deleteMark = "N";
 
-    @Column(name = "status", length = 10)
-    private String status;
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

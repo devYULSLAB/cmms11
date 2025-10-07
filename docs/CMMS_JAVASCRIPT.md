@@ -52,479 +52,762 @@ window.cmms = {
 - **초기화 패턴**: 페이지 모듈은 `data-page` 속성 기반 자동 초기화
 - **폼 처리**: 모든 폼은 `app.js`의 SPA 폼 처리로 통일 (`data-redirect` 속성 사용)
 
-## 2. JavaScript 로딩 순서 및 초기화
+## 2. 로그인부터 애플리케이션 초기화까지의 전체 흐름
 
-### 2.1 전체 로딩 순서
-1. **로그인 페이지**: `/auth/login.html` (단독 페이지, SPA 아님)
-2. **메인 레이아웃**: `/layout/defaultLayout.html?content=/dashboard/index.html`
-3. **파일 모듈 로드**: `common/fileUpload.js`, `common/fileList.js` 먼저 로드
-4. **공통 모듈 로드**: `common.js` (테이블 관리, 데이터 로더 등)
-5. **핵심 JS 로드**: `app.js` (전역 네임스페이스 및 SPA 네비게이션)
-6. **네비게이션 초기화**: `window.cmms.navigation.init()` 호출
-7. **콘텐츠 슬롯 삽입**: fetch로 콘텐츠 로드 후 `#layout-slot`에 삽입
-8. **페이지 모듈 로드**: URL 기반 `pages/*.js` 동적 로딩
-9. **페이지 초기화**: `data-page` 속성 기반 `window.cmms.pages.register()` 호출
-10. **위젯 초기화**: 파일 업로드 등 전용 위젯 자동 초기화
+### 2.1 로그인 프로세스 상세 (1단계: 로그인 페이지)
 
-### 2.2 메인 애플리케이션 (app.js)
+#### 2.1.1 로그인 페이지 로드 (`/auth/login.html`)
+```
+브라우저 → GET /auth/login.html → Spring Security (permitAll) → Thymeleaf 렌더링
+```
 
-#### 2.2.1 초기화 및 이벤트 바인딩
-```javascript
-// app.js - DOMContentLoaded에서 최소한의 초기화만 수행
-document.addEventListener('DOMContentLoaded', () => {
-  // CSRF 토큰 동기화
-  window.cmms.csrf.refreshForms();
+**HTML 구조**:
+```html
+<form data-validate action="/api/auth/login" method="post">
+  <input id="member_id" name="member_id" required />
+  <input id="password" name="password" type="password" required />
+  <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+</form>
+
+<script type="module">
+  import { initCsrf } from './core/csrf.js';
+  import { initValidator } from './ui/validator.js';
   
-  // [data-confirm] 확인 다이얼로그 처리
-  const confirmables = document.querySelectorAll('[data-confirm]');
-  confirmables.forEach((el) => {
-    el.addEventListener('click', (e) => {
-      const msg = el.getAttribute('data-confirm') || '확인하시겠습니까?';
-      if (!confirm(msg)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  });
-});
-
-// 네비게이션 초기화는 defaultLayout.html에서 호출
-// <script>window.cmms.navigation.init();</script>
-```
-
-#### 2.2.2 네비게이션 시스템 (app.js)
-```javascript
-// app.js의 navigation 모듈
-window.cmms.navigation = {
-  init: function() {
-    // 클릭 이벤트 리스너 등록 (SPA 네비게이션)
-    document.addEventListener('click', (e) => {
-      const anchor = e.target.closest('a[href]');
-      if (anchor && anchor.getAttribute('href')) {
-        const href = anchor.getAttribute('href');
-        // 외부 링크, 다운로드, 새창 열기 등은 제외
-        if (href.startsWith('http') || href.startsWith('mailto:') || 
-            href.startsWith('#') || href.startsWith('/api/auth/logout') ||
-            href.startsWith('/auth/') || href.startsWith('/api/files') ||
-            anchor.hasAttribute('data-hard-nav') || anchor.target === '_blank') {
-          return; // 브라우저 기본 동작 사용
-        }
-        e.preventDefault();
-        this.navigate(href);
-      }
-    }, { capture: true });
-
-    // 브라우저 뒤로가기/앞으로가기 처리
-    window.addEventListener('popstate', (e) => {
-      const content = e.state?.content || new URLSearchParams(window.location.search).get('content') || '../plant/list.html';
-      this.loadContent(content, { push: false });
-    });
-
-    // 초기 콘텐츠 로드
-    const initialContent = window.initialContent || new URLSearchParams(window.location.search).get('content') || '../plant/list.html';
-    this.loadContent(initialContent, { push: false });
+  // 1. CSRF 토큰 처리
+  initCsrf();
+  
+  // 2. 폼 유효성 검사
+  initValidator();
+  
+  // 3. 에러 메시지 표시 (URL 파라미터 기반)
+  if (params.get('error')) {
+    showErrorMessage('아이디 또는 비밀번호를 확인하세요.');
   }
-};
+</script>
 ```
 
-#### 2.2.3 콘텐츠 로딩 및 위젯 초기화
+**로딩 순서**:
+1. HTML 파싱 완료
+2. ES 모듈 (`<script type="module">`) 로드 시작
+   - `core/csrf.js`: CSRF 토큰을 쿠키에서 읽어 폼에 동기화
+   - `ui/validator.js`: HTML5 폼 검증 활성화
+3. URL 파라미터 확인 및 에러 메시지 표시
+
+**특징**:
+- ✅ **최소한의 JavaScript**: 로그인에 필요한 모듈만 로드 (app.js 미로드)
+- ✅ **독립 동작**: SPA 시스템과 분리되어 독립적으로 동작
+- ✅ **폴백 지원**: JavaScript 실패 시에도 기본 폼 제출 가능
+
+#### 2.1.2 로그인 폼 제출 (2단계: 인증 처리)
+```
+사용자 입력 → 폼 검증 → POST /api/auth/login → Spring Security FilterChain
+```
+
+**Spring Security 처리 흐름**:
+1. **CSRF 검증**: `CsrfFilter` - 쿠키와 폼의 토큰 비교
+2. **인증 필터**: `UsernamePasswordAuthenticationFilter`
+   - `member_id`, `password` 추출
+3. **인증 관리자**: `AuthenticationManager`
+   - `MemberUserDetailsService.loadUserByUsername()` 호출
+   - DB에서 사용자 정보 및 권한 조회
+4. **비밀번호 검증**: `BCryptPasswordEncoder.matches()`
+5. **세션 생성**: 인증 성공 시 `JSESSIONID` 쿠키 설정
+
+**결과 처리**:
+- ✅ **성공**: `HTTP 302 Redirect` → `/layout/defaultLayout.html?content=/memo/list`
+- ❌ **실패**: `HTTP 302 Redirect` → `/auth/login.html?error=1`
+
+#### 2.1.3 메인 레이아웃 로드 (3단계: SPA 초기화)
+```
+브라우저 → GET /layout/defaultLayout.html?content=/memo/list
+         → Spring Security (authenticated 필터 통과)
+         → Thymeleaf 렌더링 (사용자 정보 포함)
+```
+
+**Thymeleaf 서버 사이드 렌더링**:
+```html
+<header>
+  <div th:text="${memberId + ' (' + companyId + ')'}">사용자</div>
+  <div th:text="'부서: ' + ${deptId}">-</div>
+</header>
+
+<script th:inline="javascript">
+  // 서버 설정값을 클라이언트로 전달
+  window.initialContent = /*[[${content}]]*/ '/memo/list';
+  window.fileUploadConfig = {
+    maxSize: /*[[${fileUploadConfig.maxSize}]]*/ 10485760,
+    allowedExtensions: /*[[${fileUploadConfig.allowedExtensions}]]*/ [...]
+  };
+</script>
+
+<!-- 프로필 편집 팝업 처리 (즉시 실행) -->
+<script>
+  (function() {
+    document.getElementById("btn-profile-edit").addEventListener("click", ...);
+    window.addEventListener("message", ...);
+  })();
+</script>
+
+<!-- ES 모듈 로드 -->
+<script type="module" src="/assets/js/main.js"></script>
+```
+
+**인라인 스크립트의 역할**:
+1. **서버 데이터 주입**: Thymeleaf가 서버 설정값을 JavaScript 변수로 변환
+   - `window.initialContent`: 초기 로드할 콘텐츠 URL
+   - `window.fileUploadConfig`: 파일 업로드 제한 설정 (환경별 다름)
+2. **팝업 통신 설정**: 프로필 편집 팝업과 부모 창 간 `postMessage` 통신
+   - 팝업 열기 버튼 이벤트 리스너
+   - 팝업에서 메시지 수신 리스너 (프로필 업데이트 시)
+3. **즉시 실행**: ES 모듈 로드 전에 실행되어 기본 기능 보장
+
+**이유**:
+- ⚡ **성능**: 서버 설정값을 API 호출 없이 바로 사용
+- 🔒 **보안**: 서버에서 검증된 값만 클라이언트로 전달
+- 🎯 **환경 대응**: dev/prod 환경별 설정 차이 반영
+
+### 2.2 JavaScript 초기화 순서 (4단계: ES 모듈 시스템)
+
+#### 2.2.1 main.js 엔트리 포인트
 ```javascript
-// app.js의 loadContent 메서드
-loadContent: function(url, { push = true } = {}) {
-  this.currentContentUrl = url;
+// main.js - ES 모듈 진입점
+import { initCore } from './core/index.js';
+import { initApi } from './api/index.js';
+import { initUI } from './ui/index.js';
+
+function initialize() {
+  console.log('🚀 CMMS 시스템 초기화 시작');
+  
+  // 1. 핵심 시스템 초기화
+  initCore();    // csrf, navigation, module-loader, pages, utils
+  
+  // 2. API 계층 초기화
+  initApi();     // auth, storage
+  
+  // 3. UI 컴포넌트 초기화
+  initUI();      // notification, file-upload, file-list, etc.
+  
+  // 4. 네비게이션 시스템 초기화
+  window.cmms.navigation.init();
+  
+  // 5. 초기 콘텐츠 로드
+  window.cmms.navigation.loadContent(window.initialContent);
+  
+  console.log('🎉 CMMS 시스템 초기화 완료');
+}
+
+initialize();
+```
+
+#### 2.2.2 상세 초기화 단계
+
+**1단계: Core 모듈 초기화** (`initCore()`)
+```javascript
+// core/index.js
+export function initCore() {
+  initCsrf();           // CSRF 토큰 관리 (전역 fetch 인터셉터)
+  initNavigation();     // SPA 네비게이션 시스템
+  initModuleLoader();   // 페이지별 모듈 동적 로더
+  initPages();          // 페이지 초기화 훅 시스템
+  initUtils();          // 공통 유틸리티 함수
+}
+```
+
+**2단계: API 모듈 초기화** (`initApi()`)
+```javascript
+// api/index.js
+export function initApi() {
+  initAuth();           // 로그아웃 처리 ([data-logout] 버튼)
+  initStorage();        // LocalStorage 래퍼
+}
+```
+
+**3단계: UI 모듈 초기화** (`initUI()`)
+```javascript
+// ui/index.js
+export function initUI() {
+  initNotification();   // 알림 시스템 (success/error/warning)
+  initFileUpload();     // 파일 업로드 위젯
+  initFileList();       // 파일 목록 위젯
+  initTableManager();   // 테이블 행 클릭 처리
+  initDataLoader();     // AJAX 데이터 로딩
+  initConfirmDialog();  // 확인 다이얼로그 ([data-confirm])
+  initValidator();      // 폼 유효성 검사
+  initPrintUtils();     // 인쇄 유틸리티
+}
+```
+
+**4단계: Navigation 초기화** (`window.cmms.navigation.init()`)
+```javascript
+// core/navigation.js
+export function initNavigation() {
+  window.cmms.navigation = {
+    init() {
+      // 1. 클릭 이벤트 위임 (SPA 링크 처리)
+      document.addEventListener('click', (e) => {
+        const anchor = e.target.closest('a[href]');
+        if (anchor && shouldInterceptNavigation(anchor)) {
+          e.preventDefault();
+          this.navigate(anchor.getAttribute('href'));
+        }
+      }, { capture: true });
+      
+      // 2. 브라우저 뒤로/앞으로 가기 처리
+      window.addEventListener('popstate', (e) => {
+        const content = e.state?.content || getUrlParam('content');
+        this.loadContent(content, { push: false });
+      });
+      
+      // 3. 초기 콘텐츠 로드
+      const initialContent = window.initialContent || '/plant/list';
+      this.loadContent(initialContent, { push: false });
+    }
+  };
+}
+```
+
+**5단계: 콘텐츠 로드** (`loadContent()`)
+```javascript
+loadContent(url, { push = true } = {}) {
   const slot = document.getElementById('layout-slot');
   
-  // 로딩 상태 표시
+  // 1. 로딩 상태 표시
   slot.innerHTML = '<div class="loading">로딩 중...</div>';
   
-  // URL 정규화
-  const normalizedUrl = url.startsWith('/') ? url : '/' + url;
-  
-  fetch(normalizedUrl)
-    .then((res) => {
-      if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
-      if (!res.ok) throw new Error('Load failed: ' + res.status);
-      return res.text();
-    })
-    .then((html) => {
+  // 2. AJAX로 콘텐츠 가져오기
+  fetch(url)
+    .then(res => res.text())
+    .then(html => {
+      // 3. DOM에 삽입
       slot.innerHTML = html;
-      this.slot = slot;
       
-      // 히스토리 업데이트
+      // 4. 히스토리 업데이트
       if (push) {
-        const state = { content: normalizedUrl };
-        history.pushState(state, '', normalizedUrl);
+        const fullUrl = '/layout/defaultLayout.html?content=' + url;
+        history.pushState({ content: url }, '', fullUrl);
       }
       
-      // 모듈 로드
-      const moduleId = this.extractModuleId(normalizedUrl);
+      // 5. 페이지 모듈 로드 (URL 기반)
+      const moduleId = extractModuleId(url);  // '/memo/list' → 'memo'
       if (moduleId) {
-        this.loadModule(moduleId);
+        loadModule(moduleId);  // pages/memo.js 동적 로드
       }
       
-      // SPA 폼 처리
-      this.handleSPAForms();
+      // 6. SPA 폼 처리 ([data-redirect] 속성)
+      handleSPAForms();
       
-      // 파일 위젯 초기화 (전체 문서 대상)
+      // 7. 위젯 자동 초기화
       setTimeout(() => {
-        const uploadModule = (window.cmms && window.cmms.fileUpload) || null;
-        if (uploadModule && typeof uploadModule.initializeContainers === 'function') {
-          uploadModule.initializeContainers(document);
-        }
-        
-        const fileListModule = (window.cmms && window.cmms.fileList) || null;
-        if (fileListModule && typeof fileListModule.initializeContainers === 'function') {
-          fileListModule.initializeContainers(this.slot);
-        }
+        window.cmms.fileUpload.initializeContainers(document);
+        window.cmms.fileList.initializeContainers(slot);
       }, 10);
-    })
-    .catch((err) => {
-      console.error(err);
-      slot.innerHTML = '<div class="notice danger">페이지를 불러올 수 없습니다. 다시 시도해주세요.</div>';
     });
 }
 ```
 
-### 2.3 모듈 로더 시스템
+### 2.3 전체 로딩 타임라인
 
-#### 2.3.1 모듈 매핑 및 로딩
+```
+시간 | 단계 | 동작
+-----|------|------
+0ms  | 로그인 | /auth/login.html 로드
+     |        | ↓ ES 모듈 (csrf.js, validator.js) 로드
+     |        | ↓ 폼 검증 및 에러 표시
+...  | 제출   | POST /api/auth/login
+     |        | ↓ Spring Security 인증
+     |        | ↓ 세션 생성
+     |        | ↓ 302 Redirect
+0ms  | 레이아웃 | /layout/defaultLayout.html?content=/memo/list
+10ms |        | ↓ Thymeleaf 렌더링 (사용자 정보, 메뉴, 인라인 스크립트)
+20ms |        | ↓ 인라인 스크립트 실행 (window.initialContent 설정)
+30ms | ES모듈 | <script type="module" src="main.js">
+40ms |        | ↓ initCore() - csrf, navigation, module-loader, pages, utils
+50ms |        | ↓ initApi() - auth, storage
+60ms |        | ↓ initUI() - notification, file-upload, file-list, etc.
+70ms | 네비   | window.cmms.navigation.init()
+80ms |        | ↓ 이벤트 리스너 등록 (click, popstate)
+90ms | 콘텐츠 | loadContent(window.initialContent)
+100ms|        | ↓ fetch('/memo/list')
+150ms|        | ↓ slot.innerHTML = html
+160ms|        | ↓ loadModule('memo') - pages/memo.js 동적 로드
+170ms|        | ↓ handleSPAForms() - 폼 제출 처리
+180ms|        | ↓ 위젯 초기화 (파일 업로드, 파일 목록)
+200ms| 완료   | 🎉 사용자가 사용 가능한 상태
+```
+
+### 2.4 이전 방식과의 차이점
+
+**구 방식 (app.js 단일 파일)**:
+- ❌ 전역 스코프 오염
+- ❌ 모듈 간 의존성 불명확
+- ❌ 로딩 순서 문제
+- ❌ 중복 코드
+
+**신 방식 (ES 모듈)**:
+- ✅ 명확한 모듈 경계
+- ✅ import/export로 의존성 명시
+- ✅ 트리 셰이킹 가능
+- ✅ 코드 재사용성 향상
+
+### 2.5 ES 모듈 시스템의 장점
+
+**기존 방식 (app.js) vs 신규 방식 (main.js + ES 모듈)**:
+
+| 항목 | 기존 (app.js) | 신규 (main.js + ES 모듈) |
+|------|--------------|--------------------------|
+| 로딩 | `<script src="app.js">` | `<script type="module" src="main.js">` |
+| 스코프 | 전역 오염 | 모듈 스코프 격리 |
+| 의존성 | 암묵적 (주석으로만 표시) | 명시적 (import/export) |
+| 로딩 순서 | 수동 관리 필요 | 자동 의존성 해결 |
+| 코드 분할 | 어려움 | 쉬움 (dynamic import) |
+| 트리 셰이킹 | 불가능 | 가능 |
+| 타입 지원 | 어려움 | TypeScript 쉽게 통합 가능 |
+
+## 3. 파일 관리 시스템 (ES 모듈)
+
+### 3.1 파일 모듈 구조
+
+**ES 모듈 방식**:
+```
+ui/
+├── file-upload.js   # 파일 업로드 위젯 (initFileUpload)
+└── file-list.js     # 파일 목록 위젯 (initFileList)
+```
+
+**초기화**:
 ```javascript
-// app.js에 정의된 모듈 로더
-window.cmms.moduleLoader = {
-    moduleMap: {
-        'workorder': '/assets/js/pages/workorder.js',
-        'plant': '/assets/js/pages/plant.js',
-        'member': '/assets/js/pages/member.js',
-        'inventory': '/assets/js/pages/inventory.js',
-        'inventory-tx': '/assets/js/pages/inventory-tx.js',
-        'inspection': '/assets/js/pages/inspection.js',
-        'workpermit': '/assets/js/pages/workpermit.js',
-        'approval': '/assets/js/pages/approval.js',
-        'memo': '/assets/js/pages/memo.js',
-        'code': '/assets/js/pages/code.js',
-        'domain': '/assets/js/pages/domain.js'
+// ui/index.js
+import { initFileUpload } from './file-upload.js';
+import { initFileList } from './file-list.js';
+
+export function initUI() {
+  initFileUpload();   // window.cmms.fileUpload 등록
+  initFileList();     // window.cmms.fileList 등록
+  // ... 기타 UI 모듈
+}
+```
+
+### 3.2 파일 업로드 모듈 (ui/file-upload.js)
+
+```javascript
+// ui/file-upload.js
+export function initFileUpload() {
+  window.cmms = window.cmms || {};
+  window.cmms.fileUpload = {
+    config: {
+      isLoaded: false,
+      uploadUrl: '/api/files/upload',
+      maxFileSize: window.fileUploadConfig?.maxSize || 10 * 1024 * 1024,
+      allowedExtensions: window.fileUploadConfig?.allowedExtensions || []
     },
     
-    loadedModules: new Set(),
+    loadConfig: function() {
+      // 서버 설정값은 window.fileUploadConfig에서 가져옴
+      // (defaultLayout.html의 인라인 스크립트에서 주입)
+      return Promise.resolve();
+    },
     
-    loadModule: function(moduleId) {
-        const modulePath = this.moduleMap[moduleId];
-        
-        if (modulePath && !this.loadedModules.has(moduleId)) {
-            this.loadScript(modulePath).then(() => {
-                this.loadedModules.add(moduleId);
-                this.initializeModule(moduleId);
-              }).catch((e) => {
-                console.warn('Module load failed:', moduleId, e);
-              });
-        } else if (this.loadedModules.has(moduleId)) {
-          this.initializeModule(moduleId);
+    initializeContainers: function(root) {
+      const containers = (root || document).querySelectorAll('[data-file-upload]');
+      containers.forEach(container => {
+        this.init(container);
+      });
+    },
+    
+    init: function(container) {
+      if (container.dataset.initialized) return;
+      
+      const input = container.querySelector('#attachments-input');
+      const addButton = container.querySelector('[data-attachments-add]');
+      
+      if (input && addButton) {
+        addButton.addEventListener('click', () => input.click());
+        input.addEventListener('change', (e) => this.handleFileSelect(e, container));
+      }
+      
+      container.dataset.initialized = 'true';
+    },
+    
+    handleFileSelect: function(event, container) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+      
+      this.uploadFiles(files, container);
+    },
+    
+    uploadFiles: function(files, container) {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      
+      fetch('/api/files', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-TOKEN': this.getCSRFToken()
         }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const fileGroupIdInput = container.querySelector('input[name="fileGroupId"]');
+          if (fileGroupIdInput && data.fileGroupId) {
+            fileGroupIdInput.value = data.fileGroupId;
+          }
+          this.updateFileList(data.files, container);
+        }
+      })
+      .catch(error => {
+        console.error('업로드 오류:', error);
+        if (window.cmms?.notification) {
+          window.cmms.notification.error('파일 업로드 중 오류가 발생했습니다.');
+        }
+      });
     },
     
-    extractModuleId: function(url) {
-        // /plant/list.html -> plant
-        // /dashboard/index.html -> dashboard
-        const match = url.match(/\/([^\/]+)\//);
-        return match ? match[1] : null;
+    getCSRFToken: function() {
+      const cookies = document.cookie.split('; ');
+      for (const cookie of cookies) {
+        if (cookie.startsWith('XSRF-TOKEN=')) {
+          return decodeURIComponent(cookie.split('=')[1]);
+        }
+      }
+      return '';
+    }
+  };
+}
+```
+
+### 3.3 파일 목록 모듈 (ui/file-list.js)
+
+```javascript
+// ui/file-list.js
+export function initFileList() {
+  window.cmms = window.cmms || {};
+  window.cmms.fileList = {
+    config: {
+      isLoaded: false,
+      listUrl: '/api/files/list',
+      deleteUrl: '/api/files/delete'
     },
     
-    loadScript: function(src) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
+    initializeContainers: function(root) {
+      const containers = (root || document).querySelectorAll('[data-file-list]');
+      containers.forEach(container => {
+        this.init(container);
+      });
+    },
+    
+    init: function(container) {
+      if (container.dataset.initialized) return;
+      
+      const fileGroupId = container.dataset.fileGroupId;
+      if (fileGroupId) {
+        this.loadFiles(fileGroupId, container);
+      }
+      
+      container.dataset.initialized = 'true';
+    },
+    
+    loadFiles: function(fileGroupId, container) {
+      fetch(`/api/files?groupId=${fileGroupId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.items) {
+            this.renderFileList(data.items, container);
+          }
+        })
+        .catch(error => {
+          console.error('파일 목록 로드 오류:', error);
         });
     },
     
-    initializeModule: function(moduleId) {
-        const module = window.cmms.modules && window.cmms.modules[moduleId];
-        if (module && typeof module.init === 'function') {
-            module.init();
-        }
-    }
-};
-
-// 네비게이션에 모듈 로더 연결
-window.cmms.navigation.loadModule = window.cmms.moduleLoader.loadModule.bind(window.cmms.moduleLoader);
-window.cmms.navigation.extractModuleId = window.cmms.moduleLoader.extractModuleId.bind(window.cmms.moduleLoader);
-```
-
-## 3. 파일 관리 시스템
-
-### 3.1 파일 업로드 모듈 연계 방식
-
-#### 3.1.1 로딩 순서 최적화
-```html
-<!-- defaultLayout.html에서 올바른 로딩 순서 -->
-<script th:src="@{/assets/js/common/fileUpload.js}" src="../../static/assets/js/common/fileUpload.js"></script>
-<script th:src="@{/assets/js/common/FileList.js}" src="../../static/assets/js/common/FileList.js"></script>
-<script th:src="@{/assets/js/common.js}" src="../../static/assets/js/common.js"></script>
-<script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
-```
-
-#### 3.1.2 common/fileUpload.js에서의 등록
-```javascript
-// common/fileUpload.js
-window.cmms = window.cmms || {};
-window.cmms.fileUpload = {
-  config: {
-    isLoaded: false,
-    uploadUrl: '/api/files/upload',
-    maxFileSize: 10 * 1024 * 1024
-  },
-  
-  loadConfig: function() {
-    // 설정 로드 로직
-    return Promise.resolve();
-  },
-  
-  ensureConfigLoaded: function() {
-    if (!this.config.isLoaded) {
-      return this.loadConfig().then(() => {
-        this.config.isLoaded = true;
-      });
-    }
-    return Promise.resolve();
-  },
-  
-  initializeContainers: function(root) {
-    const containers = (root || document).querySelectorAll('[data-attachments]');
-    containers.forEach(container => {
-      this.init(container);
-    });
-  },
-  
-  init: function(container) {
-    if (container.dataset.initialized) return;
-    
-    const input = container.querySelector('#attachments-input');
-    const addButton = container.querySelector('[data-attachments-add]');
-    
-    if (input && addButton) {
-      addButton.addEventListener('click', () => input.click());
-      input.addEventListener('change', (e) => this.handleFileSelect(e, container));
-    }
-    
-    container.dataset.initialized = 'true';
-  }
-};
-```
-
-### 3.2 파일 목록 모듈 연계 방식
-
-#### 3.2.1 common/fileList.js에서의 등록
-```javascript
-// common/fileList.js
-window.cmms = window.cmms || {};
-window.cmms.fileList = {
-  config: {
-    isLoaded: false,
-    listUrl: '/api/files/list',
-    deleteUrl: '/api/files/delete'
-  },
-  
-  initializeContainers: function(root) {
-    const containers = (root || document).querySelectorAll('[data-file-list]');
-    containers.forEach(container => {
-      this.init(container);
-    });
-  },
-  
-  init: function(container) {
-    if (container.dataset.initialized) return;
-    
-    // 파일 목록 컨테이너 초기화
-    // 파일 목록 로드, 다운로드, 삭제 등
-    
-    container.dataset.initialized = 'true';
-  },
-  
-  loadFiles: function(fileGroupId) {
-    // 파일 목록 로드
-  },
-  
-  deleteFile: function(fileId) {
-    // 파일 삭제
-  }
-};
-```
-
-### 3.3 실제 연계 방식
-
-#### 3.3.1 SPA 콘텐츠 로드 후 위젯 초기화
-```javascript
-// app.js의 loadContent 메서드에서 위젯 초기화
-// 파일 위젯 초기화 (전체 문서 대상)
-setTimeout(() => {
-  const uploadModule = (window.cmms && window.cmms.fileUpload) || null;
-  if (uploadModule && typeof uploadModule.initializeContainers === 'function') {
-    uploadModule.initializeContainers(document); // 전체 문서 대상
-  }
-  
-  const fileListModule = (window.cmms && window.cmms.fileList) || null;
-  if (fileListModule && typeof fileListModule.initializeContainers === 'function') {
-    fileListModule.initializeContainers(this.slot); // SPA 슬롯 대상
-  }
-}, 10);
-```
-
-#### 3.3.2 위젯 초기화 범위
-- **파일 업로드**: `document` 전체 대상 (기존 페이지와 새로 로드된 페이지 모두)
-- **파일 목록**: `this.slot` 대상 (SPA로 로드된 콘텐츠만)
-- **초기화 중복 방지**: `dataset.initialized` 속성으로 중복 초기화 방지
-
-### 3.4 파일 업로드 기능 구현
-
-#### 3.4.1 파일 업로드 처리
-```javascript
-// common/fileUpload.js의 파일 업로드 로직
-handleFileSelect: function(event, container) {
-  const files = Array.from(event.target.files);
-  if (files.length === 0) return;
-  
-  this.ensureConfigLoaded().then(() => {
-    this.uploadFiles(files, container);
-  });
-},
-
-uploadFiles: function(files, container) {
-  const formData = new FormData();
-  files.forEach(file => formData.append('files', file));
-  
-  const fileGroupIdInput = container.querySelector('input[name="fileGroupId"]');
-  if (fileGroupIdInput && fileGroupIdInput.value) {
-    formData.append('groupId', fileGroupIdInput.value);
-  }
-  
-  fetch('/api/files', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRF-TOKEN': this.getCSRFToken()
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      if (fileGroupIdInput && data.fileGroupId) {
-        fileGroupIdInput.value = data.fileGroupId;
+    renderFileList: function(files, container) {
+      const listElement = container.querySelector('.file-list');
+      if (!listElement) return;
+      
+      if (files.length === 0) {
+        listElement.innerHTML = '<li class="empty">첨부된 파일이 없습니다.</li>';
+        return;
       }
-      this.updateFileList(data.files, container);
-    } else {
-      this.showError('파일 업로드 실패: ' + data.message);
+      
+      listElement.innerHTML = files.map(file => `
+        <li class="file-item">
+          <a href="/api/files/${file.fileId}?groupId=${file.fileGroupId}" 
+             download="${file.originalName}">
+            ${file.originalName} (${this.formatFileSize(file.size)})
+          </a>
+        </li>
+      `).join('');
+    },
+    
+    formatFileSize: function(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    },
+    
+    deleteFile: function(fileId, fileGroupId) {
+      fetch(`/api/files/${fileId}?groupId=${fileGroupId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-TOKEN': this.getCSRFToken()
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          if (window.cmms?.notification) {
+            window.cmms.notification.success('파일이 삭제되었습니다.');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('파일 삭제 오류:', error);
+        if (window.cmms?.notification) {
+          window.cmms.notification.error('파일 삭제 중 오류가 발생했습니다.');
+        }
+      });
+    },
+    
+    getCSRFToken: function() {
+      const cookies = document.cookie.split('; ');
+      for (const cookie of cookies) {
+        if (cookie.startsWith('XSRF-TOKEN=')) {
+          return decodeURIComponent(cookie.split('=')[1]);
+        }
+      }
+      return '';
     }
-  })
-  .catch(error => {
-    console.error('업로드 오류:', error);
-    this.showError('파일 업로드 중 오류가 발생했습니다.');
-  });
+  };
 }
 ```
 
-## 4. 공통 유틸리티 (common.js)
+### 3.4 위젯 자동 초기화 (core/navigation.js)
 
-### 4.1 테이블 관리자
-
-#### 4.1.1 테이블 행 클릭 및 액션 처리
+**SPA 콘텐츠 로드 후 자동 초기화**:
 ```javascript
-// common.js의 TableManager
-window.cmms.common = window.cmms.common || {};
-
-window.cmms.common.TableManager = {
-  init: function() {
-    this.bindRowClickEvents();
-    this.bindActionButtons();
-  },
+// core/navigation.js의 loadContent() 메서드 내부
+loadContent(url, { push = true } = {}) {
+  // ... (콘텐츠 로드 로직)
   
-  bindRowClickEvents: function() {
-    document.addEventListener('click', function(e) {
-      const row = e.target.closest('tr[data-row-link]');
-      if (row && !e.target.closest('button, a')) {
-        const url = row.dataset.rowLink;
-        window.cmms.navigation.loadContent(url);
-      }
-    });
-  },
-  
-  bindActionButtons: function() {
-    // 삭제 버튼 확인 다이얼로그는 app.js에서 처리
-  }
-};
-```
-
-### 4.2 데이터 로더
-
-#### 4.2.1 AJAX 데이터 로딩
-```javascript
-window.cmms.common.DataLoader = {
-  load: function(url, options = {}) {
-    return fetch(url, {
-      method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': this.getCSRFToken(),
-        ...options.headers
-      },
-      body: options.body
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return response.json();
-    });
-  },
-  
-  getCSRFToken: function() {
-    const token = document.querySelector('meta[name="_csrf"]');
-    return token ? token.getAttribute('content') : '';
-  }
-};
-```
-
-### 4.3 확인 다이얼로그
-
-#### 4.3.1 확인 다이얼로그 처리
-```javascript
-window.cmms.common.ConfirmDialog = {
-  show: function(message, callback) {
-    if (confirm(message)) {
-      callback();
-    }
-  }
-};
-```
-
-### 4.4 폼 유효성 검사
-
-#### 4.4.1 수동 유효성 검사
-```javascript
-window.cmms.common.Validator = {
-  validate: function(form) {
-    const errors = [];
-    const requiredFields = form.querySelectorAll('[required]');
-    
-    requiredFields.forEach(field => {
-      const value = field.value.trim();
-      const label = form.querySelector(`label[for="${field.id}"]`)?.textContent || field.name;
+  fetch(url)
+    .then(res => res.text())
+    .then(html => {
+      slot.innerHTML = html;
       
-      if (!value) {
-        errors.push(`${label}은(는) 필수 입력 항목입니다.`);
-        field.classList.add('error');
-      } else {
-        field.classList.remove('error');
+      // 히스토리 업데이트
+      if (push) {
+        history.pushState({ content: url }, '', fullUrl);
       }
+      
+      // 페이지 모듈 로드
+      const moduleId = extractModuleId(url);
+      if (moduleId) {
+        loadModule(moduleId);
+      }
+      
+      // SPA 폼 처리
+      handleSPAForms();
+      
+      // 파일 위젯 자동 초기화
+      setTimeout(() => {
+        // 파일 업로드 위젯 (전체 문서 대상)
+        if (window.cmms?.fileUpload?.initializeContainers) {
+          window.cmms.fileUpload.initializeContainers(document);
+        }
+        
+        // 파일 목록 위젯 (SPA 슬롯 대상)
+        if (window.cmms?.fileList?.initializeContainers) {
+          window.cmms.fileList.initializeContainers(slot);
+        }
+      }, 10);
     });
+}
+```
+
+**초기화 범위 및 중복 방지**:
+- ✅ **파일 업로드**: `document` 전체 (기존 페이지 + 새 콘텐츠)
+- ✅ **파일 목록**: `slot` (SPA로 로드된 콘텐츠만)
+- ✅ **중복 방지**: `dataset.initialized` 속성으로 재초기화 방지
+- ✅ **타이밍**: `setTimeout(10ms)` - DOM 안정화 후 초기화
+
+## 4. UI 컴포넌트 모듈 (ui/)
+
+### 4.1 테이블 관리자 (ui/table-manager.js)
+
+**테이블 행 클릭 및 액션 처리**:
+```javascript
+// ui/table-manager.js
+export function initTableManager() {
+  window.cmms = window.cmms || {};
+  window.cmms.tableManager = {
+    init: function() {
+      this.bindRowClickEvents();
+      this.bindActionButtons();
+    },
     
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-};
+    bindRowClickEvents: function() {
+      document.addEventListener('click', function(e) {
+        const row = e.target.closest('tr[data-row-link]');
+        if (row && !e.target.closest('button, a')) {
+          const url = row.dataset.rowLink;
+          if (window.cmms?.navigation) {
+            window.cmms.navigation.loadContent(url);
+          }
+        }
+      });
+    },
+    
+    bindActionButtons: function() {
+      // 삭제 버튼 확인 다이얼로그는 initConfirmDialog에서 처리
+    }
+  };
+  
+  // 자동 초기화
+  window.cmms.tableManager.init();
+}
+```
+
+### 4.2 데이터 로더 (ui/data-loader.js)
+
+**AJAX 데이터 로딩 유틸리티**:
+```javascript
+// ui/data-loader.js
+export function initDataLoader() {
+  window.cmms = window.cmms || {};
+  window.cmms.dataLoader = {
+    load: function(url, options = {}) {
+      return fetch(url, {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': this.getCSRFToken(),
+          ...options.headers
+        },
+        body: options.body
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      });
+    },
+    
+    getCSRFToken: function() {
+      const cookies = document.cookie.split('; ');
+      for (const cookie of cookies) {
+        if (cookie.startsWith('XSRF-TOKEN=')) {
+          return decodeURIComponent(cookie.split('=')[1]);
+        }
+      }
+      return '';
+    }
+  };
+}
+```
+
+### 4.3 확인 다이얼로그 (ui/confirm-dialog.js)
+
+**[data-confirm] 속성 기반 확인 다이얼로그**:
+```javascript
+// ui/confirm-dialog.js
+export function initConfirmDialog() {
+  // [data-confirm] 속성이 있는 요소에 이벤트 리스너 등록
+  document.addEventListener('click', (e) => {
+    const element = e.target.closest('[data-confirm]');
+    if (!element) return;
+    
+    const message = element.getAttribute('data-confirm') || '확인하시겠습니까?';
+    if (!confirm(message)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { capture: true });
+  
+  console.log('  ✅ Confirm Dialog 초기화 완료');
+}
+```
+
+### 4.4 폼 유효성 검사 (ui/validator.js)
+
+**[data-validate] 속성 기반 HTML5 검증**:
+```javascript
+// ui/validator.js
+export function initValidator() {
+  // [data-validate] 속성이 있는 폼에 검증 로직 적용
+  document.addEventListener('submit', (e) => {
+    const form = e.target.closest('form[data-validate]');
+    if (!form) return;
+    
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      
+      // 첫 번째 오류 필드로 포커스 이동
+      const firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) {
+        firstInvalid.focus();
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // 오류 메시지 표시
+      if (window.cmms?.notification) {
+        window.cmms.notification.error('필수 입력 항목을 확인해주세요.');
+      }
+    }
+  }, { capture: true });
+  
+  console.log('  ✅ Validator 초기화 완료');
+}
+```
+
+### 4.5 알림 시스템 (ui/notification.js)
+
+**토스트 알림 표시**:
+```javascript
+// ui/notification.js
+export function initNotification() {
+  window.cmms = window.cmms || {};
+  window.cmms.notification = {
+    success: function(message) {
+      this.show(message, 'success');
+    },
+    
+    error: function(message) {
+      this.show(message, 'error');
+    },
+    
+    warning: function(message) {
+      this.show(message, 'warning');
+    },
+    
+    info: function(message) {
+      this.show(message, 'info');
+    },
+    
+    show: function(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => notification.classList.add('show'), 100);
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    }
+  };
+  
+  console.log('  ✅ Notification 초기화 완료');
+}
 ```
 
 ## 5. KPI 대시보드 (dashboard.js)

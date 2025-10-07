@@ -118,16 +118,7 @@
                       <label class="label" for="note">비고</label>
                       <textarea id="note" name="note" rows="4" maxlength="500" placeholder="기타 메모(최대 500자)" 
                               th:text="${member.note}"></textarea>
-                    </div>
-                    <div class="grid cols-12">
-                      <div class="form-row col-span-3">
-                        <label class="label" for="deleteMark">상태</label>
-                        <select id="deleteMark" name="deleteMark">
-                          <option value="N" th:selected="${member.deleteMark == 'N'}">정상</option>
-                          <option value="Y" th:selected="${member.deleteMark == 'Y'}">사용중지</option>
-                        </select>
-                      </div>
-                    </div>
+                    </div>                    
                   </div>
 
                   <div class="actions actions-top-medium">

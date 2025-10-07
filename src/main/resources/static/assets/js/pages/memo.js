@@ -47,7 +47,7 @@
         return;
       }
       window.cmms.memo.initialized.detail = true;
-      this.initPrintButtons(root);
+      this.initPrintButton(root);
     },
     
     // 폼 페이지 초기화 (root 기반)
@@ -95,7 +95,7 @@
     },
     
     // 인쇄 버튼 초기화 (통합 모듈 사용)
-    initPrintButtons: function(root) {
+    initPrintButton: function(root) {
       window.cmms.printUtils.initPrintButton(root);
     },
     

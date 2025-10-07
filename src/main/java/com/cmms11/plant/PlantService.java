@@ -96,7 +96,6 @@ public class PlantService {
         plant.setNextInspection(request.nextInspection());
         plant.setFileGroupId(request.fileGroupId());
         plant.setNote(request.note());
-        plant.setStatus(request.status());
         plant.setDeleteMark("N");
         plant.setCreatedAt(now);
         plant.setCreatedBy(memberId);
@@ -131,7 +130,6 @@ public class PlantService {
         existing.setNextInspection(request.nextInspection());
         existing.setFileGroupId(request.fileGroupId());
         existing.setNote(request.note());
-        existing.setStatus(request.status());
         existing.setUpdatedAt(LocalDateTime.now());
         existing.setUpdatedBy(currentMemberId());
 
@@ -260,7 +258,6 @@ public class PlantService {
         plant.setNextInspection(toDate(record, headerIndex, "next_inspection"));
         plant.setFileGroupId(CsvUtils.getString(record, headerIndex, "file_group_id"));
         plant.setNote(CsvUtils.getString(record, headerIndex, "note"));
-        plant.setStatus(CsvUtils.getString(record, headerIndex, "status"));
         plant.setDeleteMark("N");
         plant.setUpdatedAt(now);
         plant.setUpdatedBy(memberId);

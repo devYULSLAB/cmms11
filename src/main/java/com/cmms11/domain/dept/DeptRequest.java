@@ -15,7 +15,6 @@ public record DeptRequest(
     @NotBlank @Size(max = 100) String name,
     @Size(max = 30) String phone,
     @Size(max = 200) String address,
-    @Size(max = 20) String status,
     @Size(max = 5) String parentDeptId,
     @Size(max = 500) String note
 ) {

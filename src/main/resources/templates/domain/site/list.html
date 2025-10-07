@@ -65,7 +65,6 @@
                       <th class="table-col-name-medium">사이트명</th>
                       <th class="table-col-id-large">회사코드</th>
                       <th class="table-col-info-large">주소</th>
-                      <th class="table-col-type-medium">상태</th>
                       <th class="table-col-action-medium">액션</th>
                     </tr>
                   </thead>
@@ -75,9 +74,6 @@
                       <td th:text="${site.name}">-</td>
                       <td th:text="${site.companyId}">-</td>
                       <td th:text="${site.address}">-</td>
-                      <td>
-                        <span class="badge" th:text="${site.status == 'ACTIVE' ? '정상' : '중지'}" th:classappend="${site.status == 'ACTIVE' ? 'badge' : 'badge danger'}">-</span>
-                      </td>
                       <td class="actions">
                         <a class="btn btn-sm" th:href="@{/domain/site/edit/{id}(id=${site.siteId})}">수정</a>
                         <button class="btn btn-sm danger" 

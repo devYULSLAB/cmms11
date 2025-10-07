@@ -7,11 +7,9 @@ spring:
       max-request-size: 100MB
       enabled: true
   jpa:
+    open-in-view: true  # 뷰 렌더링 중 지연 로딩 허용 (명시적 설정)
     hibernate:
       ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MariaDB106Dialect
   flyway:
     enabled: true
     locations: classpath:db/migration
