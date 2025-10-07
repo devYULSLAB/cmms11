@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inspection-plan" data-module="inspection-plan">
         <main>
           <div class="container">
             <section class="card">
@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate>
+                <form data-validate data-redirect="@{/inspection/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <!-- 계획 대상(행 추가/삭제) -->
@@ -51,15 +51,15 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th style="width:44px">#</th>
-                          <th>이름</th>
-                          <th style="width:140px">설비ID</th>
-                          <th style="width:100px">작업유형</th>
-                          <th style="width:100px">Site</th>
-                          <th style="width:100px">부서</th>
-                          <th style="width:100px">담당자</th>
-                          <th style="width:140px">계획일</th>
-                          <th style="width:80px"></th>
+                          <th class="table-col-number">#</th>
+                          <th class="table-col-name-medium">이름</th>
+                          <th class="table-col-id-large">설비ID</th>
+                          <th class="table-col-name-small">작업유형</th>
+                          <th class="table-col-name-small">Site</th>
+                          <th class="table-col-name-small">부서</th>
+                          <th class="table-col-name-small">담당자</th>
+                          <th class="table-col-name-medium">계획일</th>
+                          <th class="table-col-type-medium"></th>
                         </tr>
                       </thead>
                       <tbody id="plan-items-body">
@@ -88,19 +88,19 @@
                           <td><input class="input" name="inspections[0].member_id" maxlength="5" placeholder="예: M0001" /></td>
                           <td><input class="input" name="inspections[0].planned_date" type="date" required /></td>
                           <td class="cell-center">
-                            <button type="button" class="btn sm danger" data-remove-item style="display:none">삭제</button>
+                            <button type="button" class="btn sm danger hidden" data-remove-item>삭제</button>
                             <input type="hidden" name="inspections[0].status" value="PLAN" />
                           </td>
                         </tr>
                       </tbody>
                     </table>
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                    <div class="actions actions-left-align actions-top-small">
                       <button type="button" class="btn sm" data-add-item>행 추가</button>
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-medium">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">계획 생성</button>
                   </div>
@@ -115,67 +115,6 @@
       </footer>
     </div>
     
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const section = document.querySelector('[data-plan-items]');
-        if (!section) return;
-        const tbody = section.querySelector('#plan-items-body');
-        const addBtn = section.querySelector('[data-add-item]');
-        const form = document.querySelector('form[data-validate]');
-
-        function renumber() {
-          tbody.querySelectorAll('.plan-item-row').forEach((tr, i) => {
-            tr.querySelector('.line-no').textContent = i + 1;
-            const inputs = tr.querySelectorAll('input');
-            inputs.forEach((inp) => {
-              const field = inp.name.split('.').pop();
-              inp.name = `inspections[${i}].${field}`;
-              if (field === 'status') inp.value = 'PLAN';
-            });
-            const delBtn = tr.querySelector('[data-remove-item]');
-            if (delBtn) delBtn.style.display = i === 0 ? 'none' : 'inline-flex';
-          });
-        }
-
-        function addRow() {
-          const i = tbody.querySelectorAll('.plan-item-row').length;
-          const firstRow = tbody.querySelector('.plan-item-row');
-          if (!firstRow) return;
-          
-          const tr = firstRow.cloneNode(true);
-          tr.className = 'plan-item-row';
-          
-          // 모든 input/select 필드 초기화
-          tr.querySelectorAll('input[type="text"], input[type="date"]').forEach(inp => inp.value = '');
-          tr.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
-          
-          // name 속성 업데이트
-          tr.querySelectorAll('input, select').forEach(el => {
-            const field = el.name.split('.').pop();
-            el.name = `inspections[${i}].${field}`;
-          });
-          
-          // 삭제 버튼 표시
-          const delBtn = tr.querySelector('[data-remove-item]');
-          if (delBtn) delBtn.style.display = 'inline-flex';
-          
-          tbody.appendChild(tr);
-          attachRowHandlers(tr);
-          renumber();
-        }
-
-        function attachRowHandlers(tr) {
-          const delBtn = tr.querySelector('[data-remove-item]');
-          delBtn?.addEventListener('click', () => { tr.remove(); renumber(); });
-        }
-
-        // init
-        tbody.querySelectorAll('.plan-item-row').forEach(attachRowHandlers);
-        renumber();
-        addBtn?.addEventListener('click', addRow);
-
-        // status=PLAN은 각 행의 hidden input으로 포함되어 전송됩니다.
-      });
-    </script>
+    <!-- 인라인 스크립트 제거됨 - inspection.js로 이관 -->
   </body>
   </html>

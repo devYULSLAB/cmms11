@@ -25,7 +25,7 @@
               <span th:if="${!isAuthenticated}" class="guest-user">게스트 사용자</span>
               <div class="user-actions">
                 <button th:if="${isAuthenticated}" class="btn sm" type="button" id="btn-profile-edit" title="프로필 편집">프로필</button>
-                <a class="btn sm" th:href="@{/api/auth/logout}" href="/api/auth/logout" data-hard-nav>로그아웃</a>
+                <a class="btn sm" href="#" data-logout>로그아웃</a>
               </div>
             </div>
           </nav>
@@ -175,20 +175,30 @@
         <div class="container">CMMS</div>
       </footer>
     </div>
-    <!-- 공통 JavaScript 라이브러리 로드 -->
-    <script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
+    <!-- 공통 JavaScript 라이브러리 로드 (기존 방식 - 롤백용, 주석 처리) -->
+    <!-- 
+    <script th:src="@{/assets/js/common/fileUpload.js}" src="../../static/assets/js/common/fileUpload.js"></script>
+    <script th:src="@{/assets/js/common/FileList.js}" src="../../static/assets/js/common/FileList.js"></script>
     <script th:src="@{/assets/js/common.js}" src="../../static/assets/js/common.js"></script>
+    <script th:src="@{/assets/js/auth.js}" src="../../static/assets/js/auth.js"></script>
+    <script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
+    -->
+    
+    <!-- 새로운 ES 모듈 방식 -->
+    <script type="module" th:src="@{/assets/js/main.js}" src="../../static/assets/js/main.js"></script>
     
     <!-- 파일 위젯 (필요시 활성화) -->
     <!-- <script src="../assets/js/file-widget.js"></script> -->
     
-    <!-- SPA 네비게이션 및 초기 콘텐츠 설정 -->
+    <!-- SPA 네비게이션 및 초기 콘텐츠 설정 (main.js에서 처리됨) -->
+    <!-- 
     <script>
       // SPA 네비게이션 초기화
       document.addEventListener('DOMContentLoaded', () => {
         window.cmms.navigation.init();
       });
     </script>
+    -->
     
     <script th:inline="javascript">
       // 초기 콘텐츠 설정
@@ -223,7 +233,13 @@
 
             if (!popup) {
               try {
-                window.cmms?.notification?.warning("팝업이 차단되었습니다. 브라우저 설정을 확인해주세요.");
+                // ES 모듈이 로드된 후에는 window.cmms.notification 사용 가능
+                if (window.cmms?.notification?.warning) {
+                  window.cmms.notification.warning("팝업이 차단되었습니다. 브라우저 설정을 확인해주세요.");
+                } else {
+                  // 폴백: 네이티브 alert
+                  alert("팝업이 차단되었습니다. 브라우저 설정을 확인해주세요.");
+                }
               } catch (error) {
                 console.warn("팝업 차단 알림 실패", error);
               }

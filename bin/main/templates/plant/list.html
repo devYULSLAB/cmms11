@@ -98,12 +98,12 @@
 
                 <div class="row actions-top-medium">
                   <div class="spacer"></div>
-                  <div class="pagination" data-pagination>
-                    <button class="btn sm" th:disabled="${page.first}" 
+                  <div class="pagination">
+                    <button class="btn btn-sm" th:disabled="${page.first}" 
                             th:data-url="@{/plant/list(page=${page.number - 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
                             data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" 
+                    <button class="btn btn-sm" th:disabled="${page.last}" 
                             th:data-url="@{/plant/list(page=${page.number + 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
                             data-nav-button>다음</button>
                   </div>

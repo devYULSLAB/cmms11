@@ -6,26 +6,24 @@
  * 
  * 주요 기능:
  * - TableManager: 동적 테이블 행 관리 (추가/삭제/재정렬)
- * - FormManager: 폼 제출, 검증, CSRF 토큰 처리
  * - DataLoader: API 호출 및 데이터 로딩 (로딩/에러 상태 관리)
  * - ConfirmDialog: 확인 대화상자
- * - Validator: 폼 유효성 검사
- * - FileUpload: 파일 업로드 위젯 초기화
- * - 공통 이벤트: 취소 버튼, 폼 매니저, 유효성 검사 자동 바인딩
+ * - Validator: 폼 유효성 검사 (수동 적용)
+ * - 공통 이벤트: 취소 버튼, 테이블 매니저 자동 바인딩
  * 
  * 사용법:
  * - window.cmms.common.TableManager.init(tableElement, config)
- * - window.cmms.common.FormManager.init(formElement, config)  
  * - window.cmms.common.DataLoader.load(url, options)
  * - window.cmms.common.ConfirmDialog.show(message, callback)
  * - window.cmms.common.Validator.validate(form)
- * - window.cmms.common.initFileUploadWidgets(root)
  * 
  * SPA 속성 지원:
- * - data-form-manager: 폼 자동 초기화
  * - data-cancel-btn: 취소 버튼 공통 처리
- * - data-validate: 유효성 검사 자동 바인딩
  * - data-table-manager: 테이블 매니저 자동 초기화
+ * 
+ * 폼 처리:
+ * - app.js의 SPA 폼 처리 활용 (data-redirect 속성 사용)
+ * - data-validate: 수동 적용 (window.cmms.common.Validator.validate)
  * 
  * 의존성: app.js가 먼저 로드되어야 함
  */
@@ -259,124 +257,10 @@ window.cmms.common.TableManager = {
 };
 
 // =============================================================================
-// 폼 관리 유틸리티 (app.js의 SPA 폼 처리와 협력)
+// 폼 관리 유틸리티 (사용되지 않음 - app.js SPA 폼 처리로 대체됨)
 // =============================================================================
-window.cmms.common.FormManager = {
-  /**
-   * 폼 제출을 표준화하여 처리하는 함수
-   * app.js의 기존 SPA 폼 처리와 협력하여 동작합니다.
-   * @param {HTMLElement} form - 대상 폼 요소
-   * @param {Object} options - 옵션 설정
-   */
-  init: function(form, options = {}) {
-    const config = Object.assign({
-      method: 'POST',
-      showLoader: true,
-      showSuccessMessage: true,
-      bypassSPA: false, // SPA 처리를 우회할지 여부
-      redirect: null,
-      onSuccess: null,
-      onError: null
-    }, options);
-    
-    if (!form || form.__cmmsFormBound || form.__cmmsHandled) return null;
-    form.__cmmsFormBound = true;
-    
-    const manager = {
-      form,
-      config,
-      
-      // 표준화된 폼 제출
-      submit: async function(formData = null) {
-        const data = formData || new FormData(form);
-        const action = form.getAttribute('action') || window.location.href;
-        const method = (form.getAttribute('method') || config.method).toUpperCase();
-        
-        // 로더 표시
-        if (config.showLoader) {
-          this.showLoader();
-        }
-        
-        try {
-          const response = await fetch(action, {
-            method,
-            body: data,
-            credentials: 'same-origin'
-          });
-          
-          if (!response.ok) {
-            if (response.status === 403) {
-              throw window.cmms.csrf.toCsrfError(response);
-            }
-            throw new Error(`폼 제출 실패: ${response.status}`);
-          }
-          
-          // 성공 처리
-          if (config.showSuccessMessage) {
-            const mode = form.querySelector('[data-mode]')?.textContent || '처리';
-            window.cmms.notification.success(`${mode}이 완료되었습니다.`);
-          }
-          
-          // 리다이렉트 처리
-          const redirectTo = form.getAttribute('data-redirect') || config.redirect;
-          if (redirectTo) {
-            if (window.cmms?.navigation?.navigate) {
-              window.cmms.navigation.navigate(redirectTo);
-            } else {
-              window.location.href = redirectTo;
-            }
-          }
-          
-          // 성공 콜백
-          if (typeof config.onSuccess === 'function') {
-            config.onSuccess(response);
-          }
-          
-        } catch (error) {
-          console.error('폼 제출 오류:', error);
-          window.cmms.notification.error('요청 처리에 실패했습니다. 다시 시도해주세요.');
-          
-          if (typeof config.onError === 'function') {
-            config.onError(error);
-          }
-        } finally {
-          if (config.showLoader) {
-            this.hideLoader();
-          }
-        }
-      },
-      
-      showLoader: function() {
-        const submitBtn = form.querySelector('[type="submit"]');
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          const originalText = submitBtn.textContent;
-          submitBtn.textContent = '처리중...';
-          submitBtn.dataset.originalText = originalText;
-        }
-      },
-      
-      hideLoader: function() {
-        const submitBtn = form.querySelector('[type="submit"]');
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          const originalText = submitBtn.dataset.originalText;
-          if (originalText) {
-            submitBtn.textContent = originalText;
-          }
-        }
-      }
-    };
-    
-    // 폼 제출 이벤트 바인딩
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      manager.submit();
-    });
-    
-    return manager;
-  }
-};
+// FormManager는 실제로 사용되지 않으며, app.js의 SPA 폼 처리가 모든 폼을 담당합니다.
+// 필요시 개별 페이지에서 직접 폼 처리 로직을 구현하거나 app.js의 SPA 폼 처리 활용
 
 // =============================================================================
 // 확인 다이얼로그 표준화
@@ -567,18 +451,8 @@ window.cmms.common.Validator = {
       window.cmms.common.TableManager.init(table, config);
     });
     
-    // 모든 폼 매니저 자동 초기화 (SPA 폼과 구분)
-    document.querySelectorAll('form[data-form-manager]:not([data-redirect])').forEach(form => {
-      // 이미 app.js에 의해 처리된 폼은 건너뛰기
-      if (form.__cmmsHandled) return;
-      
-      const config = {};
-      
-      if (form.dataset.method) config.method = form.dataset.method;
-      if (form.dataset.redirect) config.redirect = form.dataset.redirect;
-      
-      window.cmms.common.FormManager.init(form, config);
-    });
+    // 폼 매니저는 app.js의 SPA 폼 처리와 중복을 피하기 위해 비활성화
+    // 필요시 개별 페이지에서 수동 초기화: window.cmms.common.FormManager.init(form)
     
     // 취소 버튼 공통 처리 (Domain 모듈용)
     document.querySelectorAll('[data-cancel-btn]').forEach(btn => {
@@ -596,22 +470,8 @@ window.cmms.common.Validator = {
       btn.__cancelBound = true;
     });
     
-    // 유효성 검사 바인딩 (app.js 폼 처리와 중복되지 않도록)
-    document.querySelectorAll('form[data-validate]:not([data-redirect])').forEach(form => {
-      const submitBtn = form.querySelector('[type="submit"]');
-      if (submitBtn && !submitBtn.__validationBound) {
-        submitBtn.__validationBound = true;
-        submitBtn.addEventListener('click', (e) => {
-          const validation = window.cmms.common.Validator.validate(form);
-          if (!validation.isValid) {
-            e.preventDefault();
-            validation.errors.forEach(error => {
-              window.cmms.notification.error(error);
-            });
-          }
-        });
-      }
-    });
+    // 유효성 검사는 app.js의 SPA 폼 처리와 중복을 피하기 위해 비활성화
+    // 필요시 개별 폼에서 수동 적용: window.cmms.common.Validator.validate(form)
   };
   
   // 초기화 실행 (DOM 로드 후)
@@ -639,11 +499,11 @@ window.cmms.initTable = function(selector, options = {}) {
 };
 
 /**
- * 간편 폼 초기화 함수 (레거시 호환성)
+ * 간편 폼 초기화 함수 (레거시 호환성) - 사용되지 않음
  * @param {string} selector - 폼 선택자
  * @param {Object} options - 옵션
  */
 window.cmms.initForm = function(selector, options = {}) {
-  const form = document.querySelector(selector);
-  return form ? window.cmms.common.FormManager.init(form || document.forms[0], options) : null;
+  console.warn('initForm은 더 이상 사용되지 않습니다. app.js의 SPA 폼 처리를 활용하세요.');
+  return null;
 };

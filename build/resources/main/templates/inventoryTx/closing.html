@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-tx-closing" data-module="inventory-tx-closing">
         <main>
           <div class="container">
             <section class="card">
@@ -41,10 +41,10 @@
               </div>
               <div class="card-body">
                 <!-- 성공/에러 메시지 표시 -->
-                <div th:if="${successMessage}" class="alert alert-success" style="background:#d4edda;color:#155724;padding:12px;border-radius:6px;margin-bottom:16px">
+                <div th:if="${successMessage}" class="alert alert-success">
                   <span th:text="${successMessage}">성공 메시지</span>
                 </div>
-                <div th:if="${errorMessage}" class="alert alert-danger" style="background:#f8d7da;color:#721c24;padding:12px;border-radius:6px;margin-bottom:16px">
+                <div th:if="${errorMessage}" class="alert alert-danger">
                   <span th:text="${errorMessage}">에러 메시지</span>
                 </div>
                 
@@ -65,7 +65,7 @@
                         <input id="inventoryId" name="inventoryId" class="input" maxlength="10" placeholder="예: INV000012" th:value="${inventoryId}" />
                       </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                    <div class="actions actions-left-align actions-top-small">
                       <button class="btn" type="submit">조회</button>
                     </div>
                   </form>
@@ -78,7 +78,7 @@
                     <input type="hidden" name="yyyymm" th:value="${yyyymm}" />
                     <input type="hidden" name="storageId" th:value="${storageId}" />
                     <input type="hidden" name="inventoryId" th:value="${inventoryId}" />
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                    <div class="actions actions-left-align actions-top-small">
                       <button class="btn primary" type="submit" th:disabled="${yyyymm == null}">마감 수행</button>
                     </div>
                     <div class="help">마감은 이전월까지만 가능합니다. (예: 오늘이 2025-09 이면 2025-08까지 가능)</div>
@@ -90,13 +90,13 @@
                   <table class="table">
                     <thead>
                       <tr>
-                        <th style="width:120px">창고</th>
-                        <th style="width:140px">재고번호</th>
-                        <th class="cell-right" style="width:120px">기초수량</th>
-                        <th class="cell-right" style="width:120px">입고</th>
-                        <th class="cell-right" style="width:120px">출고</th>
-                        <th class="cell-right" style="width:120px">기말수량</th>
-                        <th class="cell-right" style="width:140px">기말금액</th>
+                        <th class="table-col-id-small">창고</th>
+                        <th class="table-col-id-large">재고번호</th>
+                        <th class="cell-right table-col-amount-medium">기초수량</th>
+                        <th class="cell-right table-col-amount-small">입고</th>
+                        <th class="cell-right table-col-amount-small">출고</th>
+                        <th class="cell-right table-col-amount-medium">기말수량</th>
+                        <th class="cell-right table-col-amount-large">기말금액</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -120,28 +120,7 @@
           </div>
         </main>
         
-        <script>
-          function confirmClosing() {
-            const yyyymm = document.getElementById('yyyymm');
-            if (!yyyymm || !yyyymm.value) {
-              alert('마감월을 선택하세요');
-              return false;
-            }
-            return confirm(`${yyyymm.value} 마감을 수행하시겠습니까?`);
-          }
-          
-          // 마감월 최대값 설정 (이전월까지만 가능)
-          document.addEventListener('DOMContentLoaded', () => {
-            const yyyymm = document.getElementById('yyyymm');
-            if (yyyymm) {
-              const d = new Date();
-              const year = d.getMonth() === 0 ? d.getFullYear()-1 : d.getFullYear();
-              const month = d.getMonth() === 0 ? 12 : d.getMonth();
-              const mm = String(month).padStart(2,'0');
-              yyyymm.max = `${year}-${mm}`;
-            }
-          });
-        </script>
+        <!-- 인라인 스크립트는 inventory-tx.js로 이관됨 -->
       </section>
       <footer>
         <div class="container">© 재고 마감</div>

@@ -28,14 +28,13 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-dept-list" data-module="domain-dept-list">
         <main>
           <div class="container">
             <section class="card">
               <div class="card-header">
                 <div class="card-title">부서 목록</div>
                 <div class="toolbar">
-                  <a class="btn" th:href="@{/domain/dept/detail}">정보보기</a>
                   <a class="btn primary" th:href="@{/domain/dept/form}">새로 만들기</a>
                 </div>
               </div>
@@ -52,7 +51,7 @@
                     <div class="col-span-3">
                       <input class="input" placeholder="회사코드" />
                     </div>
-                    <div class="col-span-3" style="display:flex;gap:8px;justify-content:flex-end">
+                    <div class="col-span-3 search-actions">
                       <button class="btn">초기화</button>
                       <button class="btn">검색</button>
                     </div>
@@ -62,12 +61,12 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">부서코드</th>
-                      <th>부서명</th>
-                      <th style="width:140px">회사코드</th>
-                      <th style="width:160px">상위부서</th>
-                      <th style="width:120px">상태</th>
-                      <th style="width:140px">액션</th>
+                      <th class="table-col-id-large">부서코드</th>
+                      <th class="table-col-name-medium">부서명</th>
+                      <th class="table-col-id-large">회사코드</th>
+                      <th class="table-col-name-medium">상위부서</th>
+                      <th class="table-col-type-medium">상태</th>
+                      <th class="table-col-action-medium">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -90,11 +89,11 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-small">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" disabled>이전</button>
-                    <button class="btn sm">다음</button>
+                    <button class="btn btn-sm" disabled>이전</button>
+                    <button class="btn btn-sm">다음</button>
                   </div>
                 </div>
               </div>

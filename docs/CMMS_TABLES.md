@@ -31,6 +31,9 @@ CREATE TABLE site (
   company_id CHAR(5),
   site_id  CHAR(5),
   name       VARCHAR(100),
+  phone VARCHAR(30),
+  address VARCHAR(200),
+  status VARCHAR(20) DEFAULT 'ACTIVE',
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
   created_at TIMESTAMP,
@@ -44,8 +47,11 @@ CREATE TABLE dept (
   company_id CHAR(5),
   dept_id  CHAR(5),
   name       VARCHAR(100),
+  phone VARCHAR(30),
+  address VARCHAR(200),
+  status VARCHAR(20) DEFAULT 'ACTIVE',
   note       VARCHAR(500),
-  parent_id CHAR(5),  --상위 부서코드 
+  parent_id CHAR(5),  -- 상위 부서코드 
   delete_mark CHAR(1) DEFAULT 'N',
   created_at TIMESTAMP,
   created_by CHAR(10),
@@ -62,7 +68,9 @@ CREATE TABLE member (
   password_hash VARCHAR(100),
   email VARCHAR(100),
   phone VARCHAR(100),
-  siteId  CHAR(5),  //member의 siteId는 운영 편의를 위한 참고값임. 트랜잭션 때 기본값 설정.변경 가능 
+  site_id  CHAR(5),  -- member의 site_id는 운영 편의를 위한 참고값임. 트랜잭션 때 기본값 설정.변경 가능 
+  position VARCHAR(50),
+  title VARCHAR(50),
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
   created_at TIMESTAMP,
@@ -100,10 +108,11 @@ CREATE TABLE storage (
   CONSTRAINT pk_storage PRIMARY KEY (company_id, storage_id)
 );
 
+-- 역할 테이블: 업무 책임과 권한을 정의하는 그룹 (예: 관리자, 기술자, 조회자)
 CREATE TABLE role (
   company_id CHAR(5),
   role_id  CHAR(5),
-  name       VARCHAR(100),
+  name       VARCHAR(100),  -- 역할명 (예: "시스템관리자", "점검기술자")
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
   created_at TIMESTAMP,
@@ -113,11 +122,36 @@ CREATE TABLE role (
   CONSTRAINT pk_role PRIMARY KEY (company_id, role_id)
 );
 
+-- 사용자-역할 매핑 테이블: 어떤 사용자가 어떤 역할을 가지는지 정의
 CREATE TABLE rolemap (
   company_id CHAR(5),
-  member_id  CHAR(5),
-  role_id  CHAR(5),
+  member_id  CHAR(5),    -- 사용자 ID
+  role_id  CHAR(5),      -- 역할 ID
   CONSTRAINT pk_rolemap PRIMARY KEY (company_id, member_id, role_id)
+);
+
+-- 허가 테이블: 구체적인 시스템 기능에 대한 접근 권한 정의
+CREATE TABLE permission (
+  company_id CHAR(5),
+  permission_id CHAR(10),  -- [모듈]_[CRUD] 형식 (예: PLANT_C, INSPECTION_R)
+  name       VARCHAR(100), -- 허가명 (예: "설비등록", "점검조회")
+  module     VARCHAR(20),  -- 모듈명 (예: PLANT, INSPECTION, WORKORDER)
+  action     CHAR(1),      -- CRUD 액션 (C=생성, R=조회, U=수정, D=삭제)
+  note       VARCHAR(500),
+  delete_mark CHAR(1) DEFAULT 'N',
+  created_at TIMESTAMP,
+  created_by CHAR(10),
+  updated_at TIMESTAMP,
+  updated_by CHAR(10),
+  CONSTRAINT pk_permission PRIMARY KEY (company_id, permission_id)
+);
+
+-- 역할-허가 매핑 테이블: 어떤 역할이 어떤 허가를 가지는지 정의
+CREATE TABLE role_permission (
+  company_id CHAR(5),
+  role_id    CHAR(5),        -- 역할 ID
+  permission_id CHAR(10),    -- 허가 ID
+  CONSTRAINT pk_role_permission PRIMARY KEY (company_id, role_id, permission_id)
 );
 ```
 
@@ -154,7 +188,7 @@ CREATE TABLE plant (
   -- 기본정보 
   plant_id     CHAR(10),
   name       VARCHAR(100),
-  asset_id  CHAR(5),  --code_type="ASSET"
+  asset_id  CHAR(5),  -- code_type="ASSET"
   site_id  CHAR(5),
   dept_id  CHAR(5),
   func_id CHAR(5),
@@ -165,23 +199,23 @@ CREATE TABLE plant (
   serial  VARCHAR(100),
   -- 재무정보
   install_date  DATE,
-  depre_id  CHAR(5),  --code_type="DEPRE"
-  depre_period  SMALLINT,  --상각기간:year 
-  purchase_cost DECIMAL(18,2), --취득가
-  residual_value  DECIMAL(18,2), --잔존가 
+  depre_id  CHAR(5),  -- code_type="DEPRE"
+  depre_period  INTEGER,  -- 상각기간:year 
+  purchase_cost DECIMAL(18,2), -- 취득가
+  residual_value  DECIMAL(18,2), -- 잔존가 
   -- 운영 플래그 
   inspection_yn CHAR(1),
   psm_yn  CHAR(1),
   workpermit_yn CHAR(1),
   -- 점검 정보
-  inspection_interval SMALLINT,  --점검주기:month
+  inspection_interval INTEGER,  -- 점검주기:month
   last_inspection DATE,
   next_inspection DATE,
 
   file_group_id CHAR(10),
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
-  status  CHAR(10),
+  status  VARCHAR(10),
   created_at TIMESTAMP,
   created_by CHAR(10),
   updated_at TIMESTAMP,
@@ -194,7 +228,7 @@ CREATE TABLE inventory (
   -- 기본정보   
   inventory_id     CHAR(10),
   name       VARCHAR(100),
-  asset_id  CHAR(5),  --code_type="ASSET"
+  asset_id  CHAR(5),  -- code_type="ASSET"
   dept_id  CHAR(5),
   -- 제조사 정보
   maker_name  VARCHAR(100),
@@ -205,7 +239,7 @@ CREATE TABLE inventory (
   file_group_id CHAR(10),
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
-  status  CHAR(10),
+  status  VARCHAR(10),
   created_at TIMESTAMP,
   created_by CHAR(10),
   updated_at TIMESTAMP,
@@ -231,7 +265,7 @@ CREATE TABLE inspection (
   planned_date  DATE,
   actual_date DATE,
 
-  status  CHAR(10),
+  status  VARCHAR(10),
   file_group_id CHAR(10),
   note          VARCHAR(500),
   created_at    TIMESTAMP,
@@ -274,7 +308,7 @@ CREATE TABLE work_order (
   actual_cost  DECIMAL(18,2),
   actual_labor DECIMAL(18,2),
 
-  status  CHAR(10),
+  status  VARCHAR(10),
   file_group_id CHAR(10),
   note        VARCHAR(500),
   created_at  TIMESTAMP,
@@ -315,7 +349,7 @@ CREATE TABLE work_permit (
   
   checksheet_json  LONGTEXT,  -- 체크시트 이미지에 직접 수기로 적고 그 이미지 저장
 
-  status  CHAR(10),
+  status  VARCHAR(10),
   file_group_id CHAR(10),
   note        VARCHAR(500),
   created_at  TIMESTAMP,
@@ -408,7 +442,7 @@ CREATE TABLE approval (
   company_id  CHAR(5),
   approval_id CHAR(10),
   title       VARCHAR(100),
-  status  CHAR(10),
+  status  VARCHAR(10),
   ref_entity  VARCHAR(64),
   ref_id      CHAR(10),
   file_group_id CHAR(10),
@@ -468,7 +502,8 @@ CREATE TABLE file_item (
 CREATE UNIQUE INDEX ux_file_item_ord ON file_item(company_id, file_group_id, line_no);
 CREATE INDEX ix_file_item_path ON file_item(company_id, storage_path);
 
-### 시퀀스 관리 테이블
+## 시퀀스 관리 (sequence)
+```sql
 CREATE TABLE sequence (
   company_id CHAR(5),
   module_code CHAR(1),
@@ -476,3 +511,4 @@ CREATE TABLE sequence (
   next_seq INTEGER DEFAULT 1,
   CONSTRAINT pk_sequence PRIMARY KEY (company_id, module_code, date_key)
 );
+```

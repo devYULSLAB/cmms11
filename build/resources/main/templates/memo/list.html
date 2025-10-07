@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="memo-list" data-module="memo-list">
         <main>
           <div class="container">
             <section class="card">
@@ -53,9 +53,11 @@
                       <div class="col-span-3">
                         <input class="input" placeholder="참조 모듈" name="refEntity" th:value="${refEntity}" />
                       </div>
-                      <div class="col-span-2" style="display:flex;gap:8px;justify-content:flex-end">
-                        <button type="button" class="btn" onclick="this.form.reset();">초기화</button>
-                        <button type="submit" class="btn primary">검색</button>
+                      <div class="col-span-2">
+                        <div class="actions actions-left-align">
+                          <button type="button" class="btn" data-reset-form>초기화</button>
+                          <button type="submit" class="btn primary">검색</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -64,12 +66,12 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">메모 번호</th>
-                      <th>제목</th>
-                      <th style="width:160px">참조</th>
-                      <th style="width:120px">작성자</th>
-                      <th style="width:160px">작성일시</th>
-                      <th style="width:140px">액션</th>
+                      <th class="table-col-id-large">메모 번호</th>
+                      <th class="table-col-name-medium">제목</th>
+                      <th class="table-col-info-small">참조</th>
+                      <th class="table-col-type-large">작성자</th>
+                      <th class="table-col-date-large">작성일시</th>
+                      <th class="table-col-action-medium">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -79,9 +81,9 @@
                       <td th:text="${memo.refEntity ?: ''} + '/' + ${memo.refId ?: ''}" th:if="${memo.refEntity}">-</td>
                       <td th:text="${memo.createdBy}">-</td>
                       <td th:text="${memo.createdAt}">-</td>
-                      <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/memo/edit/{id}(id=${memo.memoId})}">수정</a>
-                        <button class="btn btn-sm danger"
+                      <td class="td.actions">
+                        <a class="btn btn-xs" th:href="@{/memo/edit/{id}(id=${memo.memoId})}">수정</a>
+                        <button class="btn btn-xs danger"
                                 th:data-delete-url="@{/memo/delete/{id}(id=${memo.memoId})}"
                                 data-redirect="@{/memo/list}"
                                 data-confirm="정말 삭제하시겠습니까?">삭제</button>
@@ -90,14 +92,17 @@
                   </tbody>
                 </table>
 
-                <div class="pagination">
-                  <button class="btn sm" th:disabled="${page.first}" 
-                          th:data-url="@{/memo/list(page=${page.number - 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
-                          onclick="if(this.dataset.url) location.href=this.dataset.url">이전</button>
-                  <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                  <button class="btn sm" th:disabled="${page.last}" 
-                          th:data-url="@{/memo/list(page=${page.number + 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
-                          onclick="if(this.dataset.url) location.href=this.dataset.url">다음</button>
+                <div class="row actions-top-medium">
+                  <div class="spacer"></div>
+                  <div class="pagination">
+                    <button class="btn btn-sm" th:disabled="${page.first}" 
+                            th:data-url="@{/memo/list(page=${page.number - 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
+                            data-nav-button>이전</button>
+                    <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+                    <button class="btn btn-sm" th:disabled="${page.last}" 
+                            th:data-url="@{/memo/list(page=${page.number + 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
+                            data-nav-button>다음</button>
+                  </div>
                 </div>
               </div>
             </section>

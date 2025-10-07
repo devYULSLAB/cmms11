@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-tx-ledger" data-module="inventory-tx-ledger">
         <main>
           <div class="container">
             <section class="card">
@@ -41,7 +41,7 @@
               </div>
               <div class="card-body">
                 <!-- 에러 메시지 표시 -->
-                <div th:if="${errorMessage}" class="alert alert-danger" style="background:#f8d7da;color:#721c24;padding:12px;border-radius:6px;margin-bottom:16px">
+                <div th:if="${errorMessage}" class="alert alert-danger">
                   <span th:text="${errorMessage}">에러 메시지</span>
                 </div>
                 
@@ -66,7 +66,7 @@
                         <input id="storageId" name="storageId" class="input" maxlength="5" placeholder="예: S0001" th:value="${storageId}" />
                       </div>
                     </div>
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                    <div class="actions actions-left-align actions-top-small">
                       <button class="btn" type="submit">조회</button>
                     </div>
                   </form>
@@ -75,19 +75,19 @@
                 <div class="section" th:if="${ledgerList != null}">
                   <div class="section-title">원장 요약</div>
                   <div class="notice" th:if="${fromYm != null && toYm != null}" th:text="'기간: ' + ${fromYm} + ' ~ ' + ${toYm}">기간: -</div>
-                  <table class="table" style="margin-top:8px">
+                  <table class="table">
                     <thead>
                       <tr>
-                        <th style="width:100px">창고</th>
-                        <th style="width:140px">재고번호</th>
-                        <th class="cell-right" style="width:120px">기초수량</th>
-                        <th class="cell-right" style="width:140px">기초금액</th>
-                        <th class="cell-right" style="width:100px">입고</th>
-                        <th class="cell-right" style="width:100px">출고</th>
-                        <th class="cell-right" style="width:100px">이동</th>
-                        <th class="cell-right" style="width:100px">조정</th>
-                        <th class="cell-right" style="width:120px">기말수량</th>
-                        <th class="cell-right" style="width:140px">기말금액</th>
+                        <th class="table-col-id-small">창고</th>
+                        <th class="table-col-id-large">재고번호</th>
+                        <th class="cell-right table-col-amount-medium">기초수량</th>
+                        <th class="cell-right table-col-amount-large">기초금액</th>
+                        <th class="cell-right table-col-amount-small">입고</th>
+                        <th class="cell-right table-col-amount-small">출고</th>
+                        <th class="cell-right table-col-amount-small">이동</th>
+                        <th class="cell-right table-col-amount-small">조정</th>
+                        <th class="cell-right table-col-amount-medium">기말수량</th>
+                        <th class="cell-right table-col-amount-large">기말금액</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -114,24 +114,7 @@
           </div>
         </main>
         
-        <script>
-          function validateForm() {
-            const fromYm = document.getElementById('fromYm');
-            const toYm = document.getElementById('toYm');
-            
-            if (!fromYm.value || !toYm.value) {
-              alert('기간을 선택하세요');
-              return false;
-            }
-            
-            if (fromYm.value > toYm.value) {
-              alert('시작월은 종료월보다 클 수 없습니다');
-              return false;
-            }
-            
-            return true;
-          }
-        </script>
+        <!-- 인라인 스크립트는 inventory-tx.js로 이관됨 -->
       </section>
       <footer>
         <div class="container">© 재고 원장</div>

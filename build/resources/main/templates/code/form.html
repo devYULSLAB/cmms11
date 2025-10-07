@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="code-form" data-module="code-form">
         <main>
           <div class="container">
             <section class="card">
@@ -74,11 +74,11 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th style="width:44px">#</th>
-                          <th style="width:140px">코드</th>
+                          <th class="col-44">#</th>
+                          <th class="col-140">코드</th>
                           <th>명칭</th>
                           <th>비고</th>
-                          <th style="width:80px"></th>
+                          <th class="col-80"></th>
                         </tr>
                       </thead>
                       <tbody id="code-items-body">
@@ -100,13 +100,13 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                    <div class="actions actions-left-align" style="margin-top:8px">
                       <button type="button" class="btn sm" data-add-item>항목 추가</button>
                     </div>
                   </div>
 
                   <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -123,54 +123,7 @@
       </footer>
     </div>
     
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const section = document.querySelector('[data-code-items]');
-        if (!section) return;
-        const tbody = section.querySelector('#code-items-body');
-        const addBtn = section.querySelector('[data-add-item]');
-
-        function renumber() {
-          tbody.querySelectorAll('.code-item-row').forEach((tr, i) => {
-            tr.querySelector('.line-no').textContent = i + 1;
-            tr.querySelectorAll('input').forEach((inp) => {
-              const field = inp.name.split('.').pop();
-              inp.name = `items[${i}].${field}`;
-            });
-            const delBtn = tr.querySelector('[data-remove-item]');
-            if (delBtn) delBtn.style.display = i === 0 ? 'none' : 'inline-flex';
-          });
-        }
-
-        function addRow() {
-          const i = tbody.querySelectorAll('.code-item-row').length;
-          const tr = document.createElement('tr');
-          tr.className = 'code-item-row';
-          tr.innerHTML = `
-            <td class="cell-center line-no">${i + 1}</td>
-            <td><input class="input" name="items[${i}].code" required maxlength="5" placeholder="예: REPR" /></td>
-            <td><input class="input" name="items[${i}].name" required maxlength="100" placeholder="예: 수리" /></td>
-            <td><input class="input" name="items[${i}].note" maxlength="500" placeholder="" /></td>
-            <td class="cell-center"><button type="button" class="btn sm danger" data-remove-item>삭제</button></td>`;
-          tbody.appendChild(tr);
-          attachRowHandlers(tr);
-          renumber();
-        }
-
-        function attachRowHandlers(tr) {
-          const delBtn = tr.querySelector('[data-remove-item]');
-          delBtn?.addEventListener('click', () => {
-            tr.remove();
-            renumber();
-          });
-        }
-
-        // init
-        tbody.querySelectorAll('.code-item-row').forEach(attachRowHandlers);
-        renumber();
-        addBtn?.addEventListener('click', addRow);
-      });
-    </script>
+    <!-- 인라인 스크립트 제거됨 - code.js로 이관 -->
   </body>
   </html>
 

@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="plant-form" data-module="plant-form">
         <main>
           <div class="container">
             <section class="card">
@@ -240,8 +240,8 @@
                         </ul>
                       </div>
                   </div>
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>

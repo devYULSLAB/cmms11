@@ -30,7 +30,7 @@
       <main>
         <div class="container">
           <section data-slot-root th:fragment="content" data-page="approval-form" data-module="approval-form">
-          <form class="stack" data-validate method="post" th:action="@{/approval/save}" th:data-redirect="@{/approval/list}" data-form-manager>
+          <form class="stack" data-validate method="post" th:action="@{/approval/save}" th:data-redirect="@{/approval/list}">
 
             <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -73,6 +73,8 @@
                     <label class="label" for="status">상태</label>
                     <select id="status" name="status">
                       <option value="">(선택)</option>
+                      <option value="DRAFT" th:selected="${!approval.status or approval.status == ''}">임시저장</option>
+                      <option value="SUBMIT">상신</option>
                       <option th:each="status : ${statusList}"
                               th:value="${status.code}"
                               th:text="${status.name}"
@@ -123,10 +125,24 @@
                     <textarea id="content" name="content" class="editor-hidden"></textarea>
                   </div>                        
 
-                  <div class="form-row col-span-12" data-attachments>
+                  <div class="form-row col-span-12" data-file-upload>
                     <label class="label">첨부</label>
                     <div>
-                      <div class="actions actions-left-align">
+                      <!-- 기존 파일 목록 표시 -->
+                      <div data-file-list 
+                           th:if="${approval.fileGroupId}"
+                           th:attr="data-file-group-id=${approval.fileGroupId}"
+                           data-empty-text="첨부된 파일이 없습니다."
+                           data-loading-text="첨부 파일을 불러오는 중..."
+                           data-error-text="첨부 파일을 불러올 수 없습니다.">
+                        <div class="loading">첨부 파일을 불러오는 중...</div>
+                      </div>
+                      <div th:unless="${approval.fileGroupId}" class="notice">
+                        첨부된 파일이 없습니다.
+                      </div>
+                      
+                      <!-- 파일 업로드 UI -->
+                      <div class="actions actions-left-align actions-top-small">
                         <input id="attachments-input" class="visually-hidden" type="file" 
                                multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
                         <button class="btn" type="button" data-attachments-add>
@@ -134,8 +150,8 @@
                           <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
                         </button>
                       </div>
-                      <ul class="attachments-list actions-top-small" aria-live="polite" aria-label="첨부 파일 목록">
-                        <li class="empty">첨부 파일이 없습니다.</li>
+                      <ul class="file-list actions-top-small" aria-live="polite" aria-label="첨부 파일 목록">
+                        <li class="empty">새로 첨부할 파일을 선택하세요.</li>
                       </ul>
                     </div>
                   </div>                  

@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/domain/company/save}" th:data-redirect="@{/domain/company/list}" data-form-manager>
+                <form data-validate method="post" th:action="@{/domain/company/save}" th:data-redirect="@{/domain/company/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -84,8 +84,6 @@
                   </div>
 
                   <div class="actions actions-top-small">
-                    <button class="btn" type="button" data-cancel-btn>취소</button>
-                    <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>

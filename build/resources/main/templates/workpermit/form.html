@@ -7,17 +7,7 @@
     <!-- common CSS is loaded via layout/defaultLayout -->
     <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
-    <style>
-      .signers{display:flex;flex-direction:column;gap:var(--space-12)}
-      .signer-row{display:flex;gap:var(--space-12);border:1px solid var(--border);border-radius:6px;padding:var(--space-12);align-items:center}
-      .signer-row .form-row{margin-bottom:0}
-      .signer-row .form-row:first-child{flex:0 0 200px}
-      .signer-row .form-row:nth-child(2){flex:1}
-      .signature-box{position:relative;height:100px;border:1px dashed var(--border);border-radius:6px;background:#fff}
-      .signature-canvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-      .signer-actions{display:flex;gap:8px;flex:0 0 auto}
-      @media print{.signer-actions,[data-add-signer]{display:none !important}}
-    </style>
+    <!-- 인라인 스타일 제거됨 - base.css로 이전 -->
   </head>
   <body>
     <div class="page">
@@ -41,7 +31,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="workpermit-form" data-module="workpermit-form">
         <main>
           <div class="container">
             <section class="card">
@@ -226,7 +216,7 @@
                   </div>
 
                   <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -243,197 +233,6 @@
       </footer>
     </div>
     
-    <script th:inline="javascript">
-      (function initWorkPermitSigners(){
-        const section = document.querySelector('[data-signers]');
-        if (!section) return;
-        const form = document.querySelector('form[data-validate]') || document.querySelector('form');
-        const list = section.querySelector('.signers');
-        const addBtn = section.querySelector('[data-add-signer]');
-        let idx = list.querySelectorAll('.signer-row').length;
-
-        function ensureSignatureUI(row){
-          // ensure canvas inside signature-box
-          let canvas = row.querySelector('.signature-canvas');
-          const box = row.querySelector('.signature-box');
-          if (box && !canvas){
-            canvas = document.createElement('canvas');
-            canvas.className = 'signature-canvas';
-            box.appendChild(canvas);
-          }
-          // ensure hidden input using index from name input
-          const nameInput = row.querySelector('input[name^="items["][name$="].name"]');
-          let index = 0;
-          const m = nameInput?.name?.match(/items\[(\d+)\]\.name/);
-          if (m) index = parseInt(m[1], 10);
-          let hidden = row.querySelector('input[name$=".signature"]');
-          if (!hidden){
-            hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.id = `signer_${index}_signature`;
-            hidden.name = `items[${index}].signature`;
-            row.querySelector('.form-row:last-child')?.appendChild(hidden);
-          }
-          // ensure clear button
-          const actions = row.querySelector('.signer-actions');
-          if (actions && !actions.querySelector('[data-clear-signature]')){
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'btn sm';
-            clearBtn.textContent = '지우기';
-            clearBtn.setAttribute('data-clear-signature','');
-            actions.insertBefore(clearBtn, actions.firstChild);
-          }
-
-          if (!canvas || !hidden) return;
-
-          const ctx = canvas.getContext('2d');
-          let drawing = false;
-          canvas.dataset.dirty = 'false';
-
-          function resize(){
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            const w = box?.clientWidth || 400;
-            const h = box?.clientHeight || 100;
-            canvas.width = Math.floor(w * ratio);
-            canvas.height = Math.floor(h * ratio);
-            canvas.style.width = w + 'px';
-            canvas.style.height = h + 'px';
-            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#111827';
-          }
-          resize();
-          window.addEventListener('resize', resize);
-
-          function pos(e){
-            const r = canvas.getBoundingClientRect();
-            return {x: e.clientX - r.left, y: e.clientY - r.top};
-          }
-          canvas.addEventListener('pointerdown', (e)=>{
-            canvas.setPointerCapture(e.pointerId);
-            const p = pos(e);
-            drawing = true;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            canvas.dataset.dirty = 'true';
-          });
-          canvas.addEventListener('pointermove', (e)=>{
-            if (!drawing) return;
-            const p = pos(e);
-            ctx.lineTo(p.x, p.y);
-            ctx.stroke();
-          });
-          function endStroke(e){
-            if (!drawing) return;
-            drawing = false;
-            try { hidden.value = canvas.toDataURL('image/png'); } catch(_) {}
-          }
-          canvas.addEventListener('pointerup', endStroke);
-          canvas.addEventListener('pointercancel', endStroke);
-
-          const clearBtn = row.querySelector('[data-clear-signature]');
-          clearBtn?.addEventListener('click', ()=>{
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.dataset.dirty = 'false';
-            hidden.value = '';
-          });
-        }
-
-        // if server provided existing items, render them
-        try {
-          const serverItems = /*[[${items}]]*/ [];
-          if (Array.isArray(serverItems) && serverItems.length > 0) {
-            list.innerHTML = '';
-            idx = 0;
-            serverItems.forEach(s => {
-              const row = document.createElement('div');
-              row.className = 'signer-row';
-              row.innerHTML = `
-                <div class=\"form-row\">
-                  <label class=\"label required\" for=\"signer_${idx}_name\">이름</label>
-                  <input id=\"signer_${idx}_name\" name=\"items[${idx}].name\" class=\"input\" required maxlength=\"100\" />
-                </div>
-                <div class=\"form-row\">
-                  <label class=\"label\">서명</label>
-                  <div class=\"signature-box\" aria-label=\"서명(마우스기입)\"></div>
-                </div>
-                <div class=\"signer-actions\">
-                  <button type=\"button\" class=\"btn sm danger\" data-remove-signer>삭제</button>
-                </div>`;
-              list.appendChild(row);
-              const removeBtn = row.querySelector('[data-remove-signer]');
-              removeBtn.addEventListener('click', () => row.remove());
-              ensureSignatureUI(row);
-              const nameInput = row.querySelector('input[name$=\".name\"]');
-              const hidden = row.querySelector('input[name$=\".signature\"]');
-              if (nameInput) nameInput.value = s.name || '';
-              if (hidden && s.signature) {
-                hidden.value = s.signature;
-                const canvas = row.querySelector('.signature-canvas');
-                if (canvas) {
-                  const img = new Image();
-                  img.onload = function(){
-                    const ctx = canvas.getContext('2d');
-                    ctx.clearRect(0,0,canvas.width,canvas.height);
-                    ctx.drawImage(img,0,0,canvas.width,canvas.height);
-                  };
-                  img.src = s.signature;
-                }
-              }
-              idx++;
-            });
-          }
-        } catch (_) { /* ignore */ }
-
-        // initialize existing rows (default or hydrated)
-        list.querySelectorAll('.signer-row').forEach(ensureSignatureUI);
-
-        addBtn?.addEventListener('click', () => {
-          const row = document.createElement('div');
-          row.className = 'signer-row';
-          row.innerHTML = `
-            <div class=\"form-row\">
-              <label class=\"label required\" for=\"signer_${idx}_name\">이름</label>
-              <input id=\"signer_${idx}_name\" name=\"items[${idx}].name\" class=\"input\" required maxlength=\"100\" />
-            </div>
-            <div class=\"form-row\">
-              <label class=\"label\">서명</label>
-              <div class=\"signature-box\" aria-label=\"서명(펜으로 기입)\"></div>
-            </div>
-            <div class=\"signer-actions\">
-              <button type=\"button\" class=\"btn sm danger\" data-remove-signer>삭제</button>
-            </div>`;
-
-          list.appendChild(row);
-          const removeBtn = row.querySelector('[data-remove-signer]');
-          removeBtn.addEventListener('click', () => row.remove());
-          ensureSignatureUI(row);
-          idx++;
-
-          // 첫 행을 제외하고 삭제 버튼 표시
-          section.querySelectorAll('[data-remove-signer]').forEach((btn, i) => {
-            btn.style.display = i === 0 ? 'none' : 'inline-flex';
-          });
-        });
-
-        // save canvases into hidden inputs on submit
-        form?.addEventListener('submit', () => {
-          list.querySelectorAll('.signer-row').forEach((row) => {
-            const name = row.querySelector('input[name$=".name"]').value || '';
-            const canvas = row.querySelector('.signature-canvas');
-            let signature = row.querySelector('input[name$=".signature"]').value || '';
-            if (canvas) {
-              try { signature = canvas.toDataURL('image/png'); } catch(_) {}
-            }
-            const hidden = row.querySelector('input[name$=".signature"]');
-            if (hidden) hidden.value = signature;
-          });
-        });
-
-        // If this template was inserted after DOMContentLoaded in SPA mode, ensure init runs immediately
-      })();
-    </script>
+    <!-- 인라인 스크립트 제거됨 - workpermit.js로 이관 -->
   </body>
   </html>

@@ -1,145 +1,375 @@
-# STRUCTURES
+# CMMS 기술 아키텍처 및 구현 가이드
 
-참고: 파일 업로드 최신 가이드가 업데이트되었습니다. 상세 내용은 `docs/FILE_UPLOAD.md`를 참고하세요.
+> **참조 문서**: [CMMS_PRD.md](./CMMS_PRD.md) - 제품 요구사항 및 기능 사양
 
-본 문서는 프로젝트의 구조와 규칙을 한눈에 보기 위해 정리되었습니다.
-요약: Spring Boot 기반의 얇은 Web 계층, Service 중심의 도메인 접근, JPA 저장소, 정적 템플릿(UI) 구조를 사용합니다.
+본 문서는 CMMS 제품 요구사항을 구현하기 위한 기술 아키텍처와 개발 가이드를 정리합니다.
+Spring Boot 기반의 레이어드 아키텍처, RBAC 권한 관리, 모바일 대응 UI, 실시간 KPI 대시보드를 핵심으로 합니다.
 
-## 1) 기술스택
-- Backend: Java 21, Spring Boot 3.3.x
-  - Spring Web, Spring Security(Form Login), Spring Data JPA, Bean Validation
-- DB: MariaDB (JDBC 드라이버), Flyway(의존성 포함, 현재 `application.yml`에서 disabled,Hibernate:update)
-- Build & Tooling: Gradle, Lombok
-- Frontend: 정적 HTML/CSS/JS (resources/templates, resources/static)
-  - `defaultLayout.html`을 통한 SPA‑like 내비게이션(History API + fetch)
+## 1. 기술 스택 및 아키텍처
 
-## 2) 디렉토리 구조
+### 1.1 기술 스택
+- **Backend**: Java 21, Spring Boot 3.3.x
+  - Spring Web MVC, Spring Security(RBAC), Spring Data JPA, Bean Validation
+  - Spring AOP (권한 체크, 감사 로그)
+- **Database**: MariaDB (JDBC 드라이버), Flyway 마이그레이션
+- **Build & Tooling**: Gradle, Lombok, MapStruct (DTO 변환)
+- **Frontend**: 정적 HTML/CSS/JS (SPA-like 내비게이션)
+  - `defaultLayout.html` 기반 SPA 내비게이션 (History API + fetch)
+  - 반응형 웹 디자인 (모바일/태블릿 대응)
+- **보안**: Spring Security, RBAC, CSRF 방어, XSS 방어
 
+### 1.2 아키텍처 설계 원칙
+- **레이어드 아키텍처**: Controller → Service → Repository
+- **도메인 중심 설계**: 기능별 패키지 구조 (Feature Colocation)
+- **공통 모듈 분리**: 파일 관리, 시퀀스, 권한 등 공통 기능 모듈화
+- **표준화된 UI/UX**: Form/List/Detail 표준 레이아웃
+
+## 2. 프로젝트 구조
+
+### 2.1 디렉토리 구조
+```
 docs/
-  CMMS_PRD.md        <- 제품 사양서 
-  STRUCTURES.md      <- 본 문서
-  TABLES.md          <- 테이블 설계 가이드
+  CMMS_PRD.md           # 제품 요구사항 정의서
+  CMMS_STRUCTURES.md    # 기술 아키텍처 (본 문서)
+  CMMS_TABLES.md        # 데이터 모델 설계
 
 src/main/java/com/cmms11/
   Cmms11Application.java
   config/
-    SecurityConfig.java   <- 로그인, 접근제어, 폼 로그인 경로 등
-    WebConfig.java        <- 정적 리소스/템플릿 매핑
+    SecurityConfig.java      # RBAC 권한 관리, 폼 로그인
+    WebConfig.java           # 정적 리소스/템플릿 매핑
+    DatabaseConfig.java      # DB 설정, 트랜잭션 관리
   security/
-    MemberUserDetailsService.java <- 사용자 조회/권한 매핑(회사:사용자ID 지원)
-  init/
-    DataInitializer.java  <- 기본 사용자(seed) 생성
+    MemberUserDetailsService.java  # 사용자 인증/권한 매핑
+    RoleBasedAccessControl.java    # RBAC 권한 체크 AOP
   web/
-    HealthController.java
-    PlantController.java  <- 예시: 설비 API (현재 저장소 직접 사용)
-  common/seq/
-    AutoNumberService.java
-    Sequence.java / SequenceId.java / SequenceRepository.java / SequenceService.java
-  domain/member/
-    Member.java / MemberId.java / MemberRepository.java / MemberService.java
+    # 도메인별 Controller
+    PlantController.java          # 설비 관리
+    InventoryController.java      # 재고 관리  
+    InspectionController.java     # 예방점검
+    WorkOrderController.java      # 작업지시
+    WorkPermitController.java     # 작업허가
+    ApprovalController.java       # 결재 관리
+    BoardController.java          # 게시판
+    DashboardController.java      # KPI 대시보드
+  domain/
+    # 기준정보 도메인
+    company/    # 회사 관리
+    site/       # 사이트 관리
+    dept/       # 부서 관리
+    member/     # 사용자 관리
+    role/       # 역할 관리
+    code/       # 공통코드 관리
   plant/
-    Plant.java / PlantId.java / PlantRepository.java / PlantService.java (예시)
+    # 설비 마스터 관리
+    Plant.java, PlantId.java, PlantRepository.java, PlantService.java
+  inventory/
+    # 재고 마스터 및 수불 관리
+    Inventory.java, InventoryHistory.java, InventoryStock.java
+  inspection/
+    # 예방점검 관리
+    Inspection.java, InspectionItem.java
+  workorder/
+    # 작업지시 관리
+    WorkOrder.java, WorkOrderItem.java
+  workpermit/
+    # 작업허가 관리
+    WorkPermit.java, WorkPermitItem.java
+  approval/
+    # 결재 프로세스
+    Approval.java, ApprovalStep.java
+  memo/
+    # 메모/게시판
+    Memo.java
+  common/
+    seq/        # 자동번호 채번
+    file/       # 파일 업로드/다운로드
+    audit/      # 감사 로그
+    kpi/        # KPI 계산 엔진
+    excel/      # 엑셀 I/O 처리
 
 src/main/resources/
-  application.yml
+  application.yml, application-dev.yml, application-prod.yml
+  messages/messages_ko.properties, messages_en.properties  # 국제화
   db/migration/
-    V1__baseline.sql      
+    V1__baseline.sql      # 초기 스키마
+    V2__add_kpi_tables.sql
   templates/
-    auth/login.html
-    layout/defaultLayout.html
-    plant/list.html, detail.html, form.html
-    {타 모듈도 같은 구조이나, domain,code 2가지 모듈은 form.html과 list.html만 필요함 }
+    layout/defaultLayout.html     # SPA 메인 레이아웃
+    auth/login.html               # 로그인 페이지
+    dashboard/index.html          # KPI 대시보드
+    plant/list.html, form.html, detail.html
+    inventory/list.html, form.html, detail.html
+    inspection/list.html, form.html, detail.html
+    workorder/list.html, form.html, detail.html
+    workpermit/list.html, form.html, detail.html
+    approval/list.html, form.html, detail.html
+    board/list.html, form.html, detail.html
   static/assets/
-    css/base.css, print.css
-    js/app.js             <- 공통 UX 스크립트(첨부 UI 포함)
+    css/
+      base.css           # 기본 스타일 (반응형)
+      print.css          # 인쇄용 스타일
+    js/
+      app.js            # SPA 네비게이션, 공통 UX
+      common.js         # 공통 유틸리티
+      dashboard.js      # KPI 대시보드
+    samples/
+      plant-upload-sample.csv
+      inventory-upload-sample.csv
+```
 
-## 3) Layer와 Naming rule
-- Layering
-  - Controller: HTTP 매핑, 요청/응답, 간단 검증 및 DTO 변환 담당
-  - Service: 트랜잭션 경계, 도메인 규칙/흐름, 저장소 조합 로직 담당
-  - Repository(JPA): 엔티티 영속화/조회 쿼리 담당
-  - 금지 규칙: Controller는 Repository를 직접 주입/호출하지 않는다. 반드시 Service를 호출한다.
+## 3. 레이어드 아키텍처 및 네이밍 규칙
 
-- Package 위치 규칙(기능 공존, feature‑colocation)
-  - 엔티티/ID/레포지토리/서비스는 기능별 패키지에 공존: 예) `com.cmms11.plant`
-  - 공용 모듈은 `com.cmms11.common.<module>`: 예) `common.seq`
-  - 웹 컨트롤러는 `com.cmms11.web` 하위에 위치
-  - 인증/인가/계정 등 보안 관련은 `com.cmms11.security` 폴더에 둔다.
+### 3.1 레이어 구성
+- **Controller**: HTTP 매핑, 요청/응답 처리, 권한 체크, DTO 변환
+- **Service**: 트랜잭션 경계, 비즈니스 로직, 도메인 규칙, Repository 조합
+- **Repository**: 엔티티 영속화, 복잡한 조회 쿼리, 데이터 접근
+- **Entity**: 도메인 모델, JPA 매핑, 비즈니스 규칙 캡슐화
 
-- Naming 규칙(Java)
-  - Entity: PascalCase (예: `Plant`, `Member`)
-  - Embedded ID: `<Entity>NameId` (예: `PlantId`, `MemberId`)
-  - Repository: `<Entity>NameRepository` (예: `PlantRepository`)
-  - Service: `<Feature>NameService` (예: `PlantService`)
-    - 구현체가 여러 개인 경우에만 인터페이스/`Impl` 도입
-  - Controller: `<Feature>NameController` (예: `PlantController`)
-    mapping에서 {id} 대신 {모듈명+Id}로 명확히 표현 
+**중요 규칙**: Controller는 절대 Repository를 직접 호출하지 않음. 반드시 Service를 통해 접근
 
-- Service 계층 메서드 컨벤션(권장)
-  - Query: `get*`(없으면 예외), `find*`(Optional-get을 쓸 수 없는 불가피한 경우에만 사용함), `list*/search*`(페이지 결과)
-  - Command: `create*`, `update*`, `delete*`(검증/중복제어를 Service에서 처리)
-  - `@Transactional`은 Service에 적용(클래스 또는 메서드 레벨)
+### 3.2 패키지 구조 (Feature Colocation)
+```
+com.cmms11/
+  domain/          # 기준정보 도메인
+    company/       # 회사 관리
+    site/          # 사이트 관리  
+    member/        # 사용자 관리
+    role/          # 역할 관리
+  plant/           # 설비 마스터
+  inventory/       # 재고 마스터
+  inspection/      # 예방점검
+  workorder/       # 작업지시
+  workpermit/      # 작업허가
+  approval/        # 결재 프로세스
+  memo/            # 메모/게시판
+  common/          # 공통 모듈
+    seq/           # 자동번호 채번
+    file/          # 파일 관리
+    kpi/           # KPI 계산
+    excel/         # 엑셀 I/O
+  web/             # 웹 컨트롤러
+  security/        # 보안 관련
+  config/          # 설정
+```
 
-- Controller/Repository 계층 메서드 컨벤션(권장)
-  - Controller(api와 WEB 구분 없음): 
-    - API:`list*`, `get*`, `create*`, `update*`, `delete*` 등 HTTP 동사/행위를 반영하고 Service로 위임
-    - WEB: Controller: `listForm*`, `getForm*`, `newForm*`, `editForm*`, `deleteForm*` 등 Form을 포함하고 Service로 위임
-  - DTO/바인딩 객체는 `*Request`, `*Response` 명명 권장
-  - Repository: Spring Data 규칙에 맞춘 파생 쿼리(`findBy*`, `existsBy*`, `deleteBy*`) 또는 `@Query` 사용
-  - 페이징은 `Page<T> method(..., Pageable pageable)` 시그니처 유지
+### 3.3 네이밍 규칙
 
-## 4) 기타
+#### 3.3.1 Java 클래스 네이밍
+- **Entity**: PascalCase (예: `Plant`, `Inspection`, `WorkOrder`)
+- **Embedded ID**: `<Entity>Id` (예: `PlantId`, `InspectionId`)
+- **Repository**: `<Entity>Repository` (예: `PlantRepository`)
+- **Service**: `<Entity>Service` (예: `PlantService`)
+- **Controller**: `<Entity>Controller` (예: `PlantController`)
+- **DTO**: `<Entity>Request`, `<Entity>Response` (예: `PlantRequest`, `PlantResponse`)
 
-### 로그인 절차
-- 로그인 페이지: `/auth/login.html`
-- 처리 URL: `/api/auth/login` (Spring Security formLogin)
-- 파라미터: `member_id`(사용자ID), `password`
-- 사용자 식별 규칙:
+#### 3.3.2 메서드 네이밍 컨벤션
+
+**Service 계층**:
+- **Query**: `get*(id)` (없으면 예외), `list*(pageable)`, `search*(keyword, pageable)`
+- **Command**: `create*(request)`, `update*(id, request)`, `delete*(id)`
+- **비즈니스 로직**: `confirm*(id)`, `approve*(id)`, `reject*(id)`
+
+**Controller 계층**:
+- **API**: `list*`, `get*`, `create*`, `update*`, `delete*`
+- **Web Form**: `listForm`, `getForm`, `newForm`, `editForm`
+
+**Repository 계층**:
+- Spring Data JPA 규칙: `findBy*`, `existsBy*`, `countBy*`
+- 커스텀 쿼리: `@Query` 사용
+
+### 3.4 RBAC 권한 관리 시스템
+
+#### 3.4.1 권한 구조 설계
+CMMS 시스템은 **사용자-역할(1:1)-허가(1:N)** 구조의 RBAC 모델을 사용합니다.
+
+**핵심 개념**:
+- **사용자(Member)**: 시스템을 사용하는 개인
+- **역할(Role)**: 업무 책임과 권한을 정의하는 그룹 (예: 관리자, 기술자, 조회자)
+- **허가(Permission)**: 구체적인 시스템 기능에 대한 접근 권한 (예: PLANT_C, INSPECTION_R)
+
+#### 3.4.2 허가 명명 규칙
+허가는 **`[모듈명]_[CRUD]`** 형식으로 명명됩니다:
+- 모듈명: 대문자 영문 (예: PLANT, INSPECTION, WORKORDER)
+- CRUD: C(생성), R(조회), U(수정), D(삭제)
+- 예시: `PLANT_C`, `INSPECTION_R`, `WORKORDER_U`
+
+#### 3.4.3 표준 역할 정의
+
+**ADMIN (관리자)**:
+- 모든 모듈의 모든 CRUD 권한
+
+**MANAGER (담당자)**:
+- 담당 업무 모듈의 모든 CRUD 권한
+- 관련 모듈의 조회 권한
+
+**TECHNICIAN (기술자)**:
+- 담당 업무의 생성, 조회, 수정 권한
+- 관련 모듈의 조회 권한
+
+**VIEWER (조회자)**:
+- 모든 모듈의 조회 권한만
+
+#### 3.4.5 모듈별 권한 체크 표준
+
+**Controller에서 권한 체크**: 모든 Controller 메서드에 `@PreAuthorize` 적용
+
+**기준정보 모듈**: `COMPANY_C/R/U/D`, `SITE_C/R/U/D`, `DEPT_C/R/U/D`, `MEMBER_C/R/U/D`, `ROLE_C/R/U/D`, `CODE_C/R/U/D`
+
+**마스터 모듈**: `PLANT_C/R/U/D`, `INVENTORY_C/R/U/D`
+
+**트랜잭션 모듈**: `INSPECTION_C/R/U/D`, `WORKORDER_C/R/U/D`, `WORKPERMIT_C/R/U/D`, `APPROVAL_C/R/U/D`
+
+**시스템 모듈**: `DASHBOARD_R`, `FILE_C/R/D`, `REPORT_R`
+
+#### 3.4.6 권한 체크 패턴
+
+**기본 CRUD**: `@PreAuthorize("hasAuthority('MODULE_C/R/U/D')")`
+
+#### 3.4.9 특별 권한 규칙 및 고려사항
+
+**업무 프로세스별 권한 제어**:
+- **점검 확정 후 수정**: 점검 완료 상태에서는 결과 수정 불가
+- **작업지시 승인 후 변경**: 승인된 작업지시는 담당자 변경 시 재승인 필요
+- **결재 진행 중 수정**: 결재 진행 중인 문서는 작성자만 수정 가능
+
+**조직 계층별 접근 제어**:
+- **부서별 데이터 접근**: 사용자 소속 부서와 동일한 부서 데이터만 접근
+- **사이트별 데이터 접근**: 사용자 기본 사이트와 동일한 사이트 데이터만 접근
+- **계층적 접근**: 상위 부서는 하위 부서 데이터 접근 가능 (설정에 따라)
+
+**업무 단계별 권한 제어**:
+- **계획 단계**: 모든 권한 사용자만 계획 수립 가능
+- **진행 단계**: 담당자와 승인자만 수정 가능
+- **완료 단계**: 관리자만 결과 수정 가능
+
+**데이터 보안 고려사항**:
+- **민감 정보 접근**: 개인정보, 설비 상세 정보는 특별 권한 필요
+- **외부 접근 제한**: 외부 업체 사용자는 제한된 모듈만 접근
+- **임시 권한**: 특정 프로젝트나 작업에 대한 임시 권한 부여 기능
+
+## 4. 핵심 기능 구현
+
+### 4.1 인증 및 권한 관리
+
+#### 4.1.1 로그인 시스템
+- **로그인 페이지**: `/auth/login.html`
+- **처리 URL**: `/api/auth/login` (Spring Security formLogin)
+- **파라미터**: `member_id`(사용자ID), `password`
+- **사용자 식별**: 
   - 기본 회사코드: `C0001`
-  - `member_id`가 `회사코드:사용자ID` 형태라면 분리 처리(예: `C0002:admin`)
-- 성공 시 이동: `/layout/defaultLayout.html?content=/plant/list.html`
-- 실패 시 이동: `/auth/login.html?error=1`
-- 로그아웃: `/api/auth/logout` → `/auth/login.html`
+  - 멀티 회사: `회사코드:사용자ID` 형태 (예: `C0002:admin`)
+- **성공 시**: `/layout/defaultLayout.html?content=/dashboard/index.html`
+- **실패 시**: `/auth/login.html?error=1`
+- **로그아웃**: `/api/auth/logout` → `/auth/login.html`
 
-### 멀티 컴퍼니 절차 
-- companyA.yourcompany.com, companyB.yourcompany.com 등 URL 기반으로 companyId를 추출하고 Login.html페이지에 기본 값 로딩 
+#### 4.1.2 RBAC 권한 관리
+```java
+@Service
+public class MemberUserDetailsService implements UserDetailsService {
+    // 사용자 권한 매핑
+    // ADMIN: 모든 권한
+    // MANAGER: 트랜잭션 CRUD + 기준정보 조회
+    // TECHNICIAN: 점검/작업 미확정 전까지 CRUD
+    // VIEWER: 모든 모듈 Read만
+}
+```
 
-### defaultLayout 구조(내비게이션)
-- 파일: `src/main/resources/templates/layout/defaultLayout.html`
-- 동작: 쿼리스트링 `content` 경로를 fetch로 로딩하여 내부 `#layout-slot`에 삽입
-  - 링크 클릭을 가로채 History API로 경로만 변경하여 페이지 전환 느낌 제공
-  - 초기 진입 시 또는 뒤/앞으로 가기(popstate) 처리 포함
-- 신규 화면 추가 시
+### 4.2 KPI 대시보드 구현
+
+#### 4.2.1 실시간 KPI 계산
+```java
+@Service
+public class KpiCalculationService {
+    // 설비 가동률: PLANT + WORKORDER 테이블 기반
+    public BigDecimal calculateEquipmentAvailability(String companyId, String siteId);
+    
+    // 예방점검 준수율: INSPECTION + INSPECTION_RESULT 기반
+    public BigDecimal calculateInspectionCompliance(String companyId, LocalDate from, LocalDate to);
+    
+    // MTTR/MTBF: WORKORDER 작업 시간 기반
+    public BigDecimal calculateMTTR(String companyId, LocalDate from, LocalDate to);
+    public BigDecimal calculateMTBF(String companyId, String plantId);
+    
+    // 재고 회전율: INVENTORY_HISTORY 기반
+    public BigDecimal calculateInventoryTurnover(String companyId, String storageId, int year);
+}
+```
+
+#### 4.2.2 알림 시스템
+```java
+@Component
+public class KpiAlertService {
+    // 임계값 기반 알림
+    @Scheduled(cron = "0 0 9 * * *") // 매일 오전 9시
+    public void checkKpiThresholds();
+    
+    // 트렌드 경고
+    public void checkTrendWarnings();
+    
+    // 예외 상황 알림
+    public void sendEmergencyAlerts();
+}
+``` 
+
+### 4.3 SPA 내비게이션 시스템
+
+#### 4.3.1 defaultLayout 구조
+- **파일**: `src/main/resources/templates/layout/defaultLayout.html`
+- **동작**: 쿼리스트링 `content` 경로를 fetch로 로딩하여 `#layout-slot`에 삽입
+- **History API**: 링크 클릭을 가로채서 경로만 변경, SPA 느낌 제공
+- **브라우저 네비게이션**: 뒤/앞으로 가기(popstate) 지원
+
+#### 4.3.2 신규 화면 추가 규칙
   - `templates/<feature>/<view>.html`에 화면 정의
   - 레이아웃에서 `?content=/<feature>/<view>.html`로 연결
+- 표준 화면: `list.html`, `form.html`, `detail.html`
 
-### 자동번호 채번 규칙
-- 구현: `common.seq.AutoNumberService`
-- 저장소/락: `Sequence` 테이블을 비관적 쓰기 락으로 조회(`findForUpdate`) 후 증분
-- Master 번호: `{moduleCode(1)}{연동키 '000000'} + 9자리 시퀀스`
+### 4.4 자동번호 채번 시스템
+
+#### 4.4.1 구현 구조
+- **구현 클래스**: `common.seq.AutoNumberService`
+- **동시성 제어**: `Sequence` 테이블 비관적 쓰기 락 (`findForUpdate`)
+- **트랜잭션**: Service 계층에서 `@Transactional` 적용
+
+#### 4.4.2 번호 생성 규칙
+
+**Master ID (기준정보)**:
+- 형식: `{moduleCode(1)}{000000}{3자리시퀀스}`
   - API: `generateMasterId(companyId, moduleCode)`
-  - 권장 모듈코드 매핑(master): `plant=1`, `inventory=2`
-- Transaction 번호: `{moduleCode(1)}{YYMMDD}{3자리 시퀀스}` : YYYYMM기준 최대 999까지 허용 
+- 모듈코드 매핑:
+  - Plant(설비): `1` → 1000000001
+  - Inventory(재고): `2` → 2000000001
+
+**Transaction ID (업무데이터)**:
+- 형식: `{moduleCode(1)}{YYMMDD}{3자리시퀀스}`
   - API: `generateTxId(companyId, moduleCode, date)`
-  - 권장 모듈코드 매핑(transaction): `inspection=I`, `workorder=O`, `workpermit=P`, `approvals=A`, `file_group_id=F`, `memo=M`
-- 초기값/증분: `next_seq`에서 현재값 반환 후 +1 저장
-- 신규 생성: `sequence` 테이블에 (companyId, moduleCode, dateKey) 행이 없으면 신규로 생성 후 시퀀스 시작(코드에 반영됨)
+- 모듈코드 매핑:
+  - Inspection(점검): `I` → I250119001
+  - WorkOrder(작업지시): `O` → O250119001
+  - WorkPermit(작업허가): `P` → P250119001
+  - Approval(결재): `A` → A250119001
+  - File(파일): `F` → F250119001
+  - Memo(메모): `M` → M250119001
 
-### 파일 업로드 가이드 (전역 위젯 기반, 최신)
+#### 4.4.3 동작 방식
+- **초기 생성**: 시퀀스 테이블에 (companyId, moduleCode, dateKey) 행이 없으면 신규 생성
+- **증분 처리**: `next_seq`에서 현재값 반환 후 +1 저장
+- **월별 리셋**: Transaction ID는 월별로 시퀀스 리셋 (최대 999건/월)
 
-이 문서는 첨부(파일 업로드/목록/삭제) 기능의 최신 구조와 사용 규칙을 정리합니다. SPA 슬롯 주입 환경에서 일관된 동작을 보장하도록 전역 위젯과 표준 마크업만으로 동작합니다.
+### 4.5 파일 관리 시스템
 
-#### 개요
-- 전역 스크립트: `src/main/resources/static/assets/js/app.js`
-  - SPA로 콘텐츠가 `#layout-slot`에 주입된 뒤, `[data-attachments]` 섹션을 자동으로 초기화합니다.
-- 템플릿별(페이지별) 첨부 전용 인라인 JS는 사용하지 않습니다.
-- 스타일은 레이아웃 공용 CSS(`base.css`)를 기본으로 하고, 페이지 전용 스타일이 필요하면 `<main>` 내부 `<style>`로 한정 적용합니다.
+#### 4.5.1 파일 업로드 아키텍처
+- **전역 위젯**: `static/assets/js/app.js`의 자동 초기화
+- **SPA 호환**: `#layout-slot` 주입 환경에서 일관된 동작
+- **표준 마크업**: `[data-attachments]` 속성 기반 자동 처리
+- **권한 기반 접근**: 업로드자와 승인된 사용자만 접근 가능
 
-#### 표준 마크업
+#### 4.5.2 표준 마크업 구조
 ```html
+<!-- 편집 가능 화면 -->
 <div class="section" data-attachments>
   <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
-
   <div class="attachments">
     <input id="attachments-input" class="visually-hidden" type="file" multiple />
     <button type="button" class="btn" data-attachments-add>파일 선택</button>
@@ -148,243 +378,407 @@ src/main/resources/
     </ul>
   </div>
 </div>
-```
 
-- 읽기 전용(상세 화면 등)인 경우:
-```html
+<!-- 읽기 전용 화면 -->
 <div class="section" data-attachments data-readonly>
   <input type="hidden" name="fileGroupId" th:value="${entity.fileGroupId}" />
   <ul class="attachments-list" aria-live="polite"></ul>
 </div>
 ```
 
-#### 동작
-- 초기 로드: hidden `fileGroupId`가 있으면 전역 위젯이 `GET /api/files?groupId=...` 호출 → 목록 렌더.
-- 업로드: 사용자가 파일을 선택하면 `POST /api/files`(multipart, key=`files`) 호출. 응답의 `fileGroupId`로 hidden 값을 갱신하고, 반환된 항목으로 목록 갱신.
-- 삭제: 편집 화면에서만 노출. `DELETE /api/files/{fileId}?groupId=...` 성공 시 목록에서 제거. 비어 있으면 빈 메시지 표시.
-- 읽기 전용: `data-readonly`가 지정되면 업로드/삭제 컨트롤을 숨기고 다운로드만 노출.
+#### 4.5.3 REST API 엔드포인트
+- **업로드**: `POST /api/files` (multipart/form-data, key=`files`)
+- **목록 조회**: `GET /api/files?groupId={fileGroupId}`
+- **다운로드**: `GET /api/files/{fileId}?groupId={fileGroupId}`
+- **삭제**: `DELETE /api/files/{fileId}?groupId={fileGroupId}`
 
-#### API 엔드포인트(현 구현, 단 POST 동작 여부는 별도 확인)
-- 업로드: `POST /api/files` (multipart/form-data, key=`files`) — 옵션 `groupId`
-- 목록: `GET /api/files?groupId={fileGroupId}`
-- 다운로드: `GET /api/files/{fileId}?groupId={fileGroupId}`
-- 삭제: `DELETE /api/files/{fileId}?groupId={fileGroupId}`
+#### 4.5.4 파일 그룹 관리
+- **fileGroupId**: 모듈 코드 기반 10자리 고정 길이 (F250119001 형식)
+- **저장 정보**: 원본명, 서명, 크기, 해시, 경로
+- **보안**: 권한 기반 접근, 서명 URL, 감사 로그
 
-#### SPA/템플릿 주의사항
-- defaultLayout는 `<main>` 내부 HTML만 주입합니다. 템플릿 `<head>`의 `<script>`는 실행되지 않습니다.
-- `/*[[...]]*/` 형태의 Thymeleaf JS 인라인 치환은 슬롯 주입 시 적용되지 않을 수 있으니, `fileGroupId`는 반드시 hidden 필드로 전달하세요.
-- 첨부 기능을 위한 인라인 JS는 넣지 않습니다. 전역 `app.js`가 자동으로 처리합니다.
+### 4.6 엑셀 I/O 시스템
+
+#### 4.6.1 대량 데이터 업로드
+- **엔드포인트**: `POST /api/{module}/upload` (multipart/form-data)
+- **응답 형식**: `BulkUploadResult` (성공/실패 건수 + 오류 목록)
+- **검증**: 컬럼 매핑, 데이터 유효성, 비즈니스 규칙 체크
+
+#### 4.6.2 CSV 템플릿
+- **설비 업로드**: `plant_id(선택)`, `name`, `asset_id`, `site_id`, `dept_id`, `func_id`, `install_date`
+- **재고 업로드**: `inventory_id(선택)`, `name`, `asset_id`, `dept_id`, `maker_name`, `spec`, `model`, `serial`
+- **샘플 파일**: `static/assets/samples/` 디렉토리 제공
+
+## 5. UI/UX 디자인 가이드
+
+### 5.1 반응형 레이아웃 시스템
+
+#### 5.1.1 페이지 구조
+```html
+<!-- SPA 레이아웃 (defaultLayout.html) -->
+<header class="appbar">
+  <div class="appbar-inner">
+    <!-- 앱바 내용 -->
+  </div>
+</header>
+<nav class="breadcrumbs">
+  <span class="sep">/</span>
+</nav>
+<main>
+  <div class="container">
+    <!-- 콘텐츠 슬롯 (#layout-slot) -->
+  </div>
+</main>
+<footer>
+  <div class="container">© ...</div>
+</footer>
+```
+
+#### 5.1.2 카드/섹션 구성
+```html
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">제목</h2>
+    <div class="toolbar">
+      <!-- 액션 버튼들 -->
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="section">
+      <h3 class="section-title">섹션 제목</h3>
+      <!-- 섹션 내용 -->
+    </div>
+  </div>
+</section>
+```
+
+### 5.2 반응형 그리드 시스템
+
+#### 5.2.1 12열 그리드
+```html
+<div class="grid cols-12">
+  <div class="col-span-6">6열</div>
+  <div class="col-span-6">6열</div>
+</div>
+```
+
+#### 5.2.2 스택 레이아웃 (모바일 대응)
+```html
+<!-- 읽기 전용 -->
+<div class="stack">
+  <div class="stack-item">
+    <label>라벨</label>
+    <span>값</span>
+  </div>
+</div>
+
+<!-- 폼 입력 -->
+<div class="form-row">
+  <label class="label required" for="field">필드명</label>
+  <input class="input" id="field" type="text" required>
+</div>
+```
+
+### 5.3 표준 컴포넌트
+
+#### 5.3.1 테이블 패턴
+```html
+<table class="table">
+  <thead>
+    <tr>
+      <th>컬럼1</th>
+      <th>컬럼2</th>
+      <th>액션</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr data-row-link="detail.html">
+      <td><a href="detail.html">값1</a></td>
+      <td>값2</td>
+      <td>
+        <button class="btn btn-sm">수정</button>
+        <button class="btn btn-sm btn-danger" data-confirm>삭제</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+#### 5.3.2 버튼/배지 스타일
+```html
+<!-- 버튼 -->
+<button class="btn">기본</button>
+<button class="btn btn-primary">주요</button>
+<button class="btn btn-sm">소형</button>
+<button class="btn btn-danger" data-confirm="정말 삭제하시겠습니까?">위험</button>
+
+<!-- 배지 -->
+<span class="badge">PLAN</span>
+<span class="badge badge-warning">PROC</span>
+<span class="badge badge-success">DONE</span>
+```
+
+### 5.4 폼 검증 시스템
+
+#### 5.4.1 HTML5 검증
+```html
+<form data-validate>
+  <div class="form-row">
+    <label class="label required" for="name">이름</label>
+    <input class="input" id="name" type="text" required maxlength="50">
+  </div>
+  <div class="form-row">
+    <label class="label required" for="email">이메일</label>
+    <input class="input" id="email" type="email" required>
+  </div>
+  <button type="submit" class="btn btn-primary">저장</button>
+</form>
+```
+
+#### 5.4.2 커스텀 검증
+```javascript
+// app.js에서 자동 처리
+document.querySelector('form[data-validate]').addEventListener('submit', function(e) {
+  if (!this.checkValidity()) {
+    e.preventDefault();
+    // 첫 번째 오류 필드로 포커스 이동
+  }
+});
+```
+
+### 5.5 모바일 최적화
+
+#### 5.5.1 반응형 브레이크포인트
+- **데스크톱**: 1024px 이상
+- **태블릿**: 768px ~ 1023px
+- **모바일**: 767px 이하
+
+#### 5.5.2 터치 친화적 UI
+- 최소 터치 영역: 44px × 44px
+- 그리드 → 스택 레이아웃 자동 전환
+- 터치 제스처 지원 (스와이프, 핀치)
 
 
-#### CSV 대량 업로드(초기 데이터 세팅용)
-- 엔드포인트: `POST /api/plants/upload`, `POST /api/inventories/upload` (multipart/form-data, 필드명 `file`)
-- 응답: `BulkUploadResult`(성공/실패 건수 + `BulkUploadError[rowNumber,message]` 목록)
-- CSV 헤더 가이드
-  - 설비: `plant_id(선택)`, `name`, `asset_id`, `site_id`, `dept_id`, `func_id`, `install_date(yyyy-MM-dd)` 등
-  - 자재: `inventory_id(선택)`, `name`, `asset_id`, `dept_id`, `maker_name`, `spec`, `model`, `serial`, `status` 등
-- UI: `templates/plant/uploadForm.html`, `templates/inventory/uploadForm.html`
-- 샘플: `static/assets/samples/plant-upload-sample.csv`, `static/assets/samples/inventory-upload-sample.csv`
+## 6. 메뉴 구조 및 화면 구성
 
-## 5) 디자인 가이드(plant 모듈 기준 공통 규칙)
-
-- 페이지 골격(standalone)
-  - 상단 앱바: <header class="appbar"><div class="appbar-inner">...</div></header>
-  - 브레드크럼: <nav class="breadcrumbs"> ... </nav> (구분 기호는 <span class="sep">/</span>)
-  - 본문 컨테이너: <main><div class="container"> ... </div></main>
-  - 푸터: <footer><div class="container">© ...</div></footer>
-  - 예시 파일: plant/list.html, plant/form.html, plant/detail.html
-
-- 레이아웃 사용 규칙(defaultLayout)
-  - 파일: templates/layout/defaultLayout.html
-  - 동작: ?content=/경로/화면.html을 읽어 <main> 내부만 #layout-slot에 삽입
-  - 주의: content 페이지의 <head>는 무시됨. 공용 CSS/JS는 레이아웃에서 로드됨
-    - 페이지 전용 스타일이 필요하면 공용 CSS 확장 또는 본문 내 인라인 스타일 사용
-  - 링크는 일반 <a href="..."> 사용(기본 내비게이션). 레이아웃이 History API로 인터셉트
-
-- 카드/섹션 구성
-  - 카드: <section class="card"> 안에 card-header(좌: card-title, 우: toolbar), card-body
-  - 섹션: card-body 안을 여러 div.section으로 분할하고 제목은 div.section-title
-  - 예시: plant/list.html의 카드/툴바, plant/form.html의 섹션 구조
-
-- 그리드/레이아웃 유틸
-  - 12열 그리드: 부모 div.grid.cols-12 + 자식 div.col-span-{1..12}
-  - 읽기 전용 스택: div.stack(라벨/값 세로쌓기), 폼 행은 div.form-row
-  - 가변 너비/정렬: .row, .spacer(좌우 여백 채우기)
-
-- 테이블 패턴
-  - 클래스: <table class="table"> + 표준 <thead>/<tbody>
-  - 행 클릭 이동: <tr data-row-link="detail.html"> 패턴 사용(static/assets/js/app.js 처리)
-  - 첫 컬럼에는 <a href="..."> 유지(접근성/우클릭 열기 지원)
-
-- 버튼/배지/알림
-  - 버튼: .btn, 강조 .btn.primary, 소형 .btn.sm, 위험 .btn.danger
-  - 배지: .badge
-  - 안내/에러: .notice, 에러 문구 .danger-text
-
-- 폼 가이드
-  - <form data-validate>로 브라우저 기본 검증 활성화(app.js가 checkValidity 연동)
-  - 라벨: <label class="label [required]" for="...">, 입력: .input, select, textarea
-  - 필수/길이/형식: required, maxlength, type="email|number|date" 등 HTML 속성 사용
-  - 확인 경고: data-confirm 속성으로 confirm 인터셉트
-
-- 첨부 파일 UI(프론트 전용)
-  - 래퍼: <div class="section" data-attachments>
-  - 숨김 인풋: <input id="attachments-input" type="file" multiple class="visually-hidden" />
-  - 추가 버튼: <button type="button" class="btn" data-attachments-add>
-  - 목록: <ul class="attachments-list" aria-live="polite"> + 항목 .attachment-item
-  - 삭제 버튼: .btn-remove(+ aria-label 적용)
-  - 접근성: 파일 목록은 aria-live="polite" 유지, 빈 상태는 <li class="empty">
-
-- 인쇄 양식
-  - 인쇄 전용 CSS: static/assets/css/print.css
-  - DOM: <section class="print-form"><div class="doc"> ... </div></section> 구조
-  - 트리거: “출력 미리보기”/“인쇄” 버튼(plant/detail.html 참고)
-
-- 정적 자산/경로
-  - 레이아웃 로드: /assets/css/base.css, /assets/js/app.js
-  - 단독 페이지 미리보기 시: 상대 경로 ../../static/assets/... 사용 가능
-  - 리소스 매핑: /assets/** → classpath:/static/assets/ (WebConfig 참고)
-
-- SPA 내비게이션 규칙
-  - 일반 링크 클릭을 레이아웃이 인터셉트해 content로 로드, 뒤/앞으로 가기(popstate) 지원
-  - 외부 링크/http, mailto, target="_blank", # 앵커는 인터셉트 제외
-
-- 접근성/사용성 체크리스트
-  - 포커스 가능한 첫 번째 오류 필드로 포커스 이동(form[data-validate])
-  - 삭제/위험동작은 data-confirm으로 확인 절차 제공
-  - 테이블 행 클릭 이동과 앵커 병행 제공으로 키보드/마우스 모두 지원
-
-
-## 6) 메뉴 Tree 
-
+### 6.1 메뉴 트리 구조
+```
 CMMS 메인 메뉴
-
-### 메뉴별 화면 구성
-- **list.html**: 목록 조회 (검색, 페이징, 신규등록 버튼). 맨 마지막에 "액션"열 추가 {"edit","delete"}
-- **form.html**: 등록/수정 폼 (신규 등록 시 ID 자동 생성)  
-- **detail.html**: 상세 조회 (읽기 전용, 수정/삭제 버튼)
-
-### 도메인별 특징
-- **domain 모듈**: 기준정보로 form.html, list.html만 제공 (상세조회 불필요)
-- **transaction 모듈**: 업무 데이터로 list.html, form.html, detail.html 모두 제공
-- **master 모듈**: 자산정보로 모든 화면 제공
-
-### 모듈별 상세 기능
-
-### 자동번호 채번 규칙 (메뉴별)
-- **Master ID**: `{moduleCode(1)}{000000}{3자리시퀀스}` or `{moduleCode(1)}{9자리시퀀스}`
-  - Plant(설비): moduleCode=1 → 1000000001
-  - Inventory(재고): moduleCode=2 → 2000000001
-- **Transaction ID**: `{moduleCode(1)}{YYMMDD}{3자리시퀀스}`
-  - Inspection(점검): moduleCode=I → I250119001  
-  - WorkOrder(작업지시): moduleCode=O → O250119001
-  - WorkPermit(작업허가): moduleCode=P → P250119001
-  - Approval(승인): moduleCode=A → A250119001 
-  - File(파일업로드): moduleCode=F → F250119001
-
-### 상태 코드 (Status Codes)
-
-#### Inspection (점검) 상태
-- 정책: {관리자 계획 생성|계획 없이 바로 실행}{점검 완료 후 결재 상신|완료 후 확정 저장} 
-- **PLAN**: 계획 - 점검 계획이 수립된 상태
-- **PROC**: 진행 - 점검이 진행 중인 상태  
-- **DONE**: 완료 - 점검이 완료된 상태
-
-#### WorkOrder (작업지시) 상태
-- 정책: {관리자가 작업지시 생성 후 결재 상신|관리자가 작업지시 생성 후 확정 저장}{작업 완료 후 결재 상신|완료 후 확정 저장}
-- **PLAN**: 계획 - 작업 계획이 수립된 상태
-- **ASGN**: 배정 - 작업이 담당자에게 배정된 상태
-- **PROC**: 진행 - 작업이 진행 중인 상태
-- **DONE**: 완료 - 작업이 완료된 상태
-
-#### WorkPermit (작업허가) 상태
-- 정책: {시스템 없이 수작업 작업안전 관리|별도의 수작업 양식지를 포함하여 작성 후 첨부하여 결재 상신}{결재 상신|담당자 확정}[작업허가서 출력하여 작업장에 배치]
-- **PLAN**: 계획 - 작업허가 계획이 수립된 상태
-- **ASGN**: 배정 - 작업허가가 담당자에게 배정된 상태
-- **PROC**: 진행 - 작업허가가 진행 중인 상태
-- **DONE**: 완료 - 작업허가가 완료된 상태
-
-#### UI 표시 규칙
-- **PLAN**: 기본 배지 (회색)
-- **ASGN**: 경고 배지 (노란색) 
-- **PROC**: 경고 배지 (주황색)
-- **DONE**: 성공 배지 (초록색) 
-
-## 파일 업로드 보완 사항 (중요)
-- 그룹 ID 폴백: 항목에 fileGroupId가 없을 수 있으므로 다음 순서로 해석합니다: (1) 렌더 시 전달된 groupId (2) 섹션/폼의 input[name=" fileGroupId\] 값 (3) 항목의 fileGroupId. 이로 인해 링크의 groupId=undefined 문제를 방지합니다.
-- 삭제 메서드: 기본은 DELETE /api/files/{fileId}?groupId=... 입니다. 서버가 POST 삭제만 허용한다면 전역 위젯을 해당 규격으로 맞춰야 합니다.
-
-## 템플릿 자산 링크/출력 가이드
-
-Thymeleaf SSR과 브라우저에서 템플릿을 직접 열 때(비‑SSR) 모두 잘 동작하도록, 링크를 이중으로 선언하는 패턴을 권장합니다.
-
-### th:href / href, th:src / src
-
-- 원칙
-  - SSR(Thymeleaf) 실행 시: `th:href`, `th:src` 사용. 절대 경로(`/assets/...`).
-  - 비‑SSR(템플릿 파일 직접 열람) 시: `href`, `src`는 상대 경로(`../../static/assets/...`) 폴백.
-
-- CSS 예시
-```
-<link rel="stylesheet" th:href="@{/assets/css/base.css}"  href="../../static/assets/css/base.css" />
-<link rel="stylesheet" th:href="@{/assets/css/print.css}" href="../../static/assets/css/print.css" />
+├── 대시보드 (/dashboard)
+├── 기준정보 관리
+│   ├── 회사 관리 (/domain/company)
+│   ├── 사이트 관리 (/domain/site)
+│   ├── 부서 관리 (/domain/dept)
+│   ├── 사용자 관리 (/domain/member)
+│   ├── 역할 관리 (/domain/role)
+│   └── 공통코드 (/domain/code)
+├── 설비 관리 (/plant)
+├── 재고 관리 (/inventory)
+├── 예방점검 (/inspection)
+├── 작업 관리
+│   ├── 작업지시 (/workorder)
+│   └── 작업허가 (/workpermit)
+├── 결재 관리 (/approval)
+├── 게시판 (/board)
+└── 시스템 관리
+    ├── 파일 관리 (/files)
+    └── 보고서 (/reports)
 ```
 
-- JS 예시
-```
-<script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
-```
+### 6.2 표준 화면 구성
 
-- 주의
-  - 실행 환경에서 `/static`을 포함한 절대 경로는 잘못입니다. SSR 경로는 `/assets/...`만 사용.
-  - 레이아웃(`templates/layout/defaultLayout.html`)을 쓰는 경우, 전역 CSS/JS는 레이아웃 `<head>`에서 로드합니다.
+#### 6.2.1 화면 유형별 특징
+- **list.html**: 목록 조회 (검색, 페이징, 신규등록 버튼, 액션 컬럼)
+- **form.html**: 등록/수정 폼 (ID 자동 생성, 검증, 파일 첨부)
+- **detail.html**: 상세 조회 (읽기 전용, 수정/삭제 버튼, 인쇄 기능)
 
-### 출력(인쇄) 뷰
+#### 6.2.2 도메인별 화면 제공
+- **기준정보 도메인**: form.html, list.html (상세조회 불필요)
+- **마스터 도메인**: 모든 화면 제공 (설비, 재고)
+- **트랜잭션 도메인**: 모든 화면 제공 (점검, 작업, 결재)
 
-- 구조
-  - CSS: `/assets/css/print.css`
-  - DOM: `<section class="print-form"><div class="doc">...</div></section>`
-  - 화면 기본: `.print-form { display: none; }`
-  - 미리보기: `body.print-preview .print-form { display: block; }` + 본문 카드 숨김
+### 6.3 상태 관리 시스템
 
-- 토글 패턴
-  - 미리보기: `onclick="document.body.classList.add('print-preview')"`
-  - 인쇄: `onclick="window.print()"`
-  - 종료: `afterprint` 이벤트, `Esc` 키로 `print-preview` 제거
-
-- 날짜 표기
-  - `#print-date` 요소에 스크립트로 인쇄 시각 주입
-
-### Thymeleaf 인라인 JS(th:inline="javascript")
-
-`/*[[...]]*/` 형태로 Thymeleaf 변수를 JS에 주입할 때는 해당 `<script>`에 `th:inline="javascript"`를 선언해야 합니다.
-
-- 예시
-```
-<script th:inline="javascript">
-  const fileGroupId = /*[[${memo.fileGroupId}]]*/ null;
-  // ...
-<\/script>
+#### 6.3.1 점검(Inspection) 상태
+```java
+public enum InspectionStatus {
+    PLAN("계획"),     // 점검 계획 수립
+    PROC("진행"),     // 점검 진행 중
+    DONE("완료")      // 점검 완료
+}
 ```
 
-- 누락 시 증상
-  - 변수가 치환되지 않아 `null`로 남고, 첨부 목록/출력 등 후속 로직이 동작하지 않음
+#### 6.3.2 작업지시(WorkOrder) 상태
+```java
+public enum WorkOrderStatus {
+    PLAN("계획"),     // 작업 계획 수립
+    ASGN("배정"),     // 담당자 배정
+    PROC("진행"),     // 작업 진행 중
+    DONE("완료")      // 작업 완료
+}
+```
 
-## 7) SPA 네비게이션 시스템 상세 구조
+#### 6.3.3 작업허가(WorkPermit) 상태
+```java
+public enum WorkPermitStatus {
+    PLAN("계획"),     // 작업허가 계획 수립
+    ASGN("배정"),     // 담당자 배정
+    PROC("진행"),     // 작업허가 진행 중
+    DONE("완료")      // 작업허가 완료
+}
+```
 
-### 공통 번들
-- `app.js`: SPA 네비게이션과 `window.cmms.moduleLoader`를 통해 페이지 전용 스크립트를 지연 로딩한다.
-- `common.js`: TableManager, FormManager 등 공통 UI 유틸을 제공한다.
+#### 6.3.4 UI 배지 표시
+```html
+<!-- 상태별 배지 색상 -->
+<span class="badge">PLAN</span>                    <!-- 기본 (회색) -->
+<span class="badge badge-warning">ASGN</span>      <!-- 경고 (노란색) -->
+<span class="badge badge-warning">PROC</span>      <!-- 경고 (주황색) -->
+<span class="badge badge-success">DONE</span>      <!-- 성공 (초록색) -->
+``` 
 
-### 모듈 로더
-- URL의 첫 번째 세그먼트를 키로 `moduleMap`에서 스크립트 경로를 찾는다.
-- `navigation.loadContent()` 이후 `loadModule(currentContentUrl)`을 호출하여 최초 접근 시에만 스크립트를 주입한다.
-- `/domain/...`처럼 매핑되지 않은 경로는 로더가 건너뛴다. 필요하면 `moduleMap`이나 `extractModuleId()`를 확장한다.
+## 7. 개발 및 배포 가이드
 
-### 파일 업로드 초기화
-- `initializeFileUploadWidgets` 한 곳에서 `[data-attachments]` 컨테이너를 초기화하고 `__fileUploadInitialized` 플래그로 중복 실행을 막는다.
-- 각 페이지 모듈(`workorder.js` 등)은 공통 초기화에 맡기고 별도의 초기화 코드를 두지 않는다.
+### 7.1 개발 환경 설정
 
-### CSRF 처리
-- fetch 래퍼가 동일 출처 비-GET 요청에 `X-CSRF-TOKEN`을 자동 주입하고 hidden 필드를 동기화한다.
-- 페이지 모듈은 별도의 CSRF 헤더 처리 없이 fetch를 사용하면 된다.
+#### 7.1.1 필수 요구사항
+- **Java**: JDK 21 이상
+- **IDE**: IntelliJ IDEA 또는 Eclipse (Spring Boot 지원)
+- **Database**: MariaDB 10.6 이상
+- **Build Tool**: Gradle 8.0 이상
+
+#### 7.1.2 개발 환경 구성
+```bash
+# 프로젝트 클론
+git clone [repository-url]
+cd cmms11
+
+# 의존성 설치
+./gradlew build
+
+# 개발 서버 실행
+./gradlew bootRun
+
+# 또는 IDE에서 Cmms11Application.java 실행
+```
+
+### 7.2 빌드 및 배포
+
+#### 7.2.1 빌드 설정
+```bash
+# 개발 빌드
+./gradlew bootJar
+
+# 프로덕션 빌드
+./gradlew bootJar -Pprofile=prod
+
+# Docker 이미지 빌드 (선택사항)
+docker build -t cmms11:latest .
+```
+
+#### 7.2.2 프로파일별 설정
+- **개발**: `application-dev.yml` (H2 인메모리 DB, 디버그 로그)
+- **테스트**: `application-test.yml` (테스트 DB, 제한된 로그)
+- **운영**: `application-prod.yml` (MariaDB, 최적화된 로그)
+
+### 7.3 성능 최적화
+
+#### 7.3.1 데이터베이스 최적화
+```sql
+-- 인덱스 생성 (성능 향상)
+CREATE INDEX idx_workorder_status ON work_order(status);
+CREATE INDEX idx_inspection_date ON inspection(planned_date);
+CREATE INDEX idx_inventory_history ON inventory_history(transaction_date);
+
+-- 쿼리 최적화
+-- 페이징 쿼리 사용
+-- N+1 문제 방지 (fetch join 사용)
+```
+
+#### 7.3.2 애플리케이션 최적화
+```java
+// JPA 최적화
+@Query("SELECT p FROM Plant p JOIN FETCH p.site WHERE p.companyId = :companyId")
+List<Plant> findAllWithSite(@Param("companyId") String companyId);
+
+// 캐싱 적용 (선택사항)
+@Cacheable("plantCache")
+public Plant getPlant(String plantId) { ... }
+```
+
+### 7.4 모니터링 및 로깅
+
+#### 7.4.1 로깅 설정
+```yaml
+# application-prod.yml
+logging:
+  level:
+    com.cmms11: INFO
+    org.springframework.security: WARN
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/cmms11.log
+    max-size: 100MB
+    max-history: 30
+```
+
+#### 7.4.2 헬스 체크
+```java
+@RestController
+public class HealthController {
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> health() {
+        Map<String, String> status = new HashMap<>();
+        status.put("status", "UP");
+        status.put("timestamp", LocalDateTime.now().toString());
+        return ResponseEntity.ok(status);
+    }
+}
+```
+
+### 7.5 보안 설정
+
+#### 7.5.1 HTTPS 설정 (운영환경)
+```yaml
+# application-prod.yml
+server:
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+  port: 443
+```
+
+#### 7.5.2 보안 헤더 설정
+```java
+@Configuration
+public class SecurityConfig {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .headers(headers -> headers
+                .frameOptions().deny()
+                .contentTypeOptions().and()
+                .httpStrictTransportSecurity(hstsConfig -> hstsConfig
+                    .maxAgeInSeconds(31536000)
+                    .includeSubdomains(true)
+                )
+            )
+            .build();
+    }
+}
+```
+
+---
+
+## 8. 참조 문서
+
+### 8.1 기술 문서
+- **[CMMS_PRD.md](./CMMS_PRD.md)**: 제품 요구사항 정의서
+- **[CMMS_TABLES.md](./CMMS_TABLES.md)**: 데이터 모델 설계
+
+### 8.2 관련 문서
+- **[PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md)**: 운영 배포 체크리스트
+- **[README.md](../README.md)**: 프로젝트 개요 및 설치 가이드

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>재고/자재 선택</title>
+    <link rel="stylesheet" th:href="@{/assets/css/base.css}" href="../../static/assets/css/base.css" />
+    <style>
+      /* 재고 목록 */
+      .inventory-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:12px}
+      .inventory-card{border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all 0.2s;background:var(--surface)}
+      .inventory-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+      .inventory-card.selected{border-color:var(--primary);background:var(--surface);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+      .inventory-card .inventory-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+      .inventory-card .inventory-id{font-weight:600;font-size:14px;color:var(--primary)}
+      .inventory-card.selected .inventory-id{color:var(--primary)}
+      .inventory-card .inventory-name{font-weight:600;font-size:15px;margin-bottom:8px}
+      .inventory-card .inventory-info{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+      .inventory-card .inventory-info .row{display:flex;gap:8px}
+      .inventory-card .inventory-info .label{flex:0 0 60px;font-weight:500;color:var(--fg)}
+      .inventory-card .inventory-info .value{flex:1;word-break:break-all}
+      
+      .empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+      .empty-state .icon{font-size:48px;margin-bottom:16px;opacity:0.3}
+      
+      /* 팝업 창 최적화 */
+      body{overflow:hidden}
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="appbar">
+        <div class="appbar-inner">
+          <div class="brand">재고/자재 선택</div>
+        </div>
+      </header>
+      
+      <main class="content">
+        <div class="container">
+          <div class="section">
+            <div class="section-title">재고/자재 목록</div>
+            <div class="grid cols-12">
+              <div class="col-span-4">
+                <input type="text" class="input" id="inventory-name" placeholder="재고명" />
+              </div>
+              <div class="col-span-4">
+                <input type="text" class="input" id="inventory-maker" placeholder="제조사" />
+              </div>
+              <div class="col-span-4">
+                <div class="actions">
+                  <button class="btn primary" type="button" id="btn-search">검색</button>
+                  <button class="btn" type="button" id="btn-reset">초기화</button>
+                </div>
+              </div>
+            </div>
+            <div class="inventory-list" id="inventory-list">
+              <div class="empty-state">
+                <div class="icon">📦</div>
+                <div>재고명 또는 제조사를 입력하고 검색하세요</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <footer class="footer">
+        <div class="container">
+          <div class="actions">
+            <button class="btn" type="button" onclick="window.close()">취소</button>
+            <button class="btn primary" type="button" id="btn-select">선택</button>
+          </div>
+        </div>
+      </footer>
+    </div>
+    
+    <!-- 기존 공통 모듈 로드 -->
+    <script src="/assets/js/app.js"></script>
+    <script src="/assets/js/common.js"></script>
+    
+    <script th:inline="javascript">
+      (function() {
+        'use strict';
+        
+        // 기존 window.cmms 객체들만 사용
+        const notification = window.cmms?.notification || {};
+        const dataLoader = window.cmms?.common?.DataLoader || {};
+        
+        // 재고 선택기 핸들러
+        const InventoryPicker = {
+          selectedInventory: null,
+          searchTimeout: null,
+          
+          init: function() {
+            this.bindEvents();
+            this.loadInventories();
+          },
+          
+          loadInventories: async function(name = '', makerName = '') {
+            try {
+              const params = { size: 1000 };
+              if (name) params.name = name;
+              if (makerName) params.makerName = makerName;
+              
+              const data = await dataLoader.load('/api/inventory', params);
+              const inventories = data.content || data;
+              
+              this.renderInventories(inventories);
+            } catch (error) {
+              notification.error('재고 데이터 로드 실패');
+              this.renderInventories([]);
+            }
+          },
+          
+          renderInventories: function(inventories) {
+            const inventoryList = document.getElementById('inventory-list');
+            
+            if (!inventories || inventories.length === 0) {
+              inventoryList.innerHTML = `
+                <div class="empty-state">
+                  <div class="icon">📦</div>
+                  <div>재고/자재가 없습니다</div>
+                </div>
+              `;
+              return;
+            }
+            
+            inventoryList.innerHTML = inventories.map(inv => `
+              <div class="inventory-card" 
+                   data-inventory-id="${inv.inventoryId}"
+                   data-name="${inv.name || ''}"
+                   data-asset-id="${inv.assetId || ''}"
+                   data-dept-id="${inv.deptId || ''}"
+                   data-model="${inv.model || ''}"
+                   data-spec="${inv.spec || ''}"
+                   data-maker-name="${inv.makerName || ''}">
+                <div class="inventory-header">
+                  <div class="inventory-id">${inv.inventoryId}</div>
+                </div>
+                <div class="inventory-name">${inv.name || '-'}</div>
+                <div class="inventory-info">
+                  <div class="row">
+                    <div class="label">자산유형</div>
+                    <div class="value">${inv.assetId || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">관리부서</div>
+                    <div class="value">${inv.deptId || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">제조사</div>
+                    <div class="value">${inv.makerName || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">모델</div>
+                    <div class="value">${inv.model || '-'}</div>
+                  </div>
+                  <div class="row">
+                    <div class="label">규격</div>
+                    <div class="value">${inv.spec || '-'}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('');
+          },
+          
+          bindEvents: function() {
+            // 재고 카드 클릭 이벤트
+            document.getElementById('inventory-list').addEventListener('click', (e) => {
+              const card = e.target.closest('.inventory-card');
+              if (card) {
+                document.querySelectorAll('.inventory-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                this.selectedInventory = {
+                  inventoryId: card.dataset.inventoryId,
+                  name: card.dataset.name,
+                  assetId: card.dataset.assetId,
+                  deptId: card.dataset.deptId,
+                  model: card.dataset.model,
+                  spec: card.dataset.spec,
+                  makerName: card.dataset.makerName
+                };
+              }
+            });
+            
+            // 선택 버튼
+            document.getElementById('btn-select').addEventListener('click', () => {
+              if (!this.selectedInventory) {
+                notification.warning('재고/자재를 선택하세요');
+                return;
+              }
+              
+              // 부모 창으로 데이터 전달
+              if (window.opener && window.opener.onInventorySelected) {
+                window.opener.onInventorySelected(this.selectedInventory);
+              }
+              window.close();
+            });
+            
+            // 검색 버튼
+            document.getElementById('btn-search').addEventListener('click', () => {
+              const name = document.getElementById('inventory-name').value.trim();
+              const makerName = document.getElementById('inventory-maker').value.trim();
+              
+              this.loadInventories(name, makerName);
+            });
+            
+            // 초기화 버튼
+            document.getElementById('btn-reset').addEventListener('click', () => {
+              document.getElementById('inventory-name').value = '';
+              document.getElementById('inventory-maker').value = '';
+              this.selectedInventory = null;
+              document.querySelectorAll('.inventory-card').forEach(c => c.classList.remove('selected'));
+              this.loadInventories();
+            });
+            
+            // Enter 키 검색 지원
+            document.getElementById('inventory-name').addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                document.getElementById('btn-search').click();
+              }
+            });
+            
+            document.getElementById('inventory-maker').addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                document.getElementById('btn-search').click();
+              }
+            });
+          }
+        };
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+          InventoryPicker.init();
+        });
+      })();
+    </script>
+  </body>
+</html>

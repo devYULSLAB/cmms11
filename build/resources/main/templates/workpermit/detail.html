@@ -31,7 +31,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="workpermit-detail" data-module="workpermit-detail">
         <main>
         <div class="container">
           <section class="card">
@@ -40,8 +40,7 @@
                 <div class="card-title">작업허가 상세</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/workpermit/list}">목록</a>
-                  <a class="btn" href="#" onclick="document.body.classList.add('print-preview')">출력 미리보기</a>
-                  <a class="btn" href="#" onclick="window.print()">인쇄</a>
+                  <a class="btn" href="#" data-print-btn>인쇄</a>
                   <a class="btn" th:href="@{/workpermit/edit/{id}(id=${workpermit.permitId})}">수정</a>
                   <button class="btn danger" 
                           th:data-delete-url="@{/workpermit/delete/{id}(id=${workpermit.permitId})}"
@@ -90,8 +89,12 @@
 
               <div class="section">
                 <div class="section-title">첨부</div>
-                <div id="attachments-container" th:if="${workpermit.fileGroupId}">
-                  <div class="loading">첨부 파일을 불러오는 중...</div>
+                <div data-file-list 
+                     th:if="${workpermit.fileGroupId}"
+                     th:attr="data-file-group-id=${workpermit.fileGroupId}"
+                     data-empty-text="첨부된 파일이 없습니다."
+                     data-loading-text="첨부 파일을 불러오는 중..."
+                     data-error-text="첨부 파일을 불러올 수 없습니다.">
                 </div>
                 <div th:unless="${workpermit.fileGroupId}" class="notice">
                   첨부된 파일이 없습니다.
@@ -144,7 +147,10 @@
                 <div class="doc">
                   <header class="doc-header">
                     <div class="doc-title">작업허가서</div>
-                    <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
+                    <div class="doc-meta">
+                      <div class="meta-row">출력일시: <span id="print-date">-</span></div>
+                      <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
+                    </div>
                   </header>
                   <div class="doc-body">
                     <div class="row"><strong>허가 번호</strong><span class="spacer"></span><span th:text="${workpermit.permitId}">P250101001</span></div>
@@ -167,75 +173,6 @@
       </footer>
     </div>
     
-    <script th:inline="javascript">
-      // 출력일 표기 및 미리보기 종료 핸들러
-      (function() {
-        var d = new Date();
-        var z = function(n){ return (n<10? ('0'+n) : n); };
-        var ts = d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
-        var el = document.getElementById('print-date');
-        if (el) el.textContent = ts;
-        window.addEventListener('afterprint', function() { document.body.classList.remove('print-preview'); });
-        document.addEventListener('keydown', function(e){ if (e.key==='Escape') document.body.classList.remove('print-preview'); });
-      })();
-
-      // Detail 페이지에서 첨부 파일 로드
-      document.addEventListener('DOMContentLoaded', () => {
-        const container = document.getElementById('attachments-container');
-        const fileGroupId = /*[[${workpermit.fileGroupId}]]*/ null;
-        
-        console.log('Detail page loaded - container:', container, 'fileGroupId:', fileGroupId);
-        
-        if (container && fileGroupId) {
-          console.log('Loading attachments for fileGroupId:', fileGroupId);
-          loadAttachments(fileGroupId, container);
-        } else {
-          console.log('Skipping attachment load - container:', !!container, 'fileGroupId:', fileGroupId);
-        }
-      });
-
-      async function loadAttachments(fileGroupId, container) {
-        try {
-          console.log('Fetching files for groupId:', fileGroupId);
-          const response = await fetch(`/api/files?groupId=${fileGroupId}`);
-          console.log('Response status:', response.status, 'ok:', response.ok);
-          
-          if (!response.ok) throw new Error('조회 실패');
-          
-          const result = await response.json();
-          console.log('API response:', result);
-          
-          if (result.items.length === 0) {
-            console.log('No files found, showing empty message');
-            container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-            return;
-          }
-          
-          const list = document.createElement('ul');
-          list.className = 'attachments-list';
-          
-          console.log('Creating list for', result.items.length, 'files');
-          result.items.forEach(item => {
-            console.log('Adding file item:', item);
-            const li = document.createElement('li');
-            li.className = 'attachment-item';
-            li.innerHTML = `
-              <span class="file-name">${item.originalName}</span>
-              <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-              <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-            `;
-            list.appendChild(li);
-          });
-          
-          console.log('Replacing container content with list');
-          container.innerHTML = '';
-          container.appendChild(list);
-          
-        } catch (error) {
-          console.error('Load attachments error:', error);
-          container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-        }
-      }
-    </script>
+    <!-- 인라인 스크립트 제거됨 - workpermit.js로 이관 -->
   </body>
   </html>

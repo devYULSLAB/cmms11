@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-storage-form" data-module="domain-storage-form">
         <main>
           <div class="container">
             <section class="card">
@@ -39,7 +39,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/domain/storage/save}" th:data-redirect="@{/domain/storage/list}">
+                <form data-validate method="post" th:action="@{/domain/storage/save}" th:data-redirect="@{/domain/storage/list}" data-form-manager>
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -64,8 +64,7 @@
                     </div>
                   </div>
 
-                  <div class="row" style="margin-top:12px; gap:8px; justify-content:flex-end">
-                    <button class="btn" type="reset">초기화</button>
+                  <div class="actions actions-top-small">
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>

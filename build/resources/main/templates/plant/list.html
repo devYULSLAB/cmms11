@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="plant-list" data-module="plant-list">
         <main>
           <div class="container">
             <section class="card">
@@ -96,16 +96,16 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" 
+                    <button class="btn btn-sm" th:disabled="${page.first}" 
                             th:data-url="@{/plant/list(page=${page.number - 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
-                            onclick="if(this.dataset.url) location.href=this.dataset.url">이전</button>
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" 
+                    <button class="btn btn-sm" th:disabled="${page.last}" 
                             th:data-url="@{/plant/list(page=${page.number + 1}, plantId=${plantId}, name=${name}, makerName=${makerName}, funcId=${funcId})}"
-                            onclick="if(this.dataset.url) location.href=this.dataset.url">다음</button>
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>

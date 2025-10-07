@@ -33,7 +33,7 @@
       </nav>
       
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content" data-page="workorder/detail" data-module="workorder-detail"
+      <section data-slot-root th:fragment="content" data-page="workorder-detail" data-module="workorder-detail"
                th:attr="data-file-group-id=${workorder.fileGroupId},data-order-id=${workorder.orderId},data-print-enabled=true">
         <main>
           <div class="container">
@@ -42,8 +42,7 @@
                 <div class="card-title">작업지시 상세</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/workorder/list}">목록</a>
-                  <a class="btn" href="#" data-print-preview>출력 미리보기</a>
-                  <a class="btn" href="#" data-print>인쇄</a>
+                  <a class="btn" href="#" data-print-btn>인쇄</a>
                   <a class="btn" th:href="@{/workorder/edit/{id}(id=${workorder.orderId})}">수정</a>
                   <button class="btn danger" 
                           th:data-delete-url="@{/workorder/delete/{id}(id=${workorder.orderId})}"
@@ -59,25 +58,25 @@
                   <table class="table table-details">
                     <tbody>
                       <tr>
-                        <th class="table-col-label">작업지시 번호</th>
+                        <th class="table-col-name-small">작업지시 번호</th>
                         <td th:text="${workorder.orderId}">O250101001</td>
-                        <th class="table-col-label">작업명</th>
+                        <th class="table-col-name-small">작업명</th>
                         <td th:text="${workorder.name}">구동부 정비</td>
                       </tr>
                       <tr>
-                        <th class="table-col-label">설비 번호</th>
+                        <th class="table-col-name-small">설비 번호</th>
                         <td th:text="${workorder.plantId}">EQP000123</td>
-                        <th class="table-col-label">작업유형</th>
+                        <th class="table-col-name-small">작업유형</th>
                         <td th:text="${workorder.jobId}">PM-001</td>
                       </tr>
                       <tr>
-                        <th class="table-col-label">계획일</th>
+                        <th class="table-col-name-small">계획일</th>
                         <td th:text="${workorder.plannedDate}">2025-01-12</td>
-                        <th class="table-col-label">실적일</th>
+                        <th class="table-col-name-small">실적일</th>
                         <td th:text="${workorder.actualDate}">2025-01-15</td>
                       </tr>
                       <tr>
-                        <th class="table-col-label">상태</th>
+                        <th class="table-col-name-small">상태</th>
                         <td colspan="3">
                           <span class="badge" th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}" 
                                 th:classappend="${workorder.status == 'PLAN' ? 'badge' : workorder.status == 'ASGN' ? 'badge warning' : workorder.status == 'PROC' ? 'badge warning' : 'badge success'}">배정</span>
@@ -120,14 +119,15 @@
                 <!-- 첨부파일 섹션 -->
                 <div class="section">
                   <div class="section-title">첨부파일</div>
-                  <div id="attachments-container" data-attachments-display 
-                       th:attr="data-file-group-id=${workorder.fileGroupId}">
-                    <div th:if="${workorder.fileGroupId}">
-                      <div class="loading">첨부 파일을 불러오는 중...</div>
-                    </div>
-                    <div th:unless="${workorder.fileGroupId}" class="notice">
-                      첨부된 파일이 없습니다.
-                    </div>
+                  <div data-file-list 
+                       th:if="${workorder.fileGroupId}"
+                       th:attr="data-file-group-id=${workorder.fileGroupId}"
+                       data-empty-text="첨부된 파일이 없습니다."
+                       data-loading-text="첨부 파일을 불러오는 중..."
+                       data-error-text="첨부 파일을 불러올 수 없습니다.">
+                  </div>
+                  <div th:unless="${workorder.fileGroupId}" class="notice">
+                    첨부된 파일이 없습니다.
                   </div>
                 </div>
 
@@ -136,7 +136,10 @@
                   <div class="doc">
                     <header class="doc-header">
                       <div class="doc-title">작업지시서</div>
-                      <div class="doc-meta">출력일시: <span id="print-date">-</span></div>
+                      <div class="doc-meta">
+                        <div class="meta-row">출력일시: <span id="print-date">-</span></div>
+                        <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
+                      </div>
                     </header>
                     <div class="doc-body">
                       <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span th:text="${workorder.orderId}">O250101001</span></div>

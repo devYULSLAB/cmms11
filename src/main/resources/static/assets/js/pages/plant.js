@@ -2,17 +2,17 @@
  * Plant 모듈 JavaScript
  * 
  * 설비 관리 모듈의 페이지별 초기화 및 기능을 담당합니다.
- * 공통 유틸(TableManager, FormManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
+ * 공통 유틸(TableManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
  * root 기반 DOM 접근으로 중복 바인딩 방지 및 SPA 최적화를 구현합니다.
  */
 
 (function() {
   'use strict';
   
-  if (!window.cmms) window.cmms = {};
-  if (!window.cmms.plant) window.cmms.plant = {};
+  window.cmms = window.cmms || {};
+  window.cmms.plant = window.cmms.plant || {};
 
-  window.cmms.plant = {
+  Object.assign(window.cmms.plant, {
     
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
@@ -23,15 +23,12 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Plant detail page initialized', root);
-      this.initAttachments(root);
-      this.initPrintPreview(root);
       this.initPrintButtons(root);
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Plant form page initialized', root);
-      this.initFileUpload(root);
       this.initCancelButton(root);
     },
     
@@ -55,110 +52,9 @@
       // root 범위 내에서만 처리되므로 중복 바인딩 방지됨
     },
     
-    // 첨부파일 초기화 (root 기반)
-    initAttachments: function(root) {
-      const container = root.querySelector('#attachments-container');
-      if (!container) return;
-      
-      const fileGroupId = container.getAttribute('data-file-group-id');
-      if (fileGroupId) {
-        this.loadAttachments(fileGroupId, container);
-      }
-    },
-    
-    // 첨부파일 로드 (공통 DataLoader 사용)
-    loadAttachments: async function(fileGroupId, container) {
-      try {
-        // 공통 DataLoader를 사용하여 첨부파일 로드
-        const result = await window.cmms.common.DataLoader.load('/api/files', {
-          params: { groupId: fileGroupId }
-        });
-        
-        if (result.items.length === 0) {
-          container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-          return;
-        }
-        
-        const list = document.createElement('ul');
-        list.className = 'attachments-list';
-        
-        result.items.forEach(item => {
-          const li = document.createElement('li');
-          li.className = 'attachment-item';
-          li.innerHTML = `
-            <span class="file-name">${item.originalName}</span>
-            <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-            <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-          `;
-          list.appendChild(li);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(list);
-        
-      } catch (error) {
-        console.error('Load attachments error:', error);
-        container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-      }
-    },
-    
-    // 출력 미리보기 초기화 (root 기반)
-    initPrintPreview: function(root) {
-      // 출력일 표기
-      const printDateEl = root.querySelector('#print-date');
-      if (printDateEl) {
-        const now = new Date();
-        const formatDate = (n) => n < 10 ? '0' + n : n;
-        const timestamp = now.getFullYear() + '-' + 
-                         formatDate(now.getMonth() + 1) + '-' + 
-                         formatDate(now.getDate()) + ' ' + 
-                         formatDate(now.getHours()) + ':' + 
-                         formatDate(now.getMinutes());
-        printDateEl.textContent = timestamp;
-      }
-      
-      // 출력 미리보기 종료 핸들러 (전역 이벤트)
-      window.addEventListener('afterprint', () => {
-        document.body.classList.remove('print-preview');
-      });
-      
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          document.body.classList.remove('print-preview');
-        }
-      });
-    },
-    
-    // 출력 버튼 초기화 (root 기반)
+    // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButtons: function(root) {
-      const printPreviewBtn = root.querySelector('[data-print-preview]');
-      const printBtn = root.querySelector('[data-print-btn]');
-      
-      if (printPreviewBtn) {
-        printPreviewBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          document.body.classList.add('print-preview');
-        });
-      }
-      
-      if (printBtn) {
-        printBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          window.print();
-        });
-      }
-    },
-    
-    // 파일 업로드 초기화 (공통 fileUpload 위임, root 기반)
-    initFileUpload: function(root) {
-      console.log('Plant file upload initialized');
-      // 공통 fileUpload 위젯 초기화 (root 범위 내에서만)
-      const containers = root.querySelectorAll('[data-attachments]');
-      if (containers.length > 0 && window.cmms?.fileUpload?.init) {
-        containers.forEach(container => {
-          window.cmms.fileUpload.init(container);
-        });
-      }
+      window.cmms.printUtils.initPrintButton(root);
     },
     
     // 취소 버튼 초기화 (root 기반)
@@ -558,7 +454,7 @@
         }
       }
     }
-  };
+  });
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('plant-list', function(root) {

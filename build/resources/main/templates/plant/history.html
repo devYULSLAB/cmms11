@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="plant-history" data-module="plant-history">
         <main>
           <div class="container">
             <!-- 설비 선택 섹션 -->
@@ -51,15 +51,15 @@
                     <div class="col-span-4">
                       <input class="input" placeholder="설비명" name="plantName" th:value="${plantName}" />
                     </div>   
-                    <div class="col-span-4" style="display:flex;gap:8px;justify-content:flex-end">
-                      <button class="btn" onclick="clearSearch()">초기화</button>
-                      <button class="btn" onclick="searchPlant()">검색</button>
+                    <div class="col-span-4 actions actions-left-align">
+                      <button class="btn" data-clear-search>초기화</button>
+                      <button class="btn" data-plant-search>검색</button>
                     </div>
                   </div>
                 </div>
 
                 <!-- 설비 검색 결과 -->
-                <div class="section" id="plant-search-results" style="display:none">
+                <div class="section hidden" id="plant-search-results">
                   <div class="section-title">검색 결과</div>
                   <table class="table">
                     <thead>
@@ -81,7 +81,7 @@
             </section>
 
             <!-- 선택된 설비 정보 섹션 -->
-            <section class="card" id="plant-info-section" style="display:none">
+            <section class="card hidden" id="plant-info-section">
               <div class="card-header">
                 <div class="card-title">설비 정보</div>
                 <div class="toolbar">
@@ -108,7 +108,7 @@
             </section>
 
             <!-- 예방점검 이력 섹션 -->
-            <section class="card" id="inspection-history-section" style="display:none">
+            <section class="card hidden" id="inspection-history-section">
               <div class="card-header">
                 <div class="card-title">예방점검 이력</div>
                 <div class="toolbar">
@@ -138,7 +138,7 @@
             </section>
 
             <!-- 작업오더 이력 섹션 -->
-            <section class="card" id="workorder-history-section" style="display:none">
+            <section class="card hidden" id="workorder-history-section">
               <div class="card-header">
                 <div class="card-title">작업오더 이력</div>
                 <div class="toolbar">
@@ -168,7 +168,7 @@
             </section>
 
             <!-- 작업허가 이력 섹션 -->
-            <section class="card" id="workpermit-history-section" style="display:none">
+            <section class="card hidden" id="workpermit-history-section">
               <div class="card-header">
                 <div class="card-title">작업허가 이력</div>
                 <div class="toolbar">
@@ -204,223 +204,6 @@
       </footer>
     </div>
     
-    <script>
-      let selectedPlantId = null;
-
-      // 설비 검색 함수
-      async function searchPlant() {
-        const plantId = document.getElementById('plant-search').value.trim();
-        if (!plantId) {
-          alert('설비번호를 입력해주세요.');
-          return;
-        }
-
-        try {
-          const response = await fetch(`/api/plants?plantId=${encodeURIComponent(plantId)}&size=10`);
-          const data = await response.json();
-          
-          const resultsSection = document.getElementById('plant-search-results');
-          const resultsBody = document.getElementById('plant-results-body');
-          
-          if (data.content && data.content.length > 0) {
-            resultsBody.innerHTML = '';
-            data.content.forEach(plant => {
-              const row = document.createElement('tr');
-              row.innerHTML = `
-                <td>${plant.plantId}</td>
-                <td>${plant.name || '-'}</td>
-                <td>${plant.siteId || '-'}</td>
-                <td>${plant.funcId || '-'}</td>
-                <td>${plant.deptId || '-'}</td>
-                <td class="actions">
-                  <button class="btn btn-sm" onclick="selectPlant('${plant.plantId}')">선택</button>
-                </td>
-              `;
-              resultsBody.appendChild(row);
-            });
-            resultsSection.style.display = 'block';
-          } else {
-            resultsSection.style.display = 'none';
-            alert('해당 설비를 찾을 수 없습니다.');
-          }
-        } catch (error) {
-          console.error('설비 검색 오류:', error);
-          alert('설비 검색 중 오류가 발생했습니다.');
-        }
-      }
-
-      // 설비 선택 함수
-      async function selectPlant(plantId) {
-        selectedPlantId = plantId;
-        
-        try {
-          // 설비 정보 로드
-          const plantResponse = await fetch(`/api/plants/${plantId}`);
-          const plant = await plantResponse.json();
-          
-          // 설비 정보 표시
-          document.getElementById('info-plant-id').textContent = plant.plantId;
-          document.getElementById('info-plant-name').textContent = plant.name || '-';
-          document.getElementById('info-asset-type').textContent = plant.assetId || '-';
-          document.getElementById('info-site').textContent = plant.siteId || '-';
-          document.getElementById('info-dept').textContent = plant.deptId || '-';
-          document.getElementById('info-func').textContent = plant.funcId || '-';
-          document.getElementById('info-maker').textContent = plant.makerName || '-';
-          document.getElementById('info-model').textContent = plant.model || '-';
-          document.getElementById('info-install-date').textContent = plant.installDate || '-';
-          
-          // 링크 업데이트
-          document.getElementById('plant-detail-link').href = `/plant/detail/${plantId}`;
-          document.getElementById('plant-edit-link').href = `/plant/edit/${plantId}`;
-          
-          // 설비 정보 섹션 표시
-          document.getElementById('plant-info-section').style.display = 'block';
-          
-          // 이력 데이터 로드
-          await loadInspectionHistory(plantId);
-          await loadWorkorderHistory(plantId);
-          await loadWorkpermitHistory(plantId);
-          
-        } catch (error) {
-          console.error('설비 정보 로드 오류:', error);
-          alert('설비 정보를 불러오는 중 오류가 발생했습니다.');
-        }
-      }
-
-      // 예방점검 이력 로드
-      async function loadInspectionHistory(plantId) {
-        try {
-          const response = await fetch(`/api/inspections?plantId=${plantId}&size=5`);
-          const data = await response.json();
-          
-          const historyBody = document.getElementById('inspection-history-body');
-          historyBody.innerHTML = '';
-          
-          if (data.content && data.content.length > 0) {
-            data.content.forEach(inspection => {
-              const row = document.createElement('tr');
-              const statusText = inspection.status === 'PLAN' ? '계획' : 
-                               inspection.status === 'PROC' ? '진행' : '완료';
-              const statusClass = inspection.status === 'PLAN' ? 'badge' : 
-                                inspection.status === 'PROC' ? 'badge warning' : 'badge success';
-              
-              row.innerHTML = `
-                <td><a href="/inspection/edit/${inspection.inspectionId}">${inspection.inspectionId}</a></td>
-                <td>${inspection.name || '-'}</td>
-                <td>${inspection.jobId || '-'}</td>
-                <td>${inspection.plannedDate || '-'}</td>
-                <td>${inspection.actualDate || '-'}</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td class="actions">
-                  <a class="btn btn-sm" href="/inspection/edit/${inspection.inspectionId}">수정</a>
-                </td>
-              `;
-              historyBody.appendChild(row);
-            });
-            document.getElementById('inspection-history-section').style.display = 'block';
-          } else {
-            document.getElementById('inspection-history-section').style.display = 'none';
-          }
-        } catch (error) {
-          console.error('점검 이력 로드 오류:', error);
-        }
-      }
-
-      // 작업오더 이력 로드
-      async function loadWorkorderHistory(plantId) {
-        try {
-          const response = await fetch(`/api/workorders?plantId=${plantId}&size=5`);
-          const data = await response.json();
-          
-          const historyBody = document.getElementById('workorder-history-body');
-          historyBody.innerHTML = '';
-          
-          if (data.content && data.content.length > 0) {
-            data.content.forEach(workorder => {
-              const row = document.createElement('tr');
-              const statusText = workorder.status === 'PLAN' ? '계획' : 
-                               workorder.status === 'PROC' ? '진행' : '완료';
-              const statusClass = workorder.status === 'PLAN' ? 'badge' : 
-                                workorder.status === 'PROC' ? 'badge warning' : 'badge success';
-              
-              row.innerHTML = `
-                <td><a href="/workorder/edit/${workorder.orderId}">${workorder.orderId}</a></td>
-                <td>${workorder.name || '-'}</td>
-                <td>${workorder.jobId || '-'}</td>
-                <td>${workorder.plannedDate || '-'}</td>
-                <td>${workorder.actualDate || '-'}</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td class="actions">
-                  <a class="btn btn-sm" href="/workorder/edit/${workorder.orderId}">수정</a>
-                </td>
-              `;
-              historyBody.appendChild(row);
-            });
-            document.getElementById('workorder-history-section').style.display = 'block';
-          } else {
-            document.getElementById('workorder-history-section').style.display = 'none';
-          }
-        } catch (error) {
-          console.error('작업오더 이력 로드 오류:', error);
-        }
-      }
-
-      // 작업허가 이력 로드
-      async function loadWorkpermitHistory(plantId) {
-        try {
-          const response = await fetch(`/api/workpermits?plantId=${plantId}&size=5`);
-          const data = await response.json();
-          
-          const historyBody = document.getElementById('workpermit-history-body');
-          historyBody.innerHTML = '';
-          
-          if (data.content && data.content.length > 0) {
-            data.content.forEach(workpermit => {
-              const row = document.createElement('tr');
-              const statusText = workpermit.status === 'REQUEST' ? '신청' : 
-                               workpermit.status === 'APPROVED' ? '승인' : '완료';
-              const statusClass = workpermit.status === 'REQUEST' ? 'badge' : 
-                                workpermit.status === 'APPROVED' ? 'badge warning' : 'badge success';
-              
-              row.innerHTML = `
-                <td><a href="/workpermit/edit/${workpermit.workpermitId}">${workpermit.workpermitId}</a></td>
-                <td>${workpermit.name || '-'}</td>
-                <td>${workpermit.jobId || '-'}</td>
-                <td>${workpermit.requestDate || '-'}</td>
-                <td>${workpermit.approvedDate || '-'}</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td class="actions">
-                  <a class="btn btn-sm" href="/workpermit/edit/${workpermit.workpermitId}">수정</a>
-                </td>
-              `;
-              historyBody.appendChild(row);
-            });
-            document.getElementById('workpermit-history-section').style.display = 'block';
-          } else {
-            document.getElementById('workpermit-history-section').style.display = 'none';
-          }
-        } catch (error) {
-          console.error('작업허가 이력 로드 오류:', error);
-        }
-      }
-
-      // 검색 초기화
-      function clearSearch() {
-        document.getElementById('plant-search').value = '';
-        document.getElementById('plant-search-results').style.display = 'none';
-        document.getElementById('plant-info-section').style.display = 'none';
-        document.getElementById('inspection-history-section').style.display = 'none';
-        document.getElementById('workorder-history-section').style.display = 'none';
-        document.getElementById('workpermit-history-section').style.display = 'none';
-        selectedPlantId = null;
-      }
-
-      // Enter 키로 검색
-      document.getElementById('plant-search').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          searchPlant();
-        }
-      });
-    </script>
+    <!-- 인라인 스크립트는 plant.js로 이관됨 -->
   </body>
   </html>

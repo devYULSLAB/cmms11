@@ -1,82 +1,74 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>???뺣낫 ?섏젙</title>
-    <!-- common CSS is loaded via layout/defaultLayout -->
-    <!-- local fallback for design-only preview without server -->
-    <link rel="stylesheet" href="../../static/assets/css/base.css" />
-    <style>
-      body{margin:0;padding:0;overflow:hidden}
-      .profile-edit{display:flex;flex-direction:column;height:100vh;background:var(--bg)}
-      .profile-header{padding:20px;border-bottom:1px solid var(--border);background:var(--bg-subtle)}
-      .profile-header h2{margin:0;font-size:18px;font-weight:600}
-      .profile-body{flex:1;overflow-y:auto;padding:24px}
-      .profile-footer{padding:16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--surface)}
-      .alert{padding:12px;border-radius:6px;margin-bottom:16px}
-      .alert-success{background:#d4edda;color:#155724}
-      .alert-danger{background:#f8d7da;color:#721c24}
-    </style>
-  </head>
-  <body>
-    <div class="profile-edit">
-      <div class="profile-header">
-        <h2>???뺣낫 ?섏젙</h2>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>프로필 편집 · CMMS</title>
+  <link rel="stylesheet" th:href="@{/assets/css/base.css}" href="../../static/assets/css/base.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="appbar">
+      <div class="appbar-inner">
+        <div class="brand">프로필 편집</div>
       </div>
-      
-      <div class="profile-body">
-        <!-- ?깃났/?먮윭 硫붿떆吏 -->
+    </header>
+    
+    <main class="content">
+      <div class="container">
+        <!-- 서버 응답 메시지 (성공/오류) -->
         <div th:if="${successMessage}" class="alert alert-success">
-          <span th:text="${successMessage}">?깃났</span>
+          <span th:text="${successMessage}">성공</span>
         </div>
         <div th:if="${errorMessage}" class="alert alert-danger">
-          <span th:text="${errorMessage}">?먮윭</span>
+          <span th:text="${errorMessage}">오류</span>
         </div>
         
         <form id="profileForm" method="post" th:action="@{/common/profile-edit}">
           <input type="hidden" name="_csrf" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
           
+          <!-- 기본 프로필 -->
           <div class="section">
-            <div class="section-title">湲곕낯 ?뺣낫</div>
+            <div class="section-title">기본 프로필</div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label">?ъ슜??ID</label>
+                <label class="label">사용자ID</label>
                 <input class="input" type="text" th:value="${member.memberId}" disabled />
               </div>
               <div class="form-row col-span-6">
-                <label class="label">?뚯궗 ID</label>
+                <label class="label">회사 ID</label>
                 <input class="input" type="text" th:value="${member.companyId}" disabled />
               </div>
             </div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label required" for="name">?대쫫</label>
+                <label class="label required" for="name">이름</label>
                 <input id="name" name="name" class="input" required maxlength="100" 
                       th:value="${member.name}" />
               </div>
               <div class="form-row col-span-6">
-                <label class="label" for="email">?대찓??/label>
+                <label class="label" for="email">이메일</label>
                 <input id="email" name="email" class="input" type="email" maxlength="100" 
                       th:value="${member.email}" />
               </div>
             </div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label" for="phone">?꾪솕踰덊샇</label>
+                <label class="label" for="phone">휴대폰번호</label>
                 <input id="phone" name="phone" class="input" type="tel" maxlength="100" 
                       th:value="${member.phone}" />
               </div>
             </div>
           </div>
           
+          <!-- 회사 프로필 -->
           <div class="section">
-            <div class="section-title">?뚯냽 ?뺣낫</div>
+            <div class="section-title">회사 프로필</div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label" for="deptId">遺??/label>
-                <select id="deptId" name="deptId">
-                  <option value="">(?좏깮)</option>
+                <label class="label" for="deptId">부서</label>
+                <select id="deptId" name="deptId" class="input">
+                  <option value="">(선택)</option>
                   <option th:each="dept : ${depts}" 
                           th:value="${dept.deptId}" 
                           th:text="${dept.deptId + ' - ' + dept.name}"
@@ -84,9 +76,9 @@
                 </select>
               </div>
               <div class="form-row col-span-6">
-                <label class="label" for="siteId">?ъ씠??/label>
-                <select id="siteId" name="siteId">
-                  <option value="">(?좏깮)</option>
+                <label class="label" for="siteId">사이트</label>
+                <select id="siteId" name="siteId" class="input">
+                  <option value="">(선택)</option>
                   <option th:each="site : ${sites}" 
                           th:value="${site.siteId}" 
                           th:text="${site.siteId + ' - ' + site.name}"
@@ -96,95 +88,144 @@
             </div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label" for="position">吏곴툒</label>
+                <label class="label" for="position">직급</label>
                 <input id="position" name="position" class="input" maxlength="50" 
-                      placeholder="?? ?由? 怨쇱옣, 李⑥옣" th:value="${member.position}" />
+                      placeholder="예: 대리, 과장, 차장" th:value="${member.position}" />
               </div>
               <div class="form-row col-span-6">
-                <label class="label" for="title">吏곸콉</label>
+                <label class="label" for="title">직책</label>
                 <input id="title" name="title" class="input" maxlength="50" 
-                      placeholder="?? ??? ?뚰듃?? th:value="${member.title}" />
+                      placeholder="예: 팀장, 파트장" th:value="${member.title}" />
               </div>
             </div>
           </div>
           
+          <!-- 비밀번호 변경 -->
           <div class="section">
-            <div class="section-title">鍮꾨?踰덊샇 蹂寃?/div>
+            <div class="section-title">비밀번호 변경</div>
             <div class="help" style="margin-bottom:12px;color:var(--fg-muted);font-size:13px">
-              鍮꾨?踰덊샇瑜?蹂寃쏀븯吏 ?딆쑝?ㅻ㈃ 鍮꾩썙?먯꽭??
+              비밀번호를 변경하지 않으려면 비워두세요
             </div>
             <div class="grid cols-12">
               <div class="form-row col-span-6">
-                <label class="label" for="password">??鍮꾨?踰덊샇</label>
+                <label class="label" for="password">새 비밀번호</label>
                 <input id="password" name="password" class="input" type="password" 
                       maxlength="100" autocomplete="new-password" />
               </div>
               <div class="form-row col-span-6">
-                <label class="label" for="passwordConfirm">鍮꾨?踰덊샇 ?뺤씤</label>
+                <label class="label" for="passwordConfirm">비밀번호 확인</label>
                 <input id="passwordConfirm" class="input" type="password" 
                       maxlength="100" autocomplete="new-password" />
               </div>
             </div>
           </div>
           
+          <!-- 메모 -->
           <div class="section">
-            <div class="section-title">湲고?</div>
+            <div class="section-title">메모</div>
             <div class="form-row col-span-12">
-              <label class="label" for="note">鍮꾧퀬</label>
+              <label class="label" for="note">비고</label>
               <textarea id="note" name="note" rows="3" maxlength="500" 
-                        placeholder="湲고? 硫붾え(理쒕? 500??" th:text="${member.note}"></textarea>
+                        placeholder="메모 내용(최대 500자)" th:text="${member.note}"></textarea>
             </div>
           </div>
         </form>
       </div>
-      
-      <div class="profile-footer">
-        <button class="btn" type="button" onclick="window.close()">痍⑥냼</button>
-        <button class="btn primary" type="button" id="btn-save">???/button>
-      </div>
-    </div>
+    </main>
     
-            <script th:inline="javascript">
-      (function() {
-        const saveButton = document.getElementById("btn-save");
-        if (saveButton) {
-          saveButton.addEventListener("click", () => {
-            const form = document.getElementById("profileForm");
-            const password = document.getElementById("password").value;
-            const passwordConfirm = document.getElementById("passwordConfirm").value;
-
-            if (password || passwordConfirm) {
-              if (password !== passwordConfirm) {
-                alert("비밀번호가 일치하지 않습니다.");
-                return;
-              }
-              if (password.length < 4) {
-                alert("비밀번호는 최소 4글자 이상이어야 합니다.");
-                return;
-              }
+    <footer class="footer">
+      <div class="container">
+        <div class="actions">
+          <button class="btn" type="button" id="btn-cancel">취소</button>
+          <button class="btn primary" type="button" id="btn-save">저장</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- 기존 공통 모듈 로드 -->
+  <script src="/assets/js/app.js"></script>
+  
+  <!-- 최종 단순화된 인라인 스크립트 -->
+  <script th:inline="javascript">
+    (function() {
+      'use strict';
+      
+      // 기존 window.cmms 객체들만 사용 (새로운 객체 생성 없음)
+      const notification = window.cmms?.notification || {};
+      
+      // 팝업 핸들러 (기존 기능만 활용)
+      const PopupHandler = {
+        init: function() {
+          this.bindEvents();
+          this.handleSuccess();
+        },
+        
+        bindEvents: function() {
+          document.getElementById('btn-save')?.addEventListener('click', this.handleSave.bind(this));
+          document.getElementById('btn-cancel')?.addEventListener('click', this.handleCancel.bind(this));
+        },
+        
+        handleSave: function(e) {
+          e.preventDefault();
+          
+          // 비밀번호 불일치만 체크
+          if (this.checkPasswordMatch()) {
+            document.getElementById('profileForm').submit();
+          }
+        },
+        
+        handleCancel: function() {
+          window.close();
+        },
+        
+        // 비밀번호 불일치 체크
+        checkPasswordMatch: function() {
+          const password = document.getElementById('password')?.value || '';
+          const passwordConfirm = document.getElementById('passwordConfirm')?.value || '';
+          
+          if (password || passwordConfirm) {
+            if (password !== passwordConfirm) {
+              // 기존 notification 시스템에 직접 메시지 전달
+              notification.error('비밀번호가 일치하지 않습니다');
+              return false;
             }
-
-            form.submit();
-          });
-        }
-
-        const updateSucceeded = /*[[${successMessage != null}]]*/ false;
-        if (updateSucceeded && window.opener && !window.opener.closed) {
-          const payload = {
-            deptId: /*[[${member.deptId}]]*/ null,
-            siteId: /*[[${member.siteId}]]*/ null,
-            displayName: /*[[${member.name}]]*/ null
-          };
-
-          try {
-            window.opener.postMessage({ type: "PROFILE_UPDATED", payload }, window.location.origin);
-          } catch (error) {
-            console.warn("프로필 정보 전달에 실패했습니다.", error);
+          }
+          return true;
+        },
+        
+        // 부모 창에 메시지 전달
+        notifyParent: function(data) {
+          if (window.opener && !window.opener.closed) {
+            try {
+              window.opener.postMessage({ 
+                type: "PROFILE_UPDATED", 
+                payload: data 
+              }, window.location.origin);
+            } catch (error) {
+              console.warn('부모 창 메시지 전달 실패:', error);
+            }
+          }
+        },
+        
+        // 성공 처리 (서버 메시지만 사용, JS 알림 제거)
+        handleSuccess: function() {
+          const updateSucceeded = /*[[${successMessage != null}]]*/ false;
+          if (updateSucceeded) {
+            // 서버에서 이미 성공 메시지를 표시하므로 JS 알림은 제거
+            // 부모 창에 업데이트된 데이터만 전달
+            this.notifyParent({
+              deptId: /*[[${member.deptId}]]*/ null,
+              siteId: /*[[${member.siteId}]]*/ null,
+              displayName: /*[[${member.name}]]*/ null
+            });
           }
         }
-      })();
-    </script>
-  </body>
+      };
+      
+      // 팝업 핸들러 초기화
+      PopupHandler.init();
+    })();
+  </script>
+</body>
 </html>
-
-

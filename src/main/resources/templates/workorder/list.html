@@ -117,11 +117,11 @@
                   <!-- 페이지네이션 -->
                   <div class="pagination-container" data-pagination>
                     <div class="pagination">
-                      <button class="btn sm" th:disabled="${page.first}" 
+                      <button class="btn btn-sm" th:disabled="${page.first}" 
                               th:data-url="@{/workorder/list(page=${page.number - 1}, orderId=${orderId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
                               data-nav-button="prev">이전</button>
                       <span class="pagination-info" th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                      <button class="btn sm" th:disabled="${page.last}" 
+                      <button class="btn btn-sm" th:disabled="${page.last}" 
                               th:data-url="@{/workorder/list(page=${page.number + 1}, orderId=${orderId}, plantId=${plantId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
                               data-nav-button="next">다음</button>
                     </div>

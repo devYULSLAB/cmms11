@@ -39,12 +39,13 @@
                 <div class="card-title">결재 상세</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/approval/list}">목록</a>
+                  <a class="btn" href="#" data-print-btn>인쇄</a>
                   <button class="btn danger" 
                           th:data-delete-url="@{/approval/reject/{id}(id=${approval.approvalId})}"
                           th:data-redirect="@{/approval/list}"
                           data-confirm="반려하시겠습니까?">반려</button>
                   <button class="btn primary" 
-                          th:data-delete-url="@{/approval/approve/{id}(id=${approval.approvalId})}"
+                          th:data-action-url="@{/approval/approve/{id}(id=${approval.approvalId})}"
                           th:data-redirect="@{/approval/list}"
                           data-confirm="결재하시겠습니까?">결재</button>
                 </div>
@@ -102,19 +103,92 @@
 
               <div class="section actions-top-small">
                 <div class="section-title">첨부</div>
-                <ul class="attachments-list" th:if="${attachments != null and !attachments.isEmpty()}">
-                  <li class="attachment-item" th:each="file : ${attachments}">
-                    <span class="file-name" th:text="${file.originalName}">파일명.pdf</span>
-                    <span class="file-size" th:text="${#numbers.formatDecimal(file.size / 1024.0, 1, 1)} + ' KB'">100 KB</span>
-                    <a th:href="@{/api/files/{fileId}(fileId=${file.fileId}, groupId=${approval.fileGroupId})}" 
-                       class="btn-download" target="_blank">다운로드</a>
-                  </li>
-                </ul>
-                <div th:if="${attachments == null or attachments.isEmpty()}" class="notice">
+                <div data-file-list 
+                     th:if="${approval.fileGroupId}"
+                     th:attr="data-file-group-id=${approval.fileGroupId}"
+                     data-empty-text="첨부된 파일이 없습니다."
+                     data-loading-text="첨부 파일을 불러오는 중..."
+                     data-error-text="첨부 파일을 불러올 수 없습니다.">
+                </div>
+                <div th:unless="${approval.fileGroupId}" class="notice">
                   첨부된 파일이 없습니다.
                 </div>
               </div>
             </div>
+            
+            <!-- 출력 문서 형식 -->
+            <section class="print-form" aria-hidden="true">
+              <div class="doc">
+                <header class="doc-header">
+                  <div class="doc-title">전자결재</div>
+                  <div class="doc-meta">
+                    <div class="meta-row">출력일시: <span id="print-date">-</span></div>
+                    <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
+                  </div>
+                </header>
+                
+                <div class="doc-body">
+                  <!-- 기본 정보 -->
+                  <div class="section">
+                    <div class="section-title">기본 정보</div>
+                    <div class="row"><strong>문서번호</strong><span class="spacer"></span><span th:text="${approval.approvalId}">APR-2025-0001</span></div>
+                    <div class="row"><strong>결재 제목</strong><span class="spacer"></span><span th:text="${approval.title}">설비 구매 요청의 건</span></div>
+                    <div class="row"><strong>기안자</strong><span class="spacer"></span><span th:text="${approval.createdBy}">admin</span></div>
+                    <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${approval.createdAt}">2025-09-01</span></div>
+                    <div class="row"><strong>결재 상태</strong><span class="spacer"></span><span th:text="${approval.status == 'DRAFT' ? '작성중' : approval.status == 'SUBMITTED' ? '상신' : approval.status == 'IN_PROGRESS' ? '결재중' : approval.status == 'APPROVED' ? '완결' : '반려'}">결재중</span></div>
+                  </div>
+
+                  <!-- 결재선 정보 -->
+                  <div class="section" th:if="${approval.steps != null and !approval.steps.isEmpty()}">
+                    <div class="section-title">결재선</div>
+                    <table class="row-cols-6">
+                      <thead>
+                        <tr>
+                          <th>순서</th>
+                          <th>결재자</th>
+                          <th>구분</th>
+                          <th>결과</th>
+                          <th>일시</th>
+                          <th>의견</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="step : ${approval.steps}">
+                          <td th:text="${step.stepNo}">1</td>
+                          <td th:text="${step.memberId}">-</td>
+                          <td th:text="${step.decision == 'APPROVAL' ? '결재' : step.decision == 'AGREE' ? '합의' : '통보'}">결재</td>
+                          <td th:text="${step.decidedAt != null ? '완료' : '대기'}">대기</td>
+                          <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
+                          <td th:text="${step.comment ?: '-'}">-</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- 본문 내용 -->
+                  <div class="section">
+                    <div class="section-title">본문 내용</div>
+                    <div class="content-body" th:utext="${approval.content}">
+                      <p>1. 목적: 신규 설비 구매에 대한 승인 요청입니다.</p>
+                      <p>2. 배경: 생산성 향상을 위해 XYZ 모델의 설비 도입이 필요합니다.</p>
+                      <p>3. 비용: 120,000,000원 (VAT 별도)</p>
+                      <p>4. 비고: 설치 일정은 추후 협의</p>
+                    </div>
+                  </div>
+
+                  <!-- 첨부 파일 -->
+                  <div class="section">
+                    <div class="section-title">첨부 파일</div>
+                    <div class="file-list" th:if="${approval.fileGroupId}">
+                      <div class="notice">첨부 파일 목록 (파일 그룹 ID: <span th:text="${approval.fileGroupId}">-</span>)</div>
+                    </div>
+                    <div class="notice" th:unless="${approval.fileGroupId}">
+                      첨부된 파일이 없습니다.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </section>
         </div>
       </main>

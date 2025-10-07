@@ -110,15 +110,15 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label required" for="txDate">일자</label>
-                        <input id="txDate" name="txDate" class="input" type="date" required />
+                        <input name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="inventoryId">재고번호</label>
-                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <input name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="storageId">창고</label>
-                        <select id="storageId" name="storageId" required>
+                        <select name="storageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -134,7 +134,7 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-6">
                         <label class="label" for="note">비고</label>
-                        <input id="note" name="note" class="input" maxlength="500" />
+                        <input name="note" class="input" maxlength="500" />
                       </div>
                     </div>
                   </div>
@@ -145,11 +145,11 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label required" for="txDate">일자</label>
-                        <input id="txDate" name="txDate" class="input" type="date" required />
+                        <input name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="inventoryId">재고번호</label>
-                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <input name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="srcStorageId">출고 창고</label>
@@ -190,15 +190,15 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label required" for="txDate">일자</label>
-                        <input id="txDate" name="txDate" class="input" type="date" required />
+                        <input name="txDate" class="input" type="date" required />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="inventoryId">재고번호</label>
-                        <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                        <input name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="storageId">창고</label>
-                        <select id="storageId" name="storageId" required>
+                        <select name="storageId" required>
                           <option value="">선택</option>
                           <option th:each="storage : ${storages}"
                                   th:value="${storage.storageId}"
@@ -246,17 +246,9 @@
                         <th class="table-col-info-small">비고</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="txHistoryBody">
                       <tr>
-                        <td>2025-01-10</td>
-                        <td>IN</td>
-                        <td>INV000012</td>
-                        <td>S0001</td>
-                        <td class="cell-right">10.000</td>
-                        <td class="cell-right">0.000</td>
-                        <td class="cell-right">1,000.00</td>
-                        <td class="cell-right">10,000.00</td>
-                        <td>-</td>
+                        <td colspan="9" class="cell-center">거래 내역을 불러오는 중...</td>
                       </tr>
                     </tbody>
                   </table>

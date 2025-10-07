@@ -32,7 +32,7 @@
       </nav>
       
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content" data-page="workorder/form" data-module="workorder-form"
+      <section data-slot-root th:fragment="content" data-page="workorder-form" data-module="workorder-form"
                th:attr="data-mode=${mode},data-is-new=${isNew}">
         <main>
           <div class="container">
@@ -46,7 +46,6 @@
               <div class="card-body">
                 <form method="POST" 
                       th:action="@{/workorder/save}" 
-                      data-form-manager
                       data-validate="true"
                       data-redirect="@{/workorder/list}">
 

@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-upload" data-module="inventory-upload">
         <main>
         <div class="container">
           <section class="card">
@@ -92,76 +92,6 @@
       </footer>
     </div>
     
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('uploadForm');
-        const fileInput = document.getElementById('csvFile');
-        const summary = document.getElementById('uploadSummary');
-        const errorSection = document.getElementById('errorSection');
-        const errorRows = errorSection.querySelector('[data-error-rows]');
-
-        function showSummary(message, isError) {
-          summary.hidden = false;
-          summary.textContent = message;
-          if (isError) {
-            summary.classList.add('danger-text');
-          } else {
-            summary.classList.remove('danger-text');
-          }
-        }
-
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const file = fileInput.files[0];
-          if (!file) {
-            showSummary('먼저 업로드할 CSV 파일을 선택하세요.', true);
-            return;
-          }
-
-          showSummary('업로드 중입니다. 잠시만 기다려 주세요...', false);
-          errorSection.hidden = true;
-          errorRows.innerHTML = '';
-
-          const formData = new FormData();
-          formData.append('file', file);
-
-          try {
-            const response = await fetch(form.action, {
-              method: 'POST',
-              body: formData,
-            });
-
-            if (!response.ok) {
-              showSummary('업로드 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', true);
-              return;
-            }
-
-            const result = await response.json();
-            const summaryText = `성공 ${result.successCount}건 · 실패 ${result.failureCount}건`;
-            showSummary(summaryText, result.failureCount > 0);
-            
-            // 업로드 완료 후 파일 입력 초기화
-            fileInput.value = '';
-
-            if (Array.isArray(result.errors) && result.errors.length) {
-              errorSection.hidden = false;
-              result.errors.forEach((error) => {
-                const row = document.createElement('tr');
-                const rowCell = document.createElement('td');
-                rowCell.textContent = error.rowNumber;
-                rowCell.className = 'cell-center';
-                const messageCell = document.createElement('td');
-                messageCell.textContent = error.message;
-                row.appendChild(rowCell);
-                row.appendChild(messageCell);
-                errorRows.appendChild(row);
-              });
-            }
-          } catch (err) {
-            showSummary('파일 업로드 중 오류가 발생했습니다.', true);
-          }
-        });
-      });
-    </script>
+    <!-- 인라인 스크립트는 inventory.js로 이관됨 -->
   </body>
 </html>

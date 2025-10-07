@@ -44,7 +44,7 @@
                           th:data-redirect="@{/approval/list}"
                           data-confirm="반려하시겠습니까?">반려</button>
                   <button class="btn primary" 
-                          th:data-delete-url="@{/approval/approve/{id}(id=${approval.approvalId})}"
+                          th:data-action-url="@{/approval/approve/{id}(id=${approval.approvalId})}"
                           th:data-redirect="@{/approval/list}"
                           data-confirm="결재하시겠습니까?">결재</button>
                 </div>
@@ -102,15 +102,14 @@
 
               <div class="section actions-top-small">
                 <div class="section-title">첨부</div>
-                <ul class="attachments-list" th:if="${attachments != null and !attachments.isEmpty()}">
-                  <li class="attachment-item" th:each="file : ${attachments}">
-                    <span class="file-name" th:text="${file.originalName}">파일명.pdf</span>
-                    <span class="file-size" th:text="${#numbers.formatDecimal(file.size / 1024.0, 1, 1)} + ' KB'">100 KB</span>
-                    <a th:href="@{/api/files/{fileId}(fileId=${file.fileId}, groupId=${approval.fileGroupId})}" 
-                       class="btn-download" target="_blank">다운로드</a>
-                  </li>
-                </ul>
-                <div th:if="${attachments == null or attachments.isEmpty()}" class="notice">
+                <div data-file-list 
+                     th:if="${approval.fileGroupId}"
+                     th:attr="data-file-group-id=${approval.fileGroupId}"
+                     data-empty-text="첨부된 파일이 없습니다."
+                     data-loading-text="첨부 파일을 불러오는 중..."
+                     data-error-text="첨부 파일을 불러올 수 없습니다.">
+                </div>
+                <div th:unless="${approval.fileGroupId}" class="notice">
                   첨부된 파일이 없습니다.
                 </div>
               </div>

@@ -23,7 +23,7 @@ if not exist "gradlew.bat" (
 
 REM Set environment variables for development
 set SPRING_PROFILES_ACTIVE=dev
-set JAVA_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8
+set JAVA_OPTS=-Xms256m -Xmx512m -Dfile.encoding=UTF-8
 
 REM Create necessary directories
 if not exist "storage\uploads" mkdir "storage\uploads"

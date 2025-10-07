@@ -28,7 +28,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inventory-list" data-module="inventory-list">
         <main>
           <div class="container">
             <section class="card">
@@ -64,7 +64,7 @@
                         </select>
                       </div>
                     </div>
-                    <div class="row" style="margin-top:8px;justify-content:flex-end;gap:8px">
+                    <div class="row actions actions-top-small">
                       <a class="btn" th:href="@{/inventory/list}">초기화</a>
                       <button type="submit" class="btn primary">검색</button>
                     </div>
@@ -74,13 +74,13 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">재고 번호</th>
+                      <th class="col-140">재고 번호</th>
                       <th>재고명</th>
-                      <th style="width:120px">자산유형</th>
-                      <th style="width:120px">관리부서</th>
-                      <th style="width:160px">모델</th>
-                      <th style="width:220px">규격</th>
-                      <th style="width:140px">액션</th>
+                      <th class="col-120">자산유형</th>
+                      <th class="col-120">관리부서</th>
+                      <th class="col-160">모델</th>
+                      <th class="col-220">규격</th>
+                      <th class="col-140">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -102,16 +102,16 @@
                   </tbody>
                 </table>
 
-                <div class="row" style="margin-top:12px">
+                <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" th:disabled="${page.first}" 
+                    <button class="btn btn-sm" th:disabled="${page.first}" 
                             th:data-url="@{/inventory/list(page=${page.number - 1}, inventoryId=${inventoryId}, name=${name}, makerName=${makerName}, deptId=${deptId})}"
-                            onclick="if(this.dataset.url) location.href=this.dataset.url">이전</button>
+                            data-nav-button>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
-                    <button class="btn sm" th:disabled="${page.last}" 
+                    <button class="btn btn-sm" th:disabled="${page.last}" 
                             th:data-url="@{/inventory/list(page=${page.number + 1}, inventoryId=${inventoryId}, name=${name}, makerName=${makerName}, deptId=${deptId})}"
-                            onclick="if(this.dataset.url) location.href=this.dataset.url">다음</button>
+                            data-nav-button>다음</button>
                   </div>
                 </div>
               </div>

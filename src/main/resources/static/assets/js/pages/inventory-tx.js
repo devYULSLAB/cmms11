@@ -2,21 +2,22 @@
  * InventoryTx 모듈 JavaScript
  * 
  * 재고거래 관리 모듈의 페이지별 초기화 및 기능을 담당합니다.
- * 공통 유틸(TableManager, FormManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
+ * 공통 유틸(TableManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
  * root 기반 DOM 접근으로 중복 바인딩 방지 및 SPA 최적화를 구현합니다.
  */
 
 (function() {
   'use strict';
   
-  if (!window.cmms) window.cmms = {};
-  if (!window.cmms.inventoryTx) window.cmms.inventoryTx = {};
+  window.cmms = window.cmms || {};
+  window.cmms.inventoryTx = window.cmms.inventoryTx || {};
 
-  window.cmms.inventoryTx = {
+  Object.assign(window.cmms.inventoryTx, {
     
     // 거래 페이지 초기화 (root 기반)
     initTransaction: function(root) {
       console.log('InventoryTx transaction page initialized', root);
+      console.log('Root element:', root.tagName, root.className);
       this.initTransactionForm(root);
       this.initInventorySearch(root);
     },
@@ -43,11 +44,23 @@
       const txTypeInput = root.querySelector('#txType');
       const form = root.querySelector('#txForm');
       
-      if (!tabs.length || !form) return;
+      console.log('Found elements:', {
+        tabs: tabs.length,
+        panels: panels.length,
+        txTypeInput: !!txTypeInput,
+        form: !!form
+      });
+      
+      if (!tabs.length || !form) {
+        console.warn('Required elements not found for tab initialization');
+        return;
+      }
       
       // 탭 전환 처리
       tabs.forEach(btn => {
         btn.addEventListener('click', () => {
+          console.log('Tab clicked:', btn.getAttribute('data-tab'));
+          
           tabs.forEach(b => b.classList.remove('active'));
           panels.forEach(p => p.classList.remove('active'));
           btn.classList.add('active');
@@ -56,21 +69,39 @@
           if (txTypeInput) txTypeInput.value = tabType;
           
           const activePanel = root.querySelector(`.tx-panel[data-panel="${tabType}"]`);
+          console.log('Active panel found:', !!activePanel);
           if (activePanel) activePanel.classList.add('active');
           
           // 폼 초기화 및 오늘 날짜 설정
           form.reset();
-          const txDateInput = root.querySelector('#txDate');
-          if (txDateInput) {
-            txDateInput.value = new Date().toISOString().split('T')[0];
+          // 활성화된 패널 내의 날짜 입력 필드 찾기
+          if (activePanel) {
+            const txDateInput = activePanel.querySelector('input[name="txDate"]');
+            if (txDateInput) {
+              txDateInput.value = new Date().toISOString().split('T')[0];
+            }
           }
         });
       });
       
-      // 초기 날짜 설정
-      const txDateInput = root.querySelector('#txDate');
-      if (txDateInput) {
-        txDateInput.value = new Date().toISOString().split('T')[0];
+      // 초기 날짜 설정 (모든 탭의 날짜 필드)
+      const today = new Date().toISOString().split('T')[0];
+      const allDateInputs = root.querySelectorAll('input[name="txDate"]');
+      allDateInputs.forEach(input => {
+        input.value = today;
+      });
+      
+      // 초기 탭 상태 설정 (첫 번째 탭 활성화)
+      const firstTab = root.querySelector('.tab-btn[data-tab="IN"]');
+      const firstPanel = root.querySelector('.tx-panel[data-panel="IN"]');
+      console.log('Initial tab setup:', {
+        firstTab: !!firstTab,
+        firstPanel: !!firstPanel
+      });
+      if (firstTab && firstPanel) {
+        firstTab.classList.add('active');
+        firstPanel.classList.add('active');
+        console.log('Initial tab activated: IN');
       }
       
       // 자재 선택 시 현재 재고 표시
@@ -146,29 +177,32 @@
       if (!tbody) return;
       
       try {
-        const response = await fetch('/api/inventory-tx?type=all');
+        const response = await fetch('/api/inventory-tx?size=5&sort=transactionDate,desc');
         if (!response.ok) throw new Error('Failed to load transaction history');
         
         const data = await response.json();
         
-        if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="cell-center">거래 내역이 없습니다.</td></tr>';
+        if (!data || !data.content || data.content.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="cell-center">거래 내역이 없습니다.</td></tr>';
           return;
         }
         
-        tbody.innerHTML = data.map(tx => `
+        tbody.innerHTML = data.content.map(tx => `
           <tr>
-            <td class="cell-center">${tx.transactionId}</td>
-            <td class="cell-center">${tx.type}</td>
-            <td class="cell-center">${tx.inventoryId}</td>
-            <td class="cell-center">${tx.quantity}</td>
-            <td class="cell-center">${tx.transactionDate}</td>
-            <td class="cell-center">${tx.note || '-'}</td>
+            <td>${tx.transactionDate || '-'}</td>
+            <td class="cell-center">${tx.txType || '-'}</td>
+            <td>${tx.inventoryId || '-'}</td>
+            <td class="cell-center">${tx.storageId || '-'}</td>
+            <td class="cell-right">${tx.inQty ? Number(tx.inQty).toFixed(3) : '0.000'}</td>
+            <td class="cell-right">${tx.outQty ? Number(tx.outQty).toFixed(3) : '0.000'}</td>
+            <td class="cell-right">${tx.unitCost ? Number(tx.unitCost).toLocaleString() : '-'}</td>
+            <td class="cell-right">${tx.amount ? Number(tx.amount).toLocaleString() : '-'}</td>
+            <td>${tx.note || '-'}</td>
           </tr>
         `).join('');
       } catch (error) {
         console.error('History load error:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="cell-center error">거래 내역을 불러올 수 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="cell-center error">거래 내역을 불러올 수 없습니다.</td></tr>';
       }
     },
     
@@ -318,33 +352,33 @@
         yyyymmInput.setAttribute('max', `${year}-${mm}`);
       }
       
-      this.initClosingSubmit(root);
+      // this.initClosingSubmit(root); // FormManager 제거됨
     },
     
-    // 마감 제출 초기화 (공통 FormManager 활용, root 기반)
-    initClosingSubmit: function(root) {
-      const form = root.querySelector('#closingForm');
-      if (!form) return;
-      
-      // 공통 FormManager를 활용한 폼 제출 처리
-      if (window.cmms?.formManager) {
-        // FormManager가 처리하도록 위임
-        window.cmms.formManager.init(form, {
-          onSuccess: (result) => {
-            this.handleClosingSuccess(result, root);
-          },
-          onError: (error) => {
-            this.handleClosingError(error, root);
-          }
-        });
-      } else {
-        // FormManager가 없는 경우 직접 처리
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          await this.handleDirectClosing(form, root);
-        });
-      }
-    },
+    // 마감 제출 초기화 (FormManager 제거됨 - app.js SPA 폼 처리 활용)
+    // initClosingSubmit: function(root) {
+    //   const form = root.querySelector('#closingForm');
+    //   if (!form) return;
+    //   
+    //   // 공통 FormManager를 활용한 폼 제출 처리
+    //   if (window.cmms?.formManager) {
+    //     // FormManager가 처리하도록 위임
+    //     window.cmms.formManager.init(form, {
+    //       onSuccess: (result) => {
+    //         this.handleClosingSuccess(result, root);
+    //       },
+    //       onError: (error) => {
+    //         this.handleClosingError(error, root);
+    //       }
+    //     });
+    //   } else {
+    //     // FormManager가 없는 경우 직접 처리
+    //     form.addEventListener('submit', async (event) => {
+    //       event.preventDefault();
+    //       await this.handleDirectClosing(form, root);
+    //     });
+    //   }
+    // },
     
     // 마감 성공 처리 (root 기반)
     handleClosingSuccess: function(result, root) {
@@ -401,7 +435,7 @@
         this.handleClosingError(error, root);
       }
     }
-  };
+  });
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('inventory-tx-transaction', function(root) {

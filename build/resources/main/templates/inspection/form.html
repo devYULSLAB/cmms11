@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="inspection-form" data-module="inspection-form">
         <main>
           <div class="container">
             <section class="card">
@@ -63,9 +63,9 @@
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
                         <label class="label required" for="plant_id">설비 번호</label>
-                        <div style="display:flex;gap:4px">
+                        <div class="actions actions-left-align">
                           <input id="plant_id" name="plantId" class="input" required maxlength="10" placeholder="EQP000123" 
-                                th:value="${inspection.plantId}" style="flex:1" />
+                                th:value="${inspection.plantId}" />
                           <button class="btn" type="button" id="btn-plant-picker" title="설비 선택">🏭</button>
                         </div>
                       </div>
@@ -144,22 +144,22 @@
                   <div class="section" data-insp-items>
                     <div class="section-title">점검 항목</div>
                     <div class="section-desc">inspection_item 항목: 항목, 단위, 방법, 최소값, 최대값, 기준값, 결과값, 비고</div>
-                    <div class="actions" style="justify-content:space-between;margin-bottom:12px">
+                    <div class="actions actions-space-between" style="margin-bottom:12px">
                       <button type="button" class="btn sm" id="btn-copy-previous">이전 점검 복사</button>
                       <button type="button" class="btn sm" data-add-item>항목 추가</button>
                     </div>
                     <table class="table">
                       <thead>
                         <tr>
-                          <th style="width:44px">#</th>
-                          <th style="width:140px">항목</th>
-                          <th style="width:80px">단위</th>
-                          <th style="width:100px">방법</th>
-                          <th style="width:80px">최소값</th>
-                          <th style="width:80px">최대값</th>
-                          <th style="width:80px">기준값</th>
-                          <th style="width:80px">결과값</th>
-                          <th style="width:80px"></th>
+                          <th class="table-col-number">#</th>
+                          <th class="table-col-name-medium">항목</th>
+                          <th class="table-col-type-medium">단위</th>
+                          <th class="table-col-name-small">방법</th>
+                          <th class="table-col-type-medium">최소값</th>
+                          <th class="table-col-type-medium">최대값</th>
+                          <th class="table-col-type-medium">기준값</th>
+                          <th class="table-col-type-medium">결과값</th>
+                          <th class="table-col-type-medium"></th>
                         </tr>
                       </thead>
                       <tbody id="insp-items-body">
@@ -172,11 +172,11 @@
                           <td><input class="input" name="items[0].maxVal" maxlength="50" placeholder="최대" /></td>
                           <td><input class="input" name="items[0].stdVal" maxlength="50" placeholder="기준" /></td>
                           <td><input class="input" name="items[0].result" maxlength="50" placeholder="결과" /></td>
-                          <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger" data-remove-item style="display:none">삭제</button></td>
+                          <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger hidden" data-remove-item>삭제</button></td>
                         </tr>
                         <tr class="insp-item-note-row">
                           <td colspan="7">
-                            <input class="input" name="items[0].note" maxlength="500" placeholder="비고" style="width:100%" />
+                            <input class="input" name="items[0].note" maxlength="500" placeholder="비고" />
                           </td>
                         </tr>
                       </tbody>
@@ -200,8 +200,8 @@
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-medium">
+                    <button class="btn" type="button" data-cancel-btn>취소</button>
                     <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
@@ -218,156 +218,6 @@
       </footer>
     </div>
     
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const section = document.querySelector('[data-insp-items]');
-        if (!section) return;
-        const tbody = section.querySelector('#insp-items-body');
-        const addBtn = section.querySelector('[data-add-item]');
-
-        function renumber() {
-          tbody.querySelectorAll('.insp-item-row').forEach((tr, i) => {
-            tr.querySelector('.line-no').textContent = i + 1;
-            tr.querySelectorAll('input').forEach((inp) => {
-              const field = inp.name.split('.').pop();
-              inp.name = `items[${i}].${field}`;
-            });
-            const delBtn = tr.querySelector('[data-remove-item]');
-            if (delBtn) delBtn.style.display = i === 0 ? 'none' : 'inline-flex';
-          });
-        }
-
-        function addRow() {
-          const i = tbody.querySelectorAll('.insp-item-row').length;
-          
-          // 첫 번째 행 (데이터 입력)
-          const tr1 = document.createElement('tr');
-          tr1.className = 'insp-item-row';
-          tr1.innerHTML = `
-            <td class="cell-center line-no" rowspan="2">${i + 1}</td>
-            <td><input class="input" name="items[${i}].name" required maxlength="100" placeholder="항목" /></td>
-            <td><input class="input" name="items[${i}].unit" maxlength="20" placeholder="단위" /></td>
-            <td><input class="input" name="items[${i}].method" maxlength="100" placeholder="방법" /></td>
-            <td><input class="input" name="items[${i}].minVal" maxlength="50" placeholder="최소" /></td>
-            <td><input class="input" name="items[${i}].maxVal" maxlength="50" placeholder="최대" /></td>
-            <td><input class="input" name="items[${i}].stdVal" maxlength="50" placeholder="기준" /></td>
-            <td><input class="input" name="items[${i}].result" maxlength="50" placeholder="결과" /></td>
-            <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger" data-remove-item>삭제</button></td>`;
-          
-          // 두 번째 행 (비고)
-          const tr2 = document.createElement('tr');
-          tr2.className = 'insp-item-note-row';
-          tr2.innerHTML = `
-            <td colspan="7">
-              <input class="input" name="items[${i}].note" maxlength="500" placeholder="비고" style="width:100%" />
-            </td>`;
-          
-          tbody.appendChild(tr1);
-          tbody.appendChild(tr2);
-          attachRowHandlers(tr1);
-          renumber();
-        }
-
-        function attachRowHandlers(tr) {
-          const delBtn = tr.querySelector('[data-remove-item]');
-          delBtn?.addEventListener('click', () => {
-            // 두 행 모두 삭제 (데이터 행 + 비고 행)
-            const nextRow = tr.nextElementSibling;
-            if (nextRow && nextRow.classList.contains('insp-item-note-row')) {
-              nextRow.remove();
-            }
-            tr.remove();
-            renumber();
-          });
-        }
-
-        // 항목 데이터를 배열로 로드
-        function loadItemsFromData(items) {
-          // 기존 항목 모두 삭제
-          tbody.innerHTML = '';
-          
-          // 새 항목 추가
-          items.forEach((item, idx) => {
-            const tr1 = document.createElement('tr');
-            tr1.className = 'insp-item-row';
-            tr1.innerHTML = `
-              <td class="cell-center line-no" rowspan="2">${idx + 1}</td>
-              <td><input class="input" name="items[${idx}].name" required maxlength="100" placeholder="항목" value="${item.name || ''}" /></td>
-              <td><input class="input" name="items[${idx}].unit" maxlength="20" placeholder="단위" value="${item.unit || ''}" /></td>
-              <td><input class="input" name="items[${idx}].method" maxlength="100" placeholder="방법" value="${item.method || ''}" /></td>
-              <td><input class="input" name="items[${idx}].minVal" maxlength="50" placeholder="최소" value="${item.minVal || ''}" /></td>
-              <td><input class="input" name="items[${idx}].maxVal" maxlength="50" placeholder="최대" value="${item.maxVal || ''}" /></td>
-              <td><input class="input" name="items[${idx}].stdVal" maxlength="50" placeholder="기준" value="${item.stdVal || ''}" /></td>
-              <td><input class="input" name="items[${idx}].result" maxlength="50" placeholder="결과" value="${item.result || ''}" /></td>
-              <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger" data-remove-item ${idx === 0 ? 'style="display:none"' : ''}>삭제</button></td>`;
-            
-            const tr2 = document.createElement('tr');
-            tr2.className = 'insp-item-note-row';
-            tr2.innerHTML = `
-              <td colspan="7">
-                <input class="input" name="items[${idx}].note" maxlength="500" placeholder="비고" style="width:100%" value="${item.note || ''}" />
-              </td>`;
-            
-            tbody.appendChild(tr1);
-            tbody.appendChild(tr2);
-            attachRowHandlers(tr1);
-          });
-          
-          renumber();
-        }
-
-        // 이전 점검 복사
-        document.getElementById('btn-copy-previous')?.addEventListener('click', async () => {
-          const plantId = document.getElementById('plant_id').value;
-          if (!plantId) {
-            alert('설비 번호를 먼저 입력하세요.');
-            return;
-          }
-          
-          try {
-            // 해당 설비의 가장 최근 점검 조회
-            const response = await fetch(`/api/inspections?plantId=${plantId}&size=1`);
-            const data = await response.json();
-            
-            if (data.content && data.content.length > 0) {
-              const prevInspection = data.content[0];
-              
-              if (confirm(`이전 점검(${prevInspection.inspectionId})의 항목을 복사하시겠습니까?\n(기존 항목은 모두 삭제됩니다)`)) {
-                loadItemsFromData(prevInspection.items || []);
-              }
-            } else {
-              alert('해당 설비의 이전 점검 기록이 없습니다.');
-            }
-          } catch (error) {
-            console.error('Copy previous error:', error);
-            alert('이전 점검을 복사하는 중 오류가 발생했습니다.');
-          }
-        });
-
-        // init
-        tbody.querySelectorAll('.insp-item-row').forEach(attachRowHandlers);
-        renumber();
-        addBtn?.addEventListener('click', addRow);
-      });
-
-      // 설비 선택 팝업 열기
-      document.getElementById('btn-plant-picker')?.addEventListener('click', () => {
-        const width = 1000;
-        const height = 600;
-        const left = (screen.width - width) / 2;
-        const top = (screen.height - height) / 2;
-        
-        window.open(
-          '/common/plant-picker',
-          'plantPicker',
-          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-      });
-
-      // 팝업에서 설비 선택 시 호출되는 콜백
-      window.onPlantSelected = function(plant) {
-        document.getElementById('plant_id').value = plant.plantId;
-      };
-    </script>
+    <!-- 인라인 스크립트 제거됨 - inspection.js로 이관 -->
   </body>
   </html>

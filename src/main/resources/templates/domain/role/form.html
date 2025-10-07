@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form th:action="@{/domain/role/save}" method="post" th:data-redirect="@{/domain/role/list}" data-form-manager>
+                <form th:action="@{/domain/role/save}" method="post" th:data-redirect="@{/domain/role/list}">
                   <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
                   
@@ -99,8 +99,7 @@
                       placeholder="추가 메모를 입력하세요"></textarea>
                   </div>
 
-                  <div class="actions actions-top-large">
-                    <button class="btn" type="button" data-cancel-btn>취소</button>
+                  <div class="actions actions-top-small">
                     <button class="btn primary" type="submit" th:text="${isNew ? '등록' : '수정'}">등록</button>
                   </div>
                 </form>

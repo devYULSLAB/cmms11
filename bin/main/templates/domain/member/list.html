@@ -35,58 +35,10 @@
               <div class="card-header">
                 <div class="card-title">사용자 목록</div>
                 <div class="toolbar">
-                  <a class="btn" th:href="@{/domain/member/export}">내보내기</a>
                   <a class="btn primary" th:href="@{/domain/member/form}">새로 만들기</a>
                 </div>
               </div>
               <div class="card-body">
-                <!-- 기존 필터 (주석 처리)
-                <div class="section">
-                  <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-3">
-                      <input class="input" placeholder="사용자ID" />
-                    </div>
-                    <div class="col-span-3">
-                      <input class="input" placeholder="이름/이메일" />
-                    </div>
-                    <div class="col-span-3">
-                      <select class="input">
-                        <option value="">부서(전체)</option>
-                        <option value="EQ">설비</option>
-                        <option value="AS">자산</option>
-                        <option value="EL">전기</option>
-                      </select>
-                    </div>
-                    <div class="col-span-3 search-actions">
-                      <button class="btn">초기화</button>
-                      <button class="btn">검색</button>
-                    </div>
-                  </div>
-                </div>
-                -->
-                
-                <!-- 통합 검색 (q 파라미터 사용) -->
-                <div class="section">
-                  <div class="section-title">검색</div>
-                  <form method="get" th:action="@{/domain/member/list}">
-                    <div class="grid cols-12">
-                      <div class="col-span-9">
-                        <input class="input" 
-                               name="q" 
-                               th:value="${keyword}"
-                               placeholder="통합 검색 (사용자ID, 이름)" />
-                      </div>
-                      <div class="col-span-3">
-                        <div class="actions actions-left-align">
-                          <a class="btn" th:href="@{/domain/member/list}">초기화</a>
-                          <button type="submit" class="btn primary">검색</button>
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-
                 <table class="table">
                   <thead>
                     <tr>
@@ -125,8 +77,8 @@
                 <div class="row actions-top-medium">
                   <div class="spacer"></div>
                   <div class="pagination">
-                    <button class="btn sm" disabled>이전</button>
-                    <button class="btn sm">다음</button>
+                    <button class="btn btn-sm" disabled>이전</button>
+                    <button class="btn btn-sm">다음</button>
                   </div>
                 </div>
               </div>

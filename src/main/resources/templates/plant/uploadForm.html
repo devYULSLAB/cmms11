@@ -51,7 +51,7 @@
                   <a class="btn sm" href="../../static/assets/samples/plant-upload-sample.csv" download>샘플 CSV 다운로드</a>
                 </div>
               </div>
-              <form id="uploadForm" method="post" th:action="@{/api/plants/upload}" enctype="multipart/form-data" data-form-manager data-redirect="@{/plant/list}">
+              <form id="uploadForm" method="post" th:action="@{/api/plants/upload}" enctype="multipart/form-data" data-redirect="@{/plant/list}">
                 <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <div class="section">
                   <div class="section-title">CSV 파일 선택</div>

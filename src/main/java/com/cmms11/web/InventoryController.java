@@ -66,6 +66,7 @@ public class InventoryController {
         return "inventory/list";
     }
 
+    // 업로드 폼 화면 제공 (미구현 - API 활용할 것)
     @GetMapping("/inventory/uploadForm")
     public String uploadForm(Model model) {
         return "inventory/uploadForm";

@@ -31,20 +31,46 @@
         </div>
       </section>
     </main>
-    <script src="../../static/assets/js/app.js"></script>
-    <script>
-      (function () {
+    <!-- 로그인 페이지에 필요한 최소한의 ES 모듈만 로딩 -->
+    <script type="module">
+      // 로그인 페이지에 필요한 핵심 모듈만 import
+      import { initCsrf } from '../../static/assets/js/core/csrf.js';
+      import { initValidator } from '../../static/assets/js/ui/validator.js';
+      
+      // 최소한의 초기화 (로그인 페이지에 필요한 기능만)
+      try {
+        console.log('🔐 로그인 페이지 초기화 시작');
+        
+        // 1. CSRF 토큰 처리 (폼 제출에 필수)
+        initCsrf();
+        console.log('  ✅ CSRF 토큰 초기화 완료');
+        
+        // 2. 폼 유효성 검사 (data-validate 속성 처리)
+        initValidator();
+        console.log('  ✅ 폼 유효성 검사 초기화 완료');
+        
+        // 3. URL 파라미터 기반 에러 메시지 표시
         const params = new URLSearchParams(window.location.search);
         const hasError = params.get('error');
         const customMsg = params.get('msg');
         const errorEl = document.getElementById('login_error');
-        if (!errorEl) return;
-        if (hasError) {
+        
+        if (errorEl && hasError) {
           errorEl.textContent = customMsg ? decodeURIComponent(customMsg) : '아이디 또는 비밀번호를 확인하세요.';
           errorEl.setAttribute('role', 'alert');
           errorEl.style.display = 'block';
+          console.log('  ⚠️ 로그인 에러 메시지 표시:', errorEl.textContent);
         }
-      })();
+        
+        console.log('🎉 로그인 페이지 초기화 완료');
+        
+      } catch (error) {
+        console.error('❌ 로그인 페이지 초기화 실패:', error);
+        // 초기화 실패해도 기본 로그인 기능은 동작하도록 함
+      }
     </script>
+    
+    <!-- 기존 방식 (롤백용) -->
+    <!-- <script src="../../static/assets/js/app.js"></script> -->
   </body>
   </html>

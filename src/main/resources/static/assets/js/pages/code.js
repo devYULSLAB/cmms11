@@ -3,7 +3,7 @@
  * 
  * 공통코드 관리 모듈의 페이지별 초기화 및 기능을 담당합니다.
  * 동적 테이블 행 추가/삭제 기능을 제공합니다.
- * 공통 유틸(FormManager, notification)을 우선 사용합니다.
+ * 공통 유틸(notification)을 우선 사용합니다.
  * root 기반 DOM 접근으로 중복 바인딩 방지 및 SPA 최적화를 구현합니다.
  */
 
@@ -19,7 +19,8 @@
     form: false
   };
 
-  window.cmms.code = {
+  // 기존 객체를 보존하면서 메서드만 추가
+  Object.assign(window.cmms.code, {
     
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
@@ -49,7 +50,7 @@
       
       this.initDynamicTable(root);
       this.initCancelButton(root);
-      this.initFormSubmit(root);
+      // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
     },
     
     // 동적 테이블 초기화 (root 기반)
@@ -149,82 +150,82 @@
     },
     
     // 폼 제출 초기화 (공통 FormManager 활용, root 기반)
-    initFormSubmit: function(root) {
-      const form = root.querySelector('[data-form-manager]');
-      if (!form) return;
-      
-      // 중복 초기화 방지
-      if (form.dataset.initialized === 'true') {
-        console.log('Form submit already initialized');
-        return;
-      }
-      
-      // 공통 FormManager를 활용한 폼 제출 처리
-      if (window.cmms?.formManager) {
-        window.cmms.formManager.init(form, {
-          onSuccess: (result) => {
-            this.handleFormSuccess(result, root);
-          },
-          onError: (error) => {
-            this.handleFormError(error, root);
-          }
-        });
-      } else {
-        // FormManager가 없는 경우 직접 처리
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          await this.handleDirectForm(form, root);
-        });
-      }
-      
-      form.dataset.initialized = 'true';
-    },
+    // initFormSubmit: function(root) {
+    //   const form = root.querySelector('[data-form-manager]');
+    //   if (!form) return;
+    //   
+    //   // 중복 초기화 방지
+    //   if (form.dataset.initialized === 'true') {
+    //     console.log('Form submit already initialized');
+    //     return;
+    //   }
+    //   
+    //   // 공통 FormManager를 활용한 폼 제출 처리
+    //   if (window.cmms?.formManager) {
+    //     window.cmms.formManager.init(form, {
+    //       onSuccess: (result) => {
+    //         this.handleFormSuccess(result, root);
+    //       },
+    //       onError: (error) => {
+    //         this.handleFormError(error, root);
+    //       }
+    //     });
+    //   } else {
+    //     // FormManager가 없는 경우 직접 처리
+    //     form.addEventListener('submit', async (event) => {
+    //       event.preventDefault();
+    //       await this.handleDirectForm(form, root);
+    //     });
+    //   }
+    //   
+    //   form.dataset.initialized = 'true';
+    // },
     
     // 폼 성공 처리 (root 기반)
-    handleFormSuccess: function(result, root) {
-      if (window.cmms?.notification) {
-        window.cmms.notification.success('공통코드가 성공적으로 저장되었습니다.');
-      } else {
-        alert('공통코드가 성공적으로 저장되었습니다.');
-      }
-      
-      // SPA 네비게이션으로 레이아웃 유지
-      setTimeout(() => {
-        window.cmms.navigation.navigate('/code/list');
-      }, 1000);
-    },
+    // handleFormSuccess: function(result, root) {
+    //   if (window.cmms?.notification) {
+    //     window.cmms.notification.success('공통코드가 성공적으로 저장되었습니다.');
+    //   } else {
+    //     alert('공통코드가 성공적으로 저장되었습니다.');
+    //   }
+    //   
+    //   // SPA 네비게이션으로 레이아웃 유지
+    //   setTimeout(() => {
+    //     window.cmms.navigation.navigate('/code/list');
+    //   }, 1000);
+    // },
     
     // 폼 에러 처리 (root 기반)
-    handleFormError: function(error, root) {
-      console.error('Form submit error:', error);
-      if (window.cmms?.notification) {
-        window.cmms.notification.error('저장 중 오류가 발생했습니다.');
-      } else {
-        alert('저장 중 오류가 발생했습니다.');
-      }
-    },
+    // handleFormError: function(error, root) {
+    //   console.error('Form submit error:', error);
+    //   if (window.cmms?.notification) {
+    //     window.cmms.notification.error('저장 중 오류가 발생했습니다.');
+    //   } else {
+    //     alert('저장 중 오류가 발생했습니다.');
+    //   }
+    // },
     
     // 직접 폼 처리 (FormManager 없을 때)
-    handleDirectForm: async function(form, root) {
-      try {
-        const formData = new FormData(form);
-        
-        const response = await fetch(form.action, {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error('저장 실패');
-        }
-        
-        const result = await response.json();
-        this.handleFormSuccess(result, root);
-        
-      } catch (error) {
-        this.handleFormError(error, root);
-      }
-    },
+    // handleDirectForm: async function(form, root) {
+    //   try {
+    //     const formData = new FormData(form);
+    //     
+    //     const response = await fetch(form.action, {
+    //       method: 'POST',
+    //       body: formData,
+    //     });
+    //     
+    //     if (!response.ok) {
+    //       throw new Error('저장 실패');
+    //     }
+    //     
+    //     const result = await response.json();
+    //     this.handleFormSuccess(result, root);
+    //     
+    //   } catch (error) {
+    //     this.handleFormError(error, root);
+    //   }
+    // },
     
     // 초기화 상태 리셋 (페이지 전환 시 호출)
     resetInitialization: function(pageType) {
@@ -238,7 +239,7 @@
       }
       console.log('Code initialization state reset:', pageType || 'all');
     }
-  };
+  });
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('code-list', function(root) {

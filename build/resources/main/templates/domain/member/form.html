@@ -30,7 +30,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-member-form" data-module="domain-member-form">
         <main>
           <div class="container">
             <section class="card">
@@ -130,8 +130,7 @@
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn" type="button" onclick="history.back()">취소</button>
+                  <div class="actions actions-top-medium">
                     <button class="btn primary" type="submit" id="btn-submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>
@@ -147,30 +146,7 @@
       </footer>
     </div>
     
-    <script>
-      // 비밀번호 확인 검증
-      document.querySelector('form')?.addEventListener('submit', (e) => {
-        const password = document.getElementById('password').value;
-        const passwordConfirm = document.getElementById('passwordConfirm').value;
-        
-        // 비밀번호를 입력한 경우에만 검증
-        if (password || passwordConfirm) {
-          if (password !== passwordConfirm) {
-            e.preventDefault();
-            alert('비밀번호가 일치하지 않습니다.');
-            document.getElementById('passwordConfirm').focus();
-            return false;
-          }
-          
-          if (password.length < 4) {
-            e.preventDefault();
-            alert('비밀번호는 최소 4자 이상이어야 합니다.');
-            document.getElementById('password').focus();
-            return false;
-          }
-        }
-      });
-    </script>
+    <!-- 인라인 스크립트 제거됨 - domain.js로 이관 -->
   </body>
   </html>
 

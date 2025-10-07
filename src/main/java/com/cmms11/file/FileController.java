@@ -63,11 +63,14 @@ public class FileController {
             contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
         String encodedName = UriUtils.encode(download.originalName(), StandardCharsets.UTF_8);
+        // 안전한 ASCII 파일명 생성 (확장자 유지)
+        String safeFilename = "file_" + fileId + getFileExtension(download.originalName());
+        
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
             .header(
                 HttpHeaders.CONTENT_DISPOSITION,
-                "attachment; filename=\"" + download.originalName() + "\"; filename*=UTF-8''" + encodedName
+                "attachment; filename=\"" + safeFilename + "\"; filename*=UTF-8''" + encodedName
             )
             .contentLength(download.size())
             .body(download.resource());
@@ -77,5 +80,21 @@ public class FileController {
     public ResponseEntity<Void> delete(@PathVariable String fileId, @RequestParam("groupId") String groupId) {
         fileService.delete(groupId, fileId);
         return ResponseEntity.noContent().build();
+    }
+    
+    /**
+     * 파일명에서 확장자를 추출하는 헬퍼 메서드
+     * @param filename 원본 파일명
+     * @return 확장자 (점 포함, 없으면 빈 문자열)
+     */
+    private String getFileExtension(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            return "";
+        }
+        int lastDot = filename.lastIndexOf('.');
+        if (lastDot == -1 || lastDot == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(lastDot);
     }
 }

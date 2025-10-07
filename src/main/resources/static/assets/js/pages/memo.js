@@ -2,15 +2,15 @@
  * Memo 모듈 JavaScript
  * 
  * 게시/메모 관리 모듈의 페이지별 초기화 및 기능을 담당합니다.
- * 공통 유틸(TableManager, FormManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
+ * 공통 유틸(TableManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
  * root 기반 DOM 접근으로 중복 바인딩 방지 및 SPA 최적화를 구현합니다.
  */
 
 (function() {
   'use strict';
   
-  if (!window.cmms) window.cmms = {};
-  if (!window.cmms.memo) window.cmms.memo = {};
+  window.cmms = window.cmms || {};
+  window.cmms.memo = window.cmms.memo || {};
 
   // 초기화 상태 추적을 위한 플래그
   window.cmms.memo.initialized = {
@@ -19,7 +19,7 @@
     form: false
   };
 
-  window.cmms.memo = {
+  Object.assign(window.cmms.memo, {
     
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
@@ -47,9 +47,6 @@
         return;
       }
       window.cmms.memo.initialized.detail = true;
-      
-      this.initAttachments(root);
-      this.initPrintPreview(root);
       this.initPrintButtons(root);
     },
     
@@ -63,11 +60,9 @@
         return;
       }
       window.cmms.memo.initialized.form = true;
-      
-      this.initFileUpload(root);
       this.initCancelButton(root);
       this.initEditor(root);
-      this.initFormSubmit(root);
+      // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
     },
     
     // 페이지네이션 초기화 (공통 유틸 사용, root 기반)
@@ -99,119 +94,11 @@
       }
     },
     
-    // 첨부파일 초기화 (root 기반)
-    initAttachments: function(root) {
-      const container = root.querySelector('#attachments-container');
-      if (!container) return;
-      
-      const fileGroupId = container.dataset.fileGroupId;
-      if (fileGroupId) {
-        this.loadAttachments(fileGroupId, container, root);
-      }
-    },
-    
-    // 첨부파일 로드 (공통 DataLoader 사용)
-    loadAttachments: async function(fileGroupId, container, root) {
-      try {
-        // 공통 DataLoader를 사용하여 첨부파일 로드
-        const result = await window.cmms.common.DataLoader.load('/api/files', {
-          params: { groupId: fileGroupId }
-        });
-        
-        if (result.items.length === 0) {
-          container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-          return;
-        }
-        
-        const list = document.createElement('ul');
-        list.className = 'attachments-list';
-        
-        result.items.forEach(item => {
-          const li = document.createElement('li');
-          li.className = 'attachment-item';
-          li.innerHTML = `
-            <span class="file-name">${item.originalName}</span>
-            <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-            <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-          `;
-          list.appendChild(li);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(list);
-        
-      } catch (error) {
-        console.error('Load attachments error:', error);
-        container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-      }
-    },
-    
-    // 출력 미리보기 초기화 (root 기반)
-    initPrintPreview: function(root) {
-      root.querySelector('[data-print-preview]')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.showPrintPreview(root);
-      });
-    },
-    
-    // 인쇄 버튼 초기화 (root 기반)
+    // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButtons: function(root) {
-      root.querySelector('[data-print]')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.print();
-      });
+      window.cmms.printUtils.initPrintButton(root);
     },
     
-    // 출력 미리보기 표시 (root 기반)
-    showPrintPreview: function(root) {
-      // 현재 날짜 업데이트
-      const printDateEl = root.querySelector('#print-date');
-      if (printDateEl) {
-        const now = new Date();
-        const formatDate = (d) => {
-          const z = (n) => n < 10 ? '0' + n : n;
-          return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
-        };
-        printDateEl.textContent = formatDate(now);
-      }
-      
-      // 출력 미리보기 모드 활성화
-      document.body.classList.add('print-preview');
-      
-      // ESC 키로 미리보기 종료
-      const handleKeydown = (e) => {
-        if (e.key === 'Escape') {
-          document.body.classList.remove('print-preview');
-          document.removeEventListener('keydown', handleKeydown);
-        }
-      };
-      document.addEventListener('keydown', handleKeydown);
-      
-      // 인쇄 후 미리보기 종료
-      window.addEventListener('afterprint', () => {
-        document.body.classList.remove('print-preview');
-      }, { once: true });
-    },
-    
-    // 파일 업로드 초기화 (공통 fileUpload 위임, root 기반)
-    initFileUpload: function(root) {
-      console.log('Memo file upload initialized');
-      
-      // 중복 초기화 방지를 위한 플래그 체크
-      const containers = root.querySelectorAll('[data-attachments]');
-      containers.forEach(container => {
-        if (container.dataset.initialized === 'true') {
-          console.log('File upload already initialized for container');
-          return;
-        }
-        
-        // 공통 fileUpload 위젯 초기화 (root 범위 내에서만)
-        if (window.cmms?.fileUpload?.init) {
-          window.cmms.fileUpload.init(container);
-          container.dataset.initialized = 'true';
-        }
-      });
-    },
     
     // 취소 버튼 초기화 (root 기반)
     initCancelButton: function(root) {
@@ -400,82 +287,82 @@
     },
     
     // 폼 제출 초기화 (공통 FormManager 활용, root 기반)
-    initFormSubmit: function(root) {
-      const form = root.querySelector('[data-form-manager]');
-      if (!form) return;
-      
-      // 중복 초기화 방지
-      if (form.dataset.initialized === 'true') {
-        console.log('Form submit already initialized');
-        return;
-      }
-      
-      // 공통 FormManager를 활용한 폼 제출 처리
-      if (window.cmms?.formManager) {
-        window.cmms.formManager.init(form, {
-          onSuccess: (result) => {
-            this.handleFormSuccess(result, root);
-          },
-          onError: (error) => {
-            this.handleFormError(error, root);
-          }
-        });
-      } else {
-        // FormManager가 없는 경우 직접 처리
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          await this.handleDirectForm(form, root);
-        });
-      }
-      
-      form.dataset.initialized = 'true';
-    },
+    // initFormSubmit: function(root) {
+    //   const form = root.querySelector('[data-form-manager]');
+    //   if (!form) return;
+    //   
+    //   // 중복 초기화 방지
+    //   if (form.dataset.initialized === 'true') {
+    //     console.log('Form submit already initialized');
+    //     return;
+    //   }
+    //   
+    //   // 공통 FormManager를 활용한 폼 제출 처리
+    //   if (window.cmms?.formManager) {
+    //     window.cmms.formManager.init(form, {
+    //       onSuccess: (result) => {
+    //         this.handleFormSuccess(result, root);
+    //       },
+    //       onError: (error) => {
+    //         this.handleFormError(error, root);
+    //       }
+    //     });
+    //   } else {
+    //     // FormManager가 없는 경우 직접 처리
+    //     form.addEventListener('submit', async (event) => {
+    //       event.preventDefault();
+    //       await this.handleDirectForm(form, root);
+    //     });
+    //   }
+    //   
+    //   form.dataset.initialized = 'true';
+    // },
     
     // 폼 성공 처리 (root 기반)
-    handleFormSuccess: function(result, root) {
-      if (window.cmms?.notification) {
-        window.cmms.notification.success('메모가 성공적으로 저장되었습니다.');
-      } else {
-        alert('메모가 성공적으로 저장되었습니다.');
-      }
-      
-      // SPA 네비게이션으로 레이아웃 유지
-      setTimeout(() => {
-        window.cmms.navigation.navigate('/memo/list');
-      }, 1000);
-    },
+    // handleFormSuccess: function(result, root) {
+    //   if (window.cmms?.notification) {
+    //     window.cmms.notification.success('메모가 성공적으로 저장되었습니다.');
+    //   } else {
+    //     alert('메모가 성공적으로 저장되었습니다.');
+    //   }
+    //   
+    //   // SPA 네비게이션으로 레이아웃 유지
+    //   setTimeout(() => {
+    //     window.cmms.navigation.navigate('/memo/list');
+    //   }, 1000);
+    // },
     
     // 폼 에러 처리 (root 기반)
-    handleFormError: function(error, root) {
-      console.error('Form submit error:', error);
-      if (window.cmms?.notification) {
-        window.cmms.notification.error('저장 중 오류가 발생했습니다.');
-      } else {
-        alert('저장 중 오류가 발생했습니다.');
-      }
-    },
+    // handleFormError: function(error, root) {
+    //   console.error('Form submit error:', error);
+    //   if (window.cmms?.notification) {
+    //     window.cmms.notification.error('저장 중 오류가 발생했습니다.');
+    //   } else {
+    //     alert('저장 중 오류가 발생했습니다.');
+    //   }
+    // },
     
     // 직접 폼 처리 (FormManager 없을 때)
-    handleDirectForm: async function(form, root) {
-      try {
-        const formData = new FormData(form);
-        
-        const response = await fetch(form.action, {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error('저장 실패');
-        }
-        
-        const result = await response.json();
-        this.handleFormSuccess(result, root);
-        
-      } catch (error) {
-        this.handleFormError(error, root);
-      }
-    },
+    // handleDirectForm: async function(form, root) {
+    //   try {
+    //     const formData = new FormData(form);
+    //     
+    //     const response = await fetch(form.action, {
+    //       method: 'POST',
+    //       body: formData,
+    //     });
+    //     
+    //     if (!response.ok) {
+    //       throw new Error('저장 실패');
+    //     }
+    //     
+    //     const result = await response.json();
+    //     this.handleFormSuccess(result, root);
+    //     
+    //   } catch (error) {
+    //     this.handleFormError(error, root);
+    //   }
+    // },
     
     // 초기화 상태 리셋 (페이지 전환 시 호출)
     resetInitialization: function(pageType) {
@@ -489,7 +376,7 @@
       }
       console.log('Memo initialization state reset:', pageType || 'all');
     }
-  };
+  });
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('memo-list', function(root) {

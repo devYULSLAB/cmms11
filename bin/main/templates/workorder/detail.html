@@ -120,14 +120,15 @@
                 <!-- 첨부파일 섹션 -->
                 <div class="section">
                   <div class="section-title">첨부파일</div>
-                  <div id="attachments-container" data-attachments-display 
-                       th:attr="data-file-group-id=${workorder.fileGroupId}">
-                    <div th:if="${workorder.fileGroupId}">
-                      <div class="loading">첨부 파일을 불러오는 중...</div>
-                    </div>
-                    <div th:unless="${workorder.fileGroupId}" class="notice">
-                      첨부된 파일이 없습니다.
-                    </div>
+                  <div data-file-list 
+                       th:if="${workorder.fileGroupId}"
+                       th:attr="data-file-group-id=${workorder.fileGroupId}"
+                       data-empty-text="첨부된 파일이 없습니다."
+                       data-loading-text="첨부 파일을 불러오는 중..."
+                       data-error-text="첨부 파일을 불러올 수 없습니다.">
+                  </div>
+                  <div th:unless="${workorder.fileGroupId}" class="notice">
+                    첨부된 파일이 없습니다.
                   </div>
                 </div>
 

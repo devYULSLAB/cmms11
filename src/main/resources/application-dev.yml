@@ -1,7 +1,13 @@
 spring:
   config:
     import: optional:classpath:database-dev.properties
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
   jpa:
+    open-in-view: true  # 뷰 렌더링 중 지연 로딩 허용 (명시적 설정)
     hibernate:
       ddl-auto: update
     properties:
@@ -27,7 +33,7 @@ server:
 app:
   file-storage:
     location: storage/uploads
-    max-size: 20971520  # 개발환경에서는 20MB 허용
+    max-size: 10485760  # 개발환경에서는 10MB 허용 (multipart는 100MB)
     allowed-extensions: jpg,jpeg,png,pdf,doc,docx,xls,xlsx,hwp,hwpx,zip,txt,gif,bmp,mp4,mov  # 개발환경에서는 더 많은 형식 허용
 
 aws:
@@ -41,5 +47,5 @@ aws:
 logging:
   level:
     com.cmms11: INFO
-    com.zaxxer.hikari: DEBUG  # HikariCP 상세 로그
-    org.springframework.jdbc: DEBUG  # JDBC 로그
+    com.zaxxer.hikari: INFO  # HikariCP 상세 로그
+    org.springframework.jdbc: INFO  # JDBC 로그

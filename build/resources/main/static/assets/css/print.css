@@ -5,14 +5,16 @@
 
 .print-form .doc { 
   width: 210mm; 
-  min-height: 297mm; 
-  padding: 14mm 16mm; 
+  height: 297mm; 
+  max-height: 297mm; 
+  padding: 8mm 10mm; 
   background: #fff; 
   color: #000; 
   border: 1px solid #ddd; 
   box-sizing: border-box; 
-  font-size: 12px; 
-  line-height: 1.4; 
+  font-size: 10px; 
+  line-height: 1.2; 
+  overflow: hidden; 
 }
 
 .print-form .doc-header { 
@@ -32,8 +34,47 @@
   color: #444; 
 }
 
+.print-form .meta-row {
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: #444;
+}
+
+.print-form .meta-row:last-child {
+  margin-bottom: 0;
+}
+
+.print-form .content-body {
+  margin-top: 6px;
+  padding: 4px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  min-height: 60px;
+}
+
+.print-form .content-body p {
+  margin: 2px 0;
+  line-height: 1.3;
+}
+
+.print-form .file-list {
+  margin-top: 6px;
+  padding: 4px;
+  border: 1px solid #ddd;
+  background: #f0f0f0;
+}
+
+.print-form .row-cols-6 th {
+  width: 12%;
+}
+
+.print-form .row-cols-6 td {
+  font-size: 9px;
+  padding: 2px 4px;
+}
+
 .print-form .section { 
-  margin-top: 10px; 
+  margin-top: 6px; 
 }
 
 .print-form .section-title { 
@@ -50,7 +91,7 @@
 .print-form th, 
 .print-form td { 
   border: 1px solid #999; 
-  padding: 6px 8px; 
+  padding: 4px 6px; 
   vertical-align: middle; 
 }
 
@@ -110,6 +151,6 @@ body.print-preview main .card {
   
   .print-form .doc { 
     border: none; 
-    padding: 8mm 10mm; 
+    padding: 6mm 8mm; 
   }
 }

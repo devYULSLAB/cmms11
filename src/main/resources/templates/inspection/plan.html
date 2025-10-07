@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate data-form-manager data-redirect="@{/inspection/list}">
+                <form data-validate data-redirect="@{/inspection/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <!-- 계획 대상(행 추가/삭제) -->

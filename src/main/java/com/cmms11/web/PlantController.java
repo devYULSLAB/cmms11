@@ -70,6 +70,7 @@ public class PlantController {
         return "plant/form";
     }
 
+    // 업로드 폼 화면 제공 (미구현 - API 활용할 것)
     @GetMapping("/plant/uploadForm")
     public String uploadForm(Model model) {
         return "plant/uploadForm";

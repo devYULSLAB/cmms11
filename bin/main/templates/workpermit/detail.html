@@ -90,8 +90,12 @@
 
               <div class="section">
                 <div class="section-title">첨부</div>
-                <div id="attachments-container" th:if="${workpermit.fileGroupId}" th:attr="data-file-group-id=${workpermit.fileGroupId}">
-                  <div class="loading">첨부 파일을 불러오는 중...</div>
+                <div data-file-list 
+                     th:if="${workpermit.fileGroupId}"
+                     th:attr="data-file-group-id=${workpermit.fileGroupId}"
+                     data-empty-text="첨부된 파일이 없습니다."
+                     data-loading-text="첨부 파일을 불러오는 중..."
+                     data-error-text="첨부 파일을 불러올 수 없습니다.">
                 </div>
                 <div th:unless="${workpermit.fileGroupId}" class="notice">
                   첨부된 파일이 없습니다.

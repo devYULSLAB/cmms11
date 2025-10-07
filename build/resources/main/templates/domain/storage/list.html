@@ -26,14 +26,13 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content">
+      <section data-slot-root th:fragment="content" data-page="domain-storage-list" data-module="domain-storage-list">
         <main>
           <div class="container">
             <section class="card">
               <div class="card-header">
                 <div class="card-title">창고 목록</div>
                 <div class="toolbar">
-                  <a class="btn" th:href="@{/domain/storage/detail}">정보보기</a>
                   <a class="btn primary" th:href="@{/domain/storage/form}">새로 만들기</a>
                 </div>
               </div>

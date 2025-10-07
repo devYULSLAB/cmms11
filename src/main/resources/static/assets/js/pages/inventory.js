@@ -2,17 +2,17 @@
  * Inventory 모듈 JavaScript
  * 
  * 자재/재고 관리 모듈의 페이지별 초기화 및 기능을 담당합니다.
- * 공통 유틸(TableManager, FormManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
+ * 공통 유틸(TableManager, DataLoader, fileUpload, notification)을 우선 사용합니다.
  * root 기반 DOM 접근으로 중복 바인딩 방지 및 SPA 최적화를 구현합니다.
  */
 
 (function() {
   'use strict';
   
-  if (!window.cmms) window.cmms = {};
-  if (!window.cmms.inventory) window.cmms.inventory = {};
+  window.cmms = window.cmms || {};
+  window.cmms.inventory = window.cmms.inventory || {};
 
-  window.cmms.inventory = {
+  Object.assign(window.cmms.inventory, {
     
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
@@ -24,15 +24,12 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Inventory detail page initialized', root);
-      this.initAttachments(root);
-      this.initPrintPreview(root);
       this.initPrintButtons(root);
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Inventory form page initialized', root);
-      this.initFileUpload(root);
       this.initCancelButton(root);
     },
     
@@ -55,114 +52,9 @@
       // 기본 폼 제출로 처리되므로 별도 초기화 불필요
     },
     
-    // 첨부파일 초기화 (root 기반)
-    initAttachments: function(root) {
-      const container = root.querySelector('#attachments-container');
-      if (!container) return;
-      
-      const fileGroupId = container.getAttribute('data-file-group-id');
-      if (fileGroupId) {
-        this.loadAttachments(fileGroupId, container);
-      }
-    },
-    
-    // 첨부파일 로드 (공통 DataLoader 사용)
-    loadAttachments: async function(fileGroupId, container) {
-      try {
-        // 공통 DataLoader를 사용하여 첨부파일 로드
-        const result = await window.cmms.common.DataLoader.load('/api/files', {
-          params: { groupId: fileGroupId }
-        });
-        
-        if (result.items.length === 0) {
-          container.innerHTML = '<div class="notice">첨부된 파일이 없습니다.</div>';
-          return;
-        }
-        
-        const list = document.createElement('ul');
-        list.className = 'attachments-list';
-        
-        result.items.forEach(item => {
-          const li = document.createElement('li');
-          li.className = 'attachment-item';
-          li.innerHTML = `
-            <span class="file-name">${item.originalName}</span>
-            <span class="file-size">${window.cmms.utils.formatFileSize(item.size)}</span>
-            <a href="/api/files/${item.fileId}?groupId=${fileGroupId}" class="btn-download" target="_blank">다운로드</a>
-          `;
-          list.appendChild(li);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(list);
-        
-      } catch (error) {
-        console.error('Load attachments error:', error);
-        container.innerHTML = '<div class="notice danger">첨부 파일을 불러올 수 없습니다.</div>';
-      }
-    },
-    
-    // 출력 미리보기 초기화 (root 기반)
-    initPrintPreview: function(root) {
-      // 출력일 표기
-      const printDateEl = root.querySelector('#print-date');
-      if (printDateEl) {
-        const now = new Date();
-        const formatDate = (n) => n < 10 ? '0' + n : n;
-        const timestamp = now.getFullYear() + '-' + 
-                         formatDate(now.getMonth() + 1) + '-' + 
-                         formatDate(now.getDate()) + ' ' + 
-                         formatDate(now.getHours()) + ':' + 
-                         formatDate(now.getMinutes());
-        printDateEl.textContent = timestamp;
-      }
-      
-      // 출력 미리보기 종료 핸들러 (전역 이벤트)
-      window.addEventListener('afterprint', () => {
-        document.body.classList.remove('print-preview');
-      });
-      
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          document.body.classList.remove('print-preview');
-        }
-      });
-    },
-    
-    // 출력 버튼 초기화 (root 기반)
+    // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButtons: function(root) {
-      const printPreviewBtn = root.querySelector('[data-print-preview]');
-      const printBtn = root.querySelector('[data-print-btn]');
-      
-      if (printPreviewBtn) {
-        printPreviewBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          document.body.classList.add('print-preview');
-        });
-      }
-      
-      if (printBtn) {
-        printBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          window.print();
-        });
-      }
-    },
-    
-    // 파일 업로드 초기화 (공통 fileUpload 위임, root 기반)
-    initFileUpload: function(root) {
-      console.log('Inventory file upload initialized');
-      // 공통 fileUpload 위젯 초기화 (root 범위 내에서만)
-      const containers = root.querySelectorAll('[data-attachments]');
-      if (containers.length > 0 && window.cmms?.fileUpload?.init) {
-        containers.forEach(container => {
-          // 중복 초기화 방지 플래그 체크
-          if (!container.__fileUploadInitialized) {
-            window.cmms.fileUpload.init(container);
-            container.__fileUploadInitialized = true;
-          }
-        });
-      }
+      window.cmms.printUtils.initPrintButton(root);
     },
     
     // 취소 버튼 초기화 (root 기반)
@@ -178,33 +70,33 @@
     // 업로드 폼 초기화 (root 기반)
     initUploadForm: function(root) {
       console.log('Inventory upload form initialized');
-      this.initUploadSubmit(root);
+      // this.initUploadSubmit(root); // FormManager 제거됨
     },
     
-    // 업로드 폼 제출 초기화 (공통 FormManager 활용, root 기반)
-    initUploadSubmit: function(root) {
-      const form = root.querySelector('#uploadForm');
-      if (!form) return;
-      
-      // 공통 FormManager를 활용한 폼 제출 처리
-      if (window.cmms?.formManager) {
-        // FormManager가 처리하도록 위임
-        window.cmms.formManager.init(form, {
-          onSuccess: (result) => {
-            this.handleUploadSuccess(result, root);
-          },
-          onError: (error) => {
-            this.handleUploadError(error, root);
-          }
-        });
-      } else {
-        // FormManager가 없는 경우 직접 처리
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          await this.handleDirectUpload(form, root);
-        });
-      }
-    },
+    // 업로드 폼 제출 초기화 (FormManager 제거됨 - app.js SPA 폼 처리 활용)
+    // initUploadSubmit: function(root) {
+    //   const form = root.querySelector('#uploadForm');
+    //   if (!form) return;
+    //   
+    //   // 공통 FormManager를 활용한 폼 제출 처리
+    //   if (window.cmms?.formManager) {
+    //     // FormManager가 처리하도록 위임
+    //     window.cmms.formManager.init(form, {
+    //       onSuccess: (result) => {
+    //         this.handleUploadSuccess(result, root);
+    //       },
+    //       onError: (error) => {
+    //         this.handleUploadError(error, root);
+    //       }
+    //     });
+    //   } else {
+    //     // FormManager가 없는 경우 직접 처리
+    //     form.addEventListener('submit', async (event) => {
+    //       event.preventDefault();
+    //       await this.handleDirectUpload(form, root);
+    //     });
+    //   }
+    // },
     
     // 업로드 성공 처리 (root 기반)
     handleUploadSuccess: function(result, root) {
@@ -318,7 +210,7 @@
         summary.classList.remove('danger-text');
       }
     }
-  };
+  });
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('inventory-list', function(root) {

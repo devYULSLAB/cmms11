@@ -2,19 +2,30 @@
  * CMMS JavaScript 모듈 시스템
  * 
  * 이 파일은 CMMS 애플리케이션의 모든 JavaScript 기능을 통합 관리합니다.
- * 기본 인프라 역할임 
+ * 기본 인프라 역할을 담당하며, 공통 모듈들과 SPA 네비게이션을 제공합니다.
+ * 
  * 모듈 구조:
- * - window.cmms.csrf: CSRF 토큰 관리
- * - window.cmms.utils: 유틸리티 함수들
- * - window.cmms.notification: 알림 시스템
- * - window.cmms.navigation: SPA 네비게이션
- * - window.cmms.fileUpload: 파일 업로드 위젯
+ * - window.cmms.csrf: CSRF 토큰 관리 (자동 동기화)
+ * - window.cmms.utils: 유틸리티 함수들 (파일 크기 포맷팅 등)
+ * - window.cmms.notification: 알림 시스템 (성공/에러/경고)
+ * - window.cmms.navigation: SPA 네비게이션 (동적 콘텐츠 로드)
+ * - window.cmms.moduleLoader: 페이지별 모듈 동적 로더
+ * - window.cmms.pages: 페이지 초기화 훅 시스템
  * - window.cmms.user: 사용자 정보 관리
+ * 
+ * 외부 모듈 (별도 로드):
+ * - window.cmms.fileUpload: 파일 업로드 위젯 (common/fileUpload.js)
+ * - window.cmms.fileList: 파일 목록 위젯 (common/FileList.js)
  * 
  * 사용법:
  * - window.cmms.notification.success('성공 메시지');
  * - window.cmms.navigation.navigate('/plant/list');
- * - window.cmms.fileUpload.init(container);
+ * - window.cmms.fileUpload.initializeContainers(container);
+ * 
+ * 초기화 순서:
+ * 1. DOMContentLoaded: CSRF 토큰 동기화, 전역 이벤트 바인딩
+ * 2. navigation.init(): SPA 네비게이션 시스템 초기화
+ * 3. loadContent(): 파일 위젯 자동 초기화
  */
 
 // =============================================================================
@@ -261,42 +272,15 @@ window.cmms.pages = window.cmms.pages || {
  * DOM 로드 이벤트 발생 시 실행되는 초기화 함수
  * 이벤트 리스너, 인터랙티브 요소, 파일 업로드 위젯 초기화
  */
-// 파일 업로드 위젯 초기화 함수 (전역)
-function initializeFileUploadWidgets(containers = null) {
-  if (typeof window.cmms?.fileUpload?.init === 'function') {
-    const targetContainers = containers || document.querySelectorAll('[data-attachments]');
-    targetContainers.forEach(container => {
-      // 중복 초기화 방지
-      if (!container.__fileUploadInitialized) {
-        window.cmms.fileUpload.init(container);
-        container.__fileUploadInitialized = true;
-      }
-    });
-  }
-}
-
+// 파일 업로드 위젯 초기화는 common/fileUpload.js에서 처리됩니다.
 document.addEventListener('DOMContentLoaded', () => {
   window.cmms.csrf.refreshForms();
   
-  // 파일 업로드 설정 미리 로드
-  window.cmms.fileUpload.loadConfig().then(() => {
-    window.cmms.fileUpload.config.isLoaded = true;
-  }).catch(error => {
-    console.warn('파일 업로드 설정 사전 로드 실패:', error);
-  });
 
-  const tableRows = document.querySelectorAll('[data-row-link]');
-  tableRows.forEach((tr) => {
-    tr.addEventListener('click', (e) => {
-      const clicked = e.target;
-      if (clicked instanceof Element && clicked.closest('a,button,input,select,textarea,label')) {
-        return; // let the element handle its own click
-      }
-      const target = e.currentTarget;
-      const href = target.getAttribute('data-row-link');
-      if (href) window.location.href = href;
-    });
-  });
+  // 파일 업로드 설정은 fileUpload.js에서 필요시 자동 로드됨 (ensureConfigLoaded)
+
+
+  // [data-row-link] 이벤트는 navigation.init()에서 통합 처리됨
 
   const confirmables = document.querySelectorAll('[data-confirm]');
   confirmables.forEach((el) => {
@@ -309,9 +293,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // DOMContentLoaded 시점에 fileUpload가 직접 실행되도록 유도
-  // 간접적으로 초기화 처리
-  setTimeout(initializeFileUploadWidgets, 0);
+  // 파일 업로드 위젯 초기화는 navigation.loadContent()에서 통합 처리
+  // DOMContentLoaded에서는 설정만 로드
+  
+  // 로그아웃 버튼 이벤트 리스너 추가
+  document.addEventListener('click', function(e) {
+    const logoutElement = e.target.closest('[data-logout]');
+    if (logoutElement) {
+      e.preventDefault();
+      
+      // 확인 대화상자 (사용자 실수 방지)
+      if (confirm('로그아웃하시겠습니까?')) {
+        if (window.cmms.auth) {
+          window.cmms.auth.logout({
+            onSuccess: function(result) {
+              console.log('Logout successful:', result);
+            },
+            onError: function(error) {
+              console.error('Logout failed:', error);
+            }
+          });
+        } else {
+          // auth 모듈이 로드되지 않은 경우 fallback
+          window.location.href = '/api/auth/logout';
+        }
+      }
+    }
+  });
 
 });
 
@@ -398,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // CMMS 역할 관리 기능 (SPA 기능)
 // =============================================================================
 
-window.cmms = window.cmms || {};
+// window.cmms는 이미 122라인에서 선언됨
 
 // =============================================================================
 // CSRF 관리 모듈
@@ -646,10 +654,7 @@ window.cmms.navigation = {
         this.slot.innerHTML = html;
       }
       
-      // Try to sync CSRF hidden fields if available
-      if (typeof window.cmms?.csrf?.refreshForms === 'function') {
-        try { window.cmms.csrf.refreshForms(); } catch (_) {}
-      }
+      // CSRF 토큰은 이미 fetch wrapper에서 자동 처리됨
 
       // 모듈 동적 로딩 (첫 방문 시에만)
       await window.cmms.moduleLoader.loadModule(this.currentContentUrl);
@@ -661,14 +666,22 @@ window.cmms.navigation = {
         window.cmms.pages.run(this.slot, { url: this.currentContentUrl, doc });
       }
       
-      // 파일 업로드 위젯 초기화 (SPA 콘텐츠 로드 직후)
-      // 간접적으로 DOM이 렌더링된 후 실행
+      // 파일 위젯 초기화 (전체 document 대상)
       setTimeout(() => {
         try {
-          const spaContainers = Array.from(this.slot.querySelectorAll('[data-attachments]'));
-          initializeFileUploadWidgets(spaContainers);
+          // 파일 업로드 위젯 초기화 (전체 document 대상)
+          const uploadModule = (window.cmms && window.cmms.fileUpload) || null;
+          if (uploadModule && typeof uploadModule.initializeContainers === 'function') {
+            uploadModule.initializeContainers(document);
+          }
+          
+          // 파일 목록 위젯 초기화 (SPA 콘텐츠 로드 직후)
+          const fileListModule = (window.cmms && window.cmms.fileList) || null;
+          if (fileListModule && typeof fileListModule.initializeContainers === 'function') {
+            fileListModule.initializeContainers(this.slot);
+          }
         } catch (error) {
-          console.warn('File upload widget initialization failed:', error);
+          console.warn('File widget initialization failed:', error);
         }
       }, 10);
 
@@ -860,8 +873,7 @@ window.cmms.navigation = {
     });
   });
 
-  // CSRF hidden 필드 동기화 보장
-  try { window.cmms.csrf.refreshForms(); } catch (_) {}
+  // CSRF 토큰은 fetch wrapper에서 자동 처리됨
 
   return { doc, root };
   },
@@ -895,6 +907,34 @@ window.cmms.navigation = {
         .then((res) => {
           if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
           if (!res.ok) throw new Error('Delete failed: ' + res.status);
+          this.navigate(redirectTo);
+        })
+        .catch((err) => {
+          console.error(err);
+          window.cmms.notification.error('요청이 실패했습니다. 잠시 후 다시 시도하세요');
+        });
+    }, { capture: true });
+  },
+
+  /**
+   * 액션 버튼 이벤트 핸들러 바인딩 함수 (POST 요청용:data-delete-url과 동일 기능이나, 속성값 구분을 위해 유지함)
+   */
+  bindActionHandler: function bindActionHandler() {
+    const slot = this.slot;
+    if (!slot) return;
+    
+    slot.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action-url]');
+      if (!btn) return;
+      e.preventDefault();
+      const url = btn.getAttribute('data-action-url');
+      const redirectTo = btn.getAttribute('data-redirect') || this.currentContentUrl;
+      const confirmMsg = btn.getAttribute('data-confirm');
+      if (confirmMsg && !confirm(confirmMsg)) return;
+      fetch(url, { method: 'POST', credentials: 'same-origin' })
+        .then((res) => {
+          if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
+          if (!res.ok) throw new Error('Action failed: ' + res.status);
           this.navigate(redirectTo);
         })
         .catch((err) => {
@@ -989,6 +1029,9 @@ window.cmms.navigation = {
 
     // 삭제 핸들러 바인딩
     this.bindDeleteHandler();
+    
+    // 액션 핸들러 바인딩
+    this.bindActionHandler();
 
     // 사용자 정보 로드 (Thymeleaf 템플릿에서 직접 주입된 경우)
     // this.loadUserInfo();
@@ -1050,225 +1093,3 @@ window.cmms.user = {
   }
 };
 
-// =============================================================================
-// 파일 업로드 모듈 (YML 설정 기반)
-// =============================================================================
-window.cmms.fileUpload = {
-  // 설정 정보 (서버에서 동적으로 로드)
-  config: {
-    maxSize: 10 * 1024 * 1024, // 기본값 (10MB)
-    allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'hwp', 'hwpx', 'zip', 'txt'],
-    maxSizeFormatted: '10MB',
-    profile: 'default'
-  },
-  
-  /**
-   * 서버에서 직접 주입된 파일 업로드 설정을 로드하는 함수
-   */
-  loadConfig: async function() {
-    try {
-      if (window.fileUploadConfig) {
-        this.config.maxSize = window.fileUploadConfig.maxSize;
-        this.config.allowedExtensions = window.fileUploadConfig.allowedExtensions;
-        this.config.maxSizeFormatted = window.fileUploadConfig.maxSizeFormatted;
-        this.config.profile = window.fileUploadConfig.profile;
-        
-        console.log('파일 업로드 설정 로드됨 (서버에서 직접 전달):', this.config);
-        console.log('현재 프로파일:', this.config.profile);
-        
-        if (this.config.profile) {
-          console.log(`프로파일 [${this.config.profile}] 설정:`, {
-            maxSize: this.config.maxSizeFormatted,
-            extensions: this.config.allowedExtensions.length + '개',
-            allowedTypes: this.config.allowedExtensions.join(', ')
-          });
-        }
-        return;
-      }
-      console.warn('window.fileUploadConfig가 없습니다. 기본값을 사용합니다.');
-    } catch (error) {
-      console.warn('파일 업로드 설정 로드 실패, 기본값 사용:', error);
-    }
-  },
-
-  /**
-   * 설정이 로드되었는지 확인하고 필요시 로드하는 함수
-   */
-  ensureConfigLoaded: async function() {
-    // 이미 로드된 설정이 있는지 확인
-    if (this.config && this.config.profile !== 'default') {
-      return; // 이미 로드됨
-    }
-    
-    await this.loadConfig();
-  },
-
-  init: function(container) {
-    const input = container.querySelector('#attachments-input');
-    const addBtn = container.querySelector('[data-attachments-add]');
-    const list = container.querySelector('.attachments-list');
-    const form = container.closest('form');
-    const hiddenField = container.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
-
-    if (!list) return;
-
-    const readonly = container.hasAttribute('data-readonly') || container.dataset.readonly === 'true';
-    if (readonly) {
-      if (addBtn) addBtn.style.display = 'none';
-      if (input) input.style.display = 'none';
-    }
-
-    const groupId = hiddenField?.value?.trim();
-    if (groupId) {
-      this.loadExisting(groupId, list, { readonly }).catch((err) => {
-        try { console.warn('Load existing attachments failed:', err); } catch (_) {}
-      });
-    }
-
-    if (!input || !addBtn) return;
-
-    addBtn.addEventListener('click', () => input.click());
-
-    input.addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files || []);
-      if (files.length === 0) return;
-
-      // 설정 확인 및 적용
-      await window.cmms.fileUpload.ensureConfigLoaded();
-      
-      const maxSize = window.cmms.fileUpload.config.maxSize;
-      const allowedExts = window.cmms.fileUpload.config.allowedExtensions;
-
-      for (const file of files) {
-        const ext = file.name.split('.').pop()?.toLowerCase();
-        if (!allowedExts.includes(ext)) {
-          window.cmms.notification.error(`허용되지 않은 파일 형식입니다: ${file.name}`);
-          return;
-        }
-        if (file.size > maxSize) {
-          window.cmms.notification.error(`파일 크기가 ${window.cmms.fileUpload.config.maxSizeFormatted}를 초과했습니다: ${file.name}`);
-          return;
-        }
-      }
-
-      await this.uploadFiles(files, hiddenField, list);
-      e.target.value = '';
-    });
-  },
-
-  loadExisting: async function(groupId, list, { readonly = false } = {}) {
-    const response = await fetch(`/api/files?groupId=${encodeURIComponent(groupId)}`, { credentials: 'same-origin' });
-    if (!response.ok) throw new Error('Failed to load existing attachments: ' + response.status);
-    const result = await response.json();
-    const items = Array.isArray(result?.items) ? result.items : [];
-    this.renderFileList(items, list, { readonly, groupId });
-  },
-
-  uploadFiles: async function(files, hiddenField, list) {
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-
-    if (hiddenField?.value) {
-      formData.append('groupId', hiddenField.value);
-    }
-
-    try {
-      const response = await fetch('/api/files', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const result = await response.json();
-
-      if (hiddenField && result.fileGroupId) {
-        hiddenField.value = result.fileGroupId;
-      }
-
-      this.renderFileList(result.items || [], list, { groupId: hiddenField?.value });
-      window.cmms.notification.success(`${files.length}개의 파일이 업로드되었습니다.`);
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      window.cmms.notification.error('업로드에 실패했습니다.');
-    }
-  },
-
-  renderFileList: function(items, list, { readonly = false, groupId: groupIdOverride } = {}) {
-    list.innerHTML = '';
-
-    if (!Array.isArray(items) || items.length === 0) {
-      list.innerHTML = '<li class="empty">첨부된 파일이 없습니다.</li>';
-      return;
-    }
-
-    // Resolve groupId from options or hidden field nearby
-    let resolvedGroupId = groupIdOverride;
-    if (!resolvedGroupId) {
-      try {
-        const container = list.closest('[data-attachments]') || list.parentElement;
-        const form = container?.closest('form');
-        const hidden = container?.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
-        resolvedGroupId = hidden?.value || undefined;
-      } catch (_) { /* noop */ }
-    }
-
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'attachment-item';
-      const size = window.cmms.utils.formatFileSize(item.size);
-      const groupIdForItem = item.fileGroupId || resolvedGroupId || '';
-      const download = `<a href="/api/files/${item.fileId}?groupId=${groupIdForItem}" class="btn-download" data-hard-nav>다운로드</a>`;
-      const remove = readonly ? '' : `<button type="button" class="btn-remove" data-file-id="${item.fileId}" data-group-id="${groupIdForItem}">삭제</button>`;
-      li.innerHTML = `
-        <span class="file-name">${item.originalName}</span>
-        <span class="file-size">${size}</span>
-        ${download}
-        ${remove}
-      `;
-      list.appendChild(li);
-    });
-
-    if (!readonly) {
-      list.querySelectorAll('.btn-remove').forEach(btn => {
-        btn.addEventListener('click', () => this.deleteFile(btn, list));
-      });
-    }
-  },
-
-  deleteFile: async function(btn, list) {
-    const fileId = btn.dataset.fileId;
-    let groupId = btn.dataset.groupId;
-    if (!groupId) {
-      try {
-        const container = list.closest('[data-attachments]') || list.parentElement;
-        const form = container?.closest('form');
-        const hidden = container?.querySelector('input[name="fileGroupId"]') || form?.querySelector('input[name="fileGroupId"]');
-        groupId = hidden?.value;
-      } catch (_) { /* noop */ }
-    }
-
-    if (!confirm('파일을 삭제하시겠습니까?')) return;
-
-    try {
-      const response = await fetch(`/api/files/${fileId}?groupId=${encodeURIComponent(groupId || '')}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) throw new Error('Delete failed');
-
-      btn.closest('li')?.remove();
-
-      if (!list.children.length) {
-        list.innerHTML = '<li class="empty">첨부된 파일이 없습니다.</li>';
-      }
-
-      window.cmms.notification.success('파일이 삭제되었습니다.');
-
-    } catch (error) {
-      console.error('Delete error:', error);
-      window.cmms.notification.error('삭제에 실패했습니다.');
-    }
-  }
-};
