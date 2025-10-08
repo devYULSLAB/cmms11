@@ -35,7 +35,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileService {
 
     private static final String MODULE_CODE = "F";
-    private static final String DELETE_MARK_Y = "Y";
 
     private final FileGroupRepository groupRepository;
     private final FileItemRepository itemRepository;
@@ -85,8 +84,8 @@ public class FileService {
         group.setUpdatedBy(memberId);
         group = groupRepository.save(group);
 
-        Integer maxLineNo = itemRepository.findMaxLineNo(companyId, group.getId().getFileGroupId());
-        int currentLineNo = maxLineNo != null ? maxLineNo : 0;
+        // ✅ DB 쿼리 제거: maxLineNo 조회 대신 메모리에서 카운팅
+        int currentLineNo = 0;
 
         for (MultipartFile file : files) {
             System.out.println("파일 처리 시작 - 원본명: " + file.getOriginalFilename() + ", 크기: " + file.getSize() + ", 타입: " + file.getContentType());
@@ -99,7 +98,8 @@ public class FileService {
             validateExtension(extension, originalName);
             validateSize(file.getSize(), originalName);
 
-            String fileId = autoNumberService.generateTxId(companyId, MODULE_CODE, LocalDate.now());
+            // ✅ UUID 기반 fileId 생성 (sequence LOCK 제거!)
+            String fileId = generateShortFileId();
             String storedName = buildStoredName(fileId, extension);
             Path target = prepareTargetPath(group.getId().getFileGroupId(), storedName);
             String checksum = storeFile(file, target);
@@ -114,7 +114,6 @@ public class FileService {
             item.setSize(file.getSize());
             item.setChecksumSha256(checksum);
             item.setStoragePath(storageRoot.relativize(target).toString().replace('\\', '/'));
-            item.setDeleteMark("N");
             item.setCreatedAt(now);
             item.setCreatedBy(memberId);
             item.setUpdatedAt(now);
@@ -165,19 +164,20 @@ public class FileService {
     public void delete(String groupId, String fileId) {
         FileItem item = requireActiveFile(groupId, fileId);
         Path filePath = storageRoot.resolve(item.getStoragePath()).normalize();
+        
+        // 물리적 파일 삭제
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
             throw new IllegalStateException("파일을 삭제할 수 없습니다: " + fileId, e);
         }
 
+        // DB에서 레코드 삭제
+        itemRepository.delete(item);
+
+        // 그룹 업데이트
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
-        item.setDeleteMark(DELETE_MARK_Y);
-        item.setUpdatedAt(now);
-        item.setUpdatedBy(memberId);
-        itemRepository.save(item);
-
         FileGroup group = groupRepository
             .findByIdCompanyIdAndIdFileGroupId(MemberUserDetailsService.DEFAULT_COMPANY, groupId)
             .orElseThrow(() -> new NotFoundException("파일 그룹을 찾을 수 없습니다: " + groupId));
@@ -209,7 +209,6 @@ public class FileService {
         FileGroup group = new FileGroup();
         String newGroupId = autoNumberService.generateTxId(companyId, MODULE_CODE, LocalDate.now());
         group.setId(new FileGroupId(companyId, newGroupId));
-        group.setDeleteMark("N");
         group.setRefEntity(refEntity);
         group.setRefId(refId);
         group.setCreatedAt(now);
@@ -219,7 +218,7 @@ public class FileService {
 
     private List<FileItemResponse> activeItems(String companyId, String groupId) {
         return itemRepository
-            .findByIdCompanyIdAndIdFileGroupIdAndDeleteMarkNot(companyId, groupId, DELETE_MARK_Y)
+            .findByIdCompanyIdAndIdFileGroupId(companyId, groupId)
             .stream()
             .sorted(Comparator.comparing(FileItem::getLineNo))
             .map(FileItemResponse::from)
@@ -238,11 +237,10 @@ public class FileService {
             throw new IllegalArgumentException("fileId 는 필수입니다.");
         }
         return itemRepository
-            .findByIdCompanyIdAndIdFileGroupIdAndIdFileIdAndDeleteMarkNot(
+            .findByIdCompanyIdAndIdFileGroupIdAndIdFileId(
                 MemberUserDetailsService.DEFAULT_COMPANY,
                 groupId,
-                fileId,
-                DELETE_MARK_Y
+                fileId
             )
             .orElseThrow(() -> new NotFoundException("파일을 찾을 수 없습니다: " + fileId));
     }
@@ -328,5 +326,13 @@ public class FileService {
         }
         String name = authentication.getName();
         return name != null ? name : "system";
+    }
+
+    /**
+     * 짧은 UUID 기반 fileId 생성 (sequence 사용 안 함)
+     * @return 10자리 고유 ID
+     */
+    private String generateShortFileId() {
+        return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
     }
 }

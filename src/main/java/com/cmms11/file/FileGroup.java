@@ -28,9 +28,6 @@ public class FileGroup {
     @Column(length = 500)
     private String note;
 
-    @Column(name = "delete_mark", length = 1)
-    private String deleteMark = "N";
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

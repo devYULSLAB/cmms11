@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파일 업로드 테스트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-drop-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .file-drop-zone:hover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        .file-drop-zone.dragover {
+            background: #d0d5ff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .file-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-item .file-name {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .file-item .file-size {
+            color: #666;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .file-item .remove-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .file-item .remove-btn:hover {
+            background: #c0392b;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .log-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-container h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .log-output {
+            flex: 1;
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+
+        .log-entry.success {
+            color: #51cf66;
+        }
+
+        .log-entry.info {
+            color: #4dabf7;
+        }
+
+        .log-entry.warning {
+            color: #ffd43b;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .test-controls {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .test-controls h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 파일 업로드 테스트 도구</h1>
+            <p>Deadlock 재현 및 성능 테스트용</p>
+        </div>
+
+        <!-- 통계 -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">총 업로드</div>
+                <div class="value" id="totalUploads">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">성공</div>
+                <div class="value" id="successCount" style="color: #51cf66;">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">실패</div>
+                <div class="value" id="failureCount" style="color: #ff6b6b;">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">평균 시간</div>
+                <div class="value" id="avgTime">0s</div>
+            </div>
+        </div>
+
+        <div class="cards">
+            <!-- 단일 업로드 -->
+            <div class="card">
+                <h2>📤 단일 파일 업로드</h2>
+
+                <div class="form-group">
+                    <label>파일 선택</label>
+                    <div class="file-drop-zone" id="dropZone">
+                        <p>📁 클릭하여 파일 선택 또는 드래그 앤 드롭</p>
+                        <input type="file" id="fileInput" multiple style="display: none;">
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                </div>
+
+                <div>
+                    <button class="btn btn-primary" id="uploadBtn">업로드 시작</button>
+                    <button class="btn btn-danger" id="clearBtn">파일 초기화</button>
+                </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progressBar">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deadlock 테스트 -->
+            <div class="card">
+                <h2>⚠️ Deadlock 재현 테스트</h2>
+                
+                <div class="test-controls">
+                    <h3>🔬 동시 업로드 테스트</h3>
+                    <p style="font-size: 14px; margin-bottom: 10px;">
+                        여러 개의 업로드 요청을 동시에 발생시켜 Deadlock을 재현합니다.
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label>동시 요청 개수</label>
+                    <input type="number" id="concurrentCount" value="3" min="2" max="10">
+                </div>
+
+                <div class="form-group">
+                    <label>요청 간 지연 (ms)</label>
+                    <input type="number" id="delayMs" value="100" min="0" max="1000">
+                </div>
+
+                <div>
+                    <button class="btn btn-warning" id="deadlockTestBtn">
+                        🔥 Deadlock 테스트 시작
+                    </button>
+                    <button class="btn btn-danger" id="stopTestBtn" disabled>
+                        ⏹️ 중지
+                    </button>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>
+                        <input type="checkbox" id="autoRetry"> 
+                        실패 시 자동 재시도
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- 로그 -->
+        <div class="log-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2>📋 실행 로그</h2>
+                <button class="btn btn-danger" id="clearLogBtn" style="margin: 0;">로그 지우기</button>
+            </div>
+            <div class="log-output" id="logOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let selectedFiles = [];
+        let uploadStats = {
+            total: 0,
+            success: 0,
+            failure: 0,
+            times: []
+        };
+        let isTestRunning = false;
+
+        // DOM 요소
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const logOutput = document.getElementById('logOutput');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const deadlockTestBtn = document.getElementById('deadlockTestBtn');
+        const stopTestBtn = document.getElementById('stopTestBtn');
+        const concurrentCount = document.getElementById('concurrentCount');
+        const delayMs = document.getElementById('delayMs');
+        const autoRetry = document.getElementById('autoRetry');
+
+        // 초기화
+        init();
+
+        function init() {
+            // 드래그 앤 드롭 이벤트
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+
+            // 파일 선택 이벤트
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // 버튼 이벤트
+            uploadBtn.addEventListener('click', handleSingleUpload);
+            clearBtn.addEventListener('click', clearFiles);
+            clearLogBtn.addEventListener('click', clearLog);
+            deadlockTestBtn.addEventListener('click', startDeadlockTest);
+            stopTestBtn.addEventListener('click', stopTest);
+        }
+
+        // 드래그 앤 드롭 핸들러
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const files = Array.from(e.dataTransfer.files);
+            addFiles(files);
+        }
+
+        // 파일 선택 핸들러
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+
+        // 파일 추가
+        function addFiles(files) {
+            files.forEach(file => {
+                // 중복 체크
+                const isDuplicate = selectedFiles.some(f => 
+                    f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+                );
+                
+                if (!isDuplicate) {
+                    selectedFiles.push(file);
+                } else {
+                    log(`⚠️ 중복 파일 무시: ${file.name}`, 'warning');
+                }
+            });
+            
+            renderFileList();
+        }
+
+        // 파일 목록 렌더링
+        function renderFileList() {
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    <button class="remove-btn" onclick="removeFile(${index})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // 파일 제거
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        // 파일 초기화
+        function clearFiles() {
+            selectedFiles = [];
+            fileInput.value = '';
+            renderFileList();
+            log('📁 파일 목록 초기화', 'info');
+        }
+
+        // 단일 업로드
+        async function handleSingleUpload() {
+            if (selectedFiles.length === 0) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            progressContainer.classList.add('active');
+
+            try {
+                const startTime = Date.now();
+                log(`🚀 업로드 시작 (${selectedFiles.length}개 파일, 총 ${formatTotalSize(selectedFiles)}KB)`, 'info');
+
+                const fileGroupId = await uploadFiles(selectedFiles, null, 
+                    (progress) => {
+                        progressBar.style.width = progress + '%';
+                        progressBar.textContent = Math.round(progress) + '%';
+                    }
+                );
+
+                const duration = Date.now() - startTime;
+                updateStats(true, duration);
+
+                log(`✅ 업로드 성공! fileGroupId: ${fileGroupId} (${(duration / 1000).toFixed(2)}초)`, 'success');
+                clearFiles();
+            } catch (error) {
+                updateStats(false, 0);
+                log(`❌ 업로드 실패: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                uploadBtn.disabled = false;
+                setTimeout(() => {
+                    progressContainer.classList.remove('active');
+                    progressBar.style.width = '0%';
+                    progressBar.textContent = '0%';
+                }, 2000);
+            }
+        }
+
+        // Deadlock 테스트
+        async function startDeadlockTest() {
+            if (selectedFiles.length === 0) {
+                alert('테스트할 파일을 선택해주세요.');
+                return;
+            }
+
+            isTestRunning = true;
+            deadlockTestBtn.disabled = true;
+            stopTestBtn.disabled = false;
+
+            const count = parseInt(concurrentCount.value);
+            const delay = parseInt(delayMs.value);
+
+            log(`\n${'='.repeat(60)}`, 'info');
+            log(`🔬 Deadlock 테스트 시작`, 'info');
+            log(`   동시 요청: ${count}개`, 'info');
+            log(`   지연 시간: ${delay}ms`, 'info');
+            log(`${'='.repeat(60)}\n`, 'info');
+
+            const promises = [];
+            for (let i = 0; i < count; i++) {
+                if (!isTestRunning) break;
+
+                const requestId = `REQ-${Date.now()}-${i}`;
+                log(`📤 요청 ${i + 1}/${count} 발송... (${requestId})`, 'info');
+
+                promises.push(
+                    uploadFiles(selectedFiles, requestId)
+                        .then(fileGroupId => {
+                            const duration = Date.now() - parseInt(requestId.split('-')[1]);
+                            updateStats(true, duration);
+                            log(`✅ 요청 ${i + 1} 성공: ${fileGroupId} (${(duration / 1000).toFixed(2)}초)`, 'success');
+                            return { success: true, fileGroupId };
+                        })
+                        .catch(error => {
+                            updateStats(false, 0);
+                            log(`❌ 요청 ${i + 1} 실패: ${error.message}`, 'error');
+                            
+                            // 자동 재시도
+                            if (autoRetry.checked && isTestRunning) {
+                                log(`🔄 자동 재시도 중... (요청 ${i + 1})`, 'warning');
+                                return uploadFiles(selectedFiles, requestId + '-retry')
+                                    .then(fileGroupId => {
+                                        updateStats(true, 0);
+                                        log(`✅ 재시도 성공: ${fileGroupId}`, 'success');
+                                        return { success: true, fileGroupId };
+                                    })
+                                    .catch(retryError => {
+                                        updateStats(false, 0);
+                                        log(`❌ 재시도 실패: ${retryError.message}`, 'error');
+                                        return { success: false, error: retryError.message };
+                                    });
+                            }
+                            
+                            return { success: false, error: error.message };
+                        })
+                );
+
+                if (delay > 0) {
+                    await sleep(delay);
+                }
+            }
+
+            try {
+                const results = await Promise.allSettled(promises);
+                
+                log(`\n${'='.repeat(60)}`, 'info');
+                log(`📊 테스트 완료`, 'info');
+                log(`   성공: ${results.filter(r => r.status === 'fulfilled' && r.value.success).length}/${count}`, 'success');
+                log(`   실패: ${results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length}/${count}`, 'error');
+                log(`${'='.repeat(60)}\n`, 'info');
+            } catch (error) {
+                log(`⚠️ 테스트 중 오류: ${error.message}`, 'error');
+            } finally {
+                isTestRunning = false;
+                deadlockTestBtn.disabled = false;
+                stopTestBtn.disabled = true;
+            }
+        }
+
+        // 테스트 중지
+        function stopTest() {
+            isTestRunning = false;
+            log('⏹️ 테스트 중지됨', 'warning');
+        }
+
+        // CSRF 토큰 가져오기
+        function getCsrfToken() {
+            // 1. meta 태그에서 찾기
+            const metaToken = document.querySelector('meta[name="_csrf"]');
+            const metaHeader = document.querySelector('meta[name="_csrf_header"]');
+            if (metaToken && metaHeader) {
+                return {
+                    token: metaToken.content,
+                    header: metaHeader.content
+                };
+            }
+
+            // 2. 쿠키에서 찾기 (XSRF-TOKEN)
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('XSRF-TOKEN='));
+            if (cookieValue) {
+                return {
+                    token: decodeURIComponent(cookieValue.split('=')[1]),
+                    header: 'X-CSRF-TOKEN'  // ← 수정: X-XSRF-TOKEN → X-CSRF-TOKEN
+                };
+            }
+
+            // 3. 없으면 null 반환
+            return null;
+        }
+
+        // 파일 업로드 함수
+        async function uploadFiles(files, onProgressOrRequestId, requestId) {
+            // 파라미터 처리
+            let onProgress = null;
+            let actualRequestId = null;
+            
+            if (typeof onProgressOrRequestId === 'function') {
+                onProgress = onProgressOrRequestId;
+            } else if (typeof onProgressOrRequestId === 'string') {
+                actualRequestId = onProgressOrRequestId;
+            }
+            
+            if (requestId) {
+                actualRequestId = requestId;
+            }
+            
+            const formData = new FormData();
+            
+            files.forEach(file => {
+                formData.append('files', file);
+            });
+
+            const xhr = new XMLHttpRequest();
+
+            return new Promise((resolve, reject) => {
+                if (onProgress) {
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            onProgress(percent);
+                        }
+                    });
+                }
+
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response.fileGroupId);
+                        } catch (error) {
+                            reject(new Error('Invalid response format'));
+                        }
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error'));
+                });
+
+                xhr.addEventListener('timeout', () => {
+                    reject(new Error('Request timeout'));
+                });
+
+                xhr.open('POST', '/api/files');
+                xhr.timeout = 30000; // 30초 타임아웃
+                
+                // CSRF 토큰 추가
+                const csrf = getCsrfToken();
+                if (csrf) {
+                    xhr.setRequestHeader(csrf.header, csrf.token);
+                } else {
+                    reject(new Error('CSRF token not found'));
+                    return;
+                }
+                
+                xhr.send(formData);
+            });
+        }
+
+        // 통계 업데이트
+        function updateStats(success, duration) {
+            uploadStats.total++;
+            if (success) {
+                uploadStats.success++;
+                if (duration > 0) {
+                    uploadStats.times.push(duration);
+                }
+            } else {
+                uploadStats.failure++;
+            }
+
+            document.getElementById('totalUploads').textContent = uploadStats.total;
+            document.getElementById('successCount').textContent = uploadStats.success;
+            document.getElementById('failureCount').textContent = uploadStats.failure;
+
+            if (uploadStats.times.length > 0) {
+                const avg = uploadStats.times.reduce((a, b) => a + b, 0) / uploadStats.times.length;
+                document.getElementById('avgTime').textContent = (avg / 1000).toFixed(2) + 's';
+            }
+        }
+
+        // 로그 출력
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // 로그 지우기
+        function clearLog() {
+            logOutput.innerHTML = '';
+            uploadStats = {
+                total: 0,
+                success: 0,
+                failure: 0,
+                times: []
+            };
+            document.getElementById('totalUploads').textContent = '0';
+            document.getElementById('successCount').textContent = '0';
+            document.getElementById('failureCount').textContent = '0';
+            document.getElementById('avgTime').textContent = '0s';
+        }
+
+        // 유틸리티 함수
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function formatTotalSize(files) {
+            const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+            return Math.round(totalBytes / 1024);
+        }
+
+        // CSRF 토큰 확인
+        async function checkCsrfToken() {
+            const csrf = getCsrfToken();
+            if (csrf) {
+                log(`✅ CSRF 토큰 확인 (${csrf.header}: ${csrf.token.substring(0, 10)}...)`, 'success');
+            } else {
+                log('⚠️ CSRF 토큰을 찾을 수 없습니다. 서버에 요청합니다...', 'warning');
+                
+                // 서버에서 CSRF 토큰 가져오기 시도 (아무 페이지나 요청하면 쿠키 생성됨)
+                try {
+                    await fetch('/memo/list', { credentials: 'same-origin' });
+                    
+                    // 다시 확인
+                    const csrfRetry = getCsrfToken();
+                    if (csrfRetry) {
+                        log(`✅ CSRF 토큰 획득 성공 (${csrfRetry.header})`, 'success');
+                    } else {
+                        log('❌ CSRF 토큰 획득 실패. 로그인이 필요할 수 있습니다.', 'error');
+                    }
+                } catch (error) {
+                    log(`❌ 서버 요청 실패: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // 초기화
+        checkCsrfToken();
+        
+        // 초기 로그
+        log('🎉 파일 업로드 테스트 도구 준비 완료', 'success');
+        log('💡 왼쪽에서 파일을 선택하고 업로드하거나, 오른쪽에서 Deadlock 테스트를 실행하세요.', 'info');
+    </script>
+</body>
+</html>
+

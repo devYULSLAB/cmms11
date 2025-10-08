@@ -8,13 +8,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface FileItemRepository extends JpaRepository<FileItem, FileItemId> {
 
-    List<FileItem> findByIdCompanyIdAndIdFileGroupIdAndDeleteMarkNot(String companyId, String fileGroupId, String deleteMark);
+    List<FileItem> findByIdCompanyIdAndIdFileGroupId(String companyId, String fileGroupId);
 
-    Optional<FileItem> findByIdCompanyIdAndIdFileGroupIdAndIdFileIdAndDeleteMarkNot(
+    Optional<FileItem> findByIdCompanyIdAndIdFileGroupIdAndIdFileId(
         String companyId,
         String fileGroupId,
-        String fileId,
-        String deleteMark
+        String fileId
     );
 
     @Query(

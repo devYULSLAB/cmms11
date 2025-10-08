@@ -1,3 +1,0 @@
-inventory_id,name,asset_id,dept_id,maker_name,spec,model,serial,file_group_id,note,status
-,베어링 6204,ASSET,D0001,SKF,내경 20mm · 외경 47mm,6204ZZ,,FG1001,예비용 베어링,ACTIVE
-I200000015,모터 윤활유,ASSET,D0002,SHELL,ISO VG 68,,LUB-2024,,창고 비축,ACTIVE
