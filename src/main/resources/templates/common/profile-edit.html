@@ -143,8 +143,19 @@
     </footer>
   </div>
   
-  <!-- 기존 공통 모듈 로드 -->
-  <script src="/assets/js/app.js"></script>
+  <!-- 필요한 모듈만 직접 로드 (경량화) -->
+  <script type="module">
+    // 필요한 모듈만 import
+    import { initNotification } from '/assets/js/ui/notification.js';
+    
+    // window.cmms 초기화
+    window.cmms = window.cmms || {};
+    
+    // 모듈 초기화
+    initNotification();
+    
+    console.log('✅ Profile-edit 모듈 로드 완료 (notification)');
+  </script>
   
   <!-- 최종 단순화된 인라인 스크립트 -->
   <script th:inline="javascript">

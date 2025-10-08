@@ -1,7 +1,6 @@
 /**
  * SPA 네비게이션 모듈
  * 
- * app.js에서 네비게이션 기능을 추출한 모듈입니다.
  * - SPA 콘텐츠 로딩
  * - 브라우저 히스토리 관리
  * - URL 해석 및 라우팅
@@ -15,7 +14,7 @@ export function initNavigation() {
   window.cmms = window.cmms || {};
   window.cmms.navigation = {
     slot: null,
-    currentContentUrl: '../plant/list.html',
+    currentContentUrl: '../memo/list.html',
 
     /**
      * Thymeleaf 링크를 URL로 변환하는 함수
@@ -106,7 +105,7 @@ export function initNavigation() {
       // URL 효과적으로 검증
       if (!contentUrl || contentUrl.trim() === '') {
         console.warn('Empty content URL, redirecting to default');
-        this.navigate('../plant/list.html');
+        this.navigate('../memo/list.html');
         return;
       }
       
@@ -117,7 +116,7 @@ export function initNavigation() {
           <div class="notice danger">
             <h3>못 찾을 URL이 있습니다.</h3>
             <p>보안의 유효한 URL이 아닙니다.</p>
-            <a class="btn primary" href="/domain/company/list">목록으로 이동</a>
+            <a class="btn primary" href="/memo/list">목록으로 이동</a>
           </div>
         `;
         return;

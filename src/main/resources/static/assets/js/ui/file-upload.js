@@ -162,13 +162,17 @@ export function initFileUpload() {
       const li = document.createElement('li');
       li.className = 'attachment-item';
       
-      const fileInfo = document.createElement('div');
-      fileInfo.className = 'file-name';
-      fileInfo.innerHTML = `
-        ${file.name}
-        <div class="file-size">${this.formatFileSize(file.size)}</div>
-      `;
+      // 파일명
+      const fileName = document.createElement('div');
+      fileName.className = 'file-name';
+      fileName.textContent = file.name;
       
+      // 파일 크기 (별도 요소로 분리)
+      const fileSize = document.createElement('div');
+      fileSize.className = 'file-size';
+      fileSize.textContent = this.formatFileSize(file.size);
+      
+      // 삭제 버튼
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'btn btn-remove';
@@ -178,7 +182,9 @@ export function initFileUpload() {
         li.remove();
       });
       
-      li.appendChild(fileInfo);
+      // Flexbox 레이아웃에 맞게 조립
+      li.appendChild(fileName);
+      li.appendChild(fileSize);
       li.appendChild(removeBtn);
       
       return li;
@@ -227,95 +233,8 @@ export function initFileUpload() {
         maxSizeFormatted: '10MB',
         profile: 'default'
       };
-    },
-    
-    /**
-     * 파일 업로드 (범용) - 현재 미사용
-     * 
-     * 📝 주석 처리 이유:
-     * - 현재 프로젝트에서 사용하지 않음
-     * - uploadFormFiles + uploadToServer로 대체됨
-     * - 향후 커스텀 업로드 UI 필요 시 활성화 가능
-     * 
-     * @deprecated 사용하지 않음. uploadFormFiles 사용 권장
-     * @param {Array} files - 업로드할 파일 배열
-     * @param {string} endpoint - 업로드 엔드포인트
-     * @param {Object} options - 업로드 옵션
-     * @returns {Promise} 업로드 Promise
-     */
-    /*
-    uploadFiles: async function(files, endpoint, options = {}) {
-      const config = Object.assign({
-        showProgress: true,
-        onProgress: null,
-        onSuccess: null,
-        onError: null
-      }, options);
-      
-      try {
-        const formData = new FormData();
-        
-        // 파일 추가
-        files.forEach(file => {
-          formData.append('files', file);
-        });
-        
-        // 추가 데이터 추가
-        if (options.data) {
-          Object.keys(options.data).forEach(key => {
-            formData.append(key, options.data[key]);
-          });
-        }
-        
-        // 업로드 진행률 표시
-        if (config.showProgress) {
-          if (window.cmms && window.cmms.notification) {
-            window.cmms.notification.info('파일을 업로드하는 중...');
-          }
-        }
-        
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          body: formData,
-          credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        // 성공 콜백
-        if (typeof config.onSuccess === 'function') {
-          config.onSuccess(result);
-        }
-        
-        // 성공 알림
-        if (window.cmms && window.cmms.notification) {
-          window.cmms.notification.success('파일 업로드가 완료되었습니다.');
-        }
-        
-        return result;
-        
-      } catch (error) {
-        console.error('File upload error:', error);
-        
-        // 에러 콜백
-        if (typeof config.onError === 'function') {
-          config.onError(error);
-        }
-        
-        // 에러 알림
-        if (window.cmms && window.cmms.notification) {
-          window.cmms.notification.error('파일 업로드에 실패했습니다.');
-        }
-        
-        throw error;
-      }
-    },
-    */
-    
+    },    
+  
     /**
      * Form의 파일을 서버에 업로드
      * @param {HTMLFormElement} form - 대상 form

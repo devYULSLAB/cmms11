@@ -66,7 +66,6 @@
           btn.classList.add('active');
           
           const tabType = btn.getAttribute('data-tab');
-          if (txTypeInput) txTypeInput.value = tabType;
           
           const activePanel = root.querySelector(`.tx-panel[data-panel="${tabType}"]`);
           console.log('Active panel found:', !!activePanel);
@@ -74,6 +73,10 @@
           
           // 폼 초기화 및 오늘 날짜 설정
           form.reset();
+          
+          // 폼 리셋 후 txType 다시 설정 (리셋하면 초기값 'IN'으로 되돌아가므로)
+          if (txTypeInput) txTypeInput.value = tabType;
+          
           // 활성화된 패널 내의 날짜 입력 필드 찾기
           if (activePanel) {
             const txDateInput = activePanel.querySelector('input[name="txDate"]');
@@ -104,11 +107,12 @@
         console.log('Initial tab activated: IN');
       }
       
-      // 자재 선택 시 현재 재고 표시
-      const inventorySelect = root.querySelector('#inventoryId');
-      if (inventorySelect) {
-        inventorySelect.addEventListener('change', () => this.loadCurrentStock(root));
-      }
+      // 자재 선택 시 현재 재고 표시 (모든 탭의 inventoryId 필드에 바인딩)
+      const inventoryInputs = root.querySelectorAll('input[name="inventoryId"]');
+      inventoryInputs.forEach(input => {
+        input.addEventListener('change', () => this.loadCurrentStock(root));
+        input.addEventListener('blur', () => this.loadCurrentStock(root));
+      });
       
       // 수량 변경 시 재고 반영
       const quantityInput = root.querySelector('#quantity');
