@@ -35,7 +35,6 @@
               <div class="card-header">
                 <div class="card-title">공통코드 목록</div>
                 <div class="toolbar">
-                  <a class="btn" th:href="@{/code/export}">내보내기</a>
                   <a class="btn primary" th:href="@{/code/form}">새로 만들기</a>
                 </div>
               </div>
@@ -43,22 +42,7 @@
                 <!-- 에러 메시지 표시 -->
                 <div th:if="${param.error}" class="notice danger" style="margin-bottom: 16px;">
                   <span th:if="${param.error[0] == 'notfound'}">요청하신 코드 타입을 찾을 수 없습니다.</span>
-                </div>
-                
-                <div class="section">
-                  <div class="section-title">필터</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-3"><input class="input" placeholder="코드타입" /></div>
-                    <div class="col-span-5"><input class="input" placeholder="명칭" /></div>
-                  </div>
-                  <div class="row actions-top-small">
-                    <div class="spacer"></div>
-                    <div class="actions">
-                      <button class="btn">초기화</button>
-                      <button class="btn">검색</button>
-                    </div>
-                  </div>
-                </div>
+                </div>                              
 
                 <table class="table">
                   <thead>

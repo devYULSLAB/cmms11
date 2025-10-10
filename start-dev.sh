@@ -1,23 +1,24 @@
-#!/bin/bash
-# CMMS11 Production Server Start Script
+﻿#!/bin/bash
+# CMMS11 Development Server Start Script
 
 APP_NAME="cmms11"
 APP_DIR="/opt/cmms11"
-JAR_FILE=$(ls ${APP_DIR}/${APP_NAME}-*.jar 2>/dev/null | head -n 1)
-PID_FILE="${APP_DIR}/${APP_NAME}.pid"
-LOG_FILE="${APP_DIR}/logs/cmms11.out"
+JAR_FILE=$(ls ${APP_DIR}/build/libs/${APP_NAME}-*.jar 2>/dev/null | head -n 1)
+PID_FILE="${APP_DIR}/${APP_NAME}-dev.pid"
+LOG_FILE="${APP_DIR}/logs/cmms11-dev.out"
 
 echo "========================================"
-echo "CMMS11 Production Server Starting..."
+echo "CMMS11 Development Server Starting..."
 echo "========================================"
 
-# JAR 파일 확인
+# Check if JAR file exists
 if [ ! -f "$JAR_FILE" ]; then
-    echo "[ERROR] JAR file not found in ${APP_DIR}"
+    echo "[ERROR] JAR file not found in ${APP_DIR}/build/libs"
+    echo "[INFO] Please build the project first: ./gradlew build"
     exit 1
 fi
 
-# 이미 실행 중인지 확인
+# Check if server is already running
 if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     if ps -p $PID > /dev/null 2>&1; then
@@ -28,18 +29,18 @@ if [ -f "$PID_FILE" ]; then
     fi
 fi
 
-# 로그 디렉토리 생성
+# Create log directory
 mkdir -p "${APP_DIR}/logs"
 
-# 서버 시작
+# Start server
 echo "[INFO] Starting: $JAR_FILE"
-echo "[INFO] Profile: prod"
+echo "[INFO] Profile: dev"
 echo "[INFO] Log: $LOG_FILE"
 echo "========================================"
 
-nohup java -Xms1g -Xmx2g -Dfile.encoding=UTF-8 \
+nohup java -Xms512m -Xmx1g -Dfile.encoding=UTF-8 \
     -jar "$JAR_FILE" \
-    --spring.profiles.active=prod \
+    --spring.profiles.active=dev \
     > "$LOG_FILE" 2>&1 &
 
 PID=$!
@@ -49,9 +50,11 @@ sleep 2
 
 if ps -p $PID > /dev/null 2>&1; then
     echo "[SUCCESS] Server started (PID: $PID)"
+    echo "[INFO] To stop: ./stop-dev.sh"
+    echo "[INFO] View logs: tail -f $LOG_FILE"
 else
     echo "[ERROR] Server failed to start"
+    echo "[INFO] Check logs: cat $LOG_FILE"
     rm -f "$PID_FILE"
     exit 1
 fi
-

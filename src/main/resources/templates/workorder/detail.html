@@ -142,13 +142,52 @@
                         <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                       </div>
                     </header>
-                    <div class="doc-body">
-                      <div class="row"><strong>작업지시 번호</strong><span class="spacer"></span><span th:text="${workorder.orderId}">O250101001</span></div>
-                      <div class="row"><strong>작업명</strong><span class="spacer"></span><span th:text="${workorder.name}">구동부 정비</span></div>
-                      <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${workorder.plantId}">EQP000123</span></div>
-                      <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${workorder.plannedDate}">2025-01-12</span></div>
-                      <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${workorder.actualDate}">2025-01-15</span></div>
-                      <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}">배정</span></div>
+                    
+                    <!-- 기본 정보 -->
+                    <div class="section">
+                      <div class="section-title">기본 정보</div>
+                      <table class="row-cols-4">
+                        <tr>
+                          <th>작업지시 번호</th><td th:text="${workorder.orderId}">O250101001</td>
+                          <th>작업명</th><td th:text="${workorder.name}">구동부 정비</td>
+                        </tr>
+                        <tr>
+                          <th>설비 번호</th><td th:text="${workorder.plantId}">EQP000123</td>
+                          <th>상태</th><td th:text="${workorder.status == 'PLAN' ? '계획' : workorder.status == 'ASGN' ? '배정' : workorder.status == 'PROC' ? '진행' : '완료'}">배정</td>
+                        </tr>
+                        <tr>
+                          <th>계획일</th><td th:text="${workorder.plannedDate ?: '-'}">2025-01-12</td>
+                          <th>실적일</th><td th:text="${workorder.actualDate ?: '-'}">2025-01-15</td>
+                        </tr>
+                      </table>
+                    </div>
+                    
+                    <!-- 작업 항목 -->
+                    <div class="section">
+                      <div class="section-title">작업 항목</div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>작업명</th>
+                            <th>작업방법</th>
+                            <th>결과</th>
+                            <th>메모</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
+                            <td th:text="${iter.index + 1}">1</td>
+                            <td th:text="${item.name}">부품 교체</td>
+                            <td th:text="${item.method}">기준서 따라 교체</td>
+                            <td th:text="${item.result}">정상 교체 완료</td>
+                            <td th:text="${item.note}">특이사항 없음</td>
+                          </tr>
+                          <tr th:if="${items == null or items.empty}">
+                            <td colspan="5" class="muted">작업 항목이 없습니다.</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </section>

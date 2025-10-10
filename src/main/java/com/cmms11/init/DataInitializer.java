@@ -114,10 +114,18 @@ public class DataInitializer implements ApplicationRunner {
         sites.forEach(siteRepository::save);
 
         List<Dept> depts = List.of(
-            buildDept(now, "D0001", "Sample department1"),
-            buildDept(now, "D0002", "Sample department2")
+            buildDept(now, "D0000", "Sample division1", null),
+            buildDept(now, "D0001", "Sample department1", "D0000"),
+            buildDept(now, "D0002", "Sample department2", "D0000")
         );
         depts.forEach(deptRepository::save);
+
+        // Seed sample members
+        List<Member> members = List.of(
+            buildMember(now, "user1", "Sample User1", "S0001", "D0001"),
+            buildMember(now, "user2", "Sample User2", "S0001", "D0002")
+        );
+        members.forEach(memberRepository::save);
     }
   
     private Site buildSite(LocalDateTime now, String siteId, String name) {
@@ -135,7 +143,7 @@ public class DataInitializer implements ApplicationRunner {
         return site;
     }
 
-    private Dept buildDept(LocalDateTime now, String deptId, String name) {
+    private Dept buildDept(LocalDateTime now, String deptId, String name, String parentDeptId) {
         DeptId id = new DeptId(DEFAULT_COMPANY, deptId);
         Dept dept = deptRepository.findById(id).orElseGet(Dept::new);
         dept.setId(id);
@@ -144,10 +152,29 @@ public class DataInitializer implements ApplicationRunner {
             dept.setCreatedBy(SYSTEM_USER);
         }
         dept.setName(name);
+        dept.setParentId(parentDeptId);
         dept.setDeleteMark("N");
         dept.setUpdatedAt(now);
         dept.setUpdatedBy(SYSTEM_USER);
         return dept;
+    }
+
+    private Member buildMember(LocalDateTime now, String memberId, String name, String siteId, String deptId) {
+        MemberId id = new MemberId(DEFAULT_COMPANY, memberId);
+        Member member = memberRepository.findById(id).orElseGet(Member::new);
+        member.setId(id);
+        if (member.getCreatedAt() == null) {
+            member.setCreatedAt(now);
+            member.setCreatedBy(SYSTEM_USER);
+        }
+        member.setName(name);
+        member.setSiteId(siteId);
+        member.setDeptId(deptId);
+        member.setPasswordHash(passwordEncoder.encode("1234"));
+        member.setDeleteMark("N");
+        member.setUpdatedAt(now);
+        member.setUpdatedBy(SYSTEM_USER);
+        return member;
     }
 
     private void seedCodes() {
@@ -184,29 +211,33 @@ public class DataInitializer implements ApplicationRunner {
         ));
 
         seedItems("JOBTP", List.of(
-            new SeedCodeItem("PLI01", "정기점검"),
-            new SeedCodeItem("UPI01", "돌발점검"),
-            new SeedCodeItem("PLO01", "정기작업"),
-            new SeedCodeItem("UPO01", "돌발작업")
+            new SeedCodeItem("PLI01", "정기점검(Planned Inspection)"),
+            new SeedCodeItem("UPI01", "돌발점검(Unplanned Inspection)"),
+            new SeedCodeItem("PLW01", "정기작업(Planned Work)"),
+            new SeedCodeItem("UPW01", "돌발작업(Unplanned Work)")
         ));
 
         seedItems("PERMT", List.of(
-            new SeedCodeItem("P0001", "허가1")
+            new SeedCodeItem("PEWOK", "작업허가(Work Permit)"),
+            new SeedCodeItem("PEINS", "점검허가(Inspection Permit)"),
+            new SeedCodeItem("PEINP", "일반허가(General Permit)")
         ));
 
         seedItems("DEPRE", List.of(
-            new SeedCodeItem("STRAI", "정액법"),
-            new SeedCodeItem("DECLI", "정률법"),
-            new SeedCodeItem("SUM", "연수합법"),
-            new SeedCodeItem("NONE", "감가없음")
+            new SeedCodeItem("STRAI", "정액법(Straight-line)"),
+            new SeedCodeItem("DECLI", "정률법(Declining Balance)"),
+            new SeedCodeItem("SUM", "연수합법(Sum-of-the-years' digits)"),
+            new SeedCodeItem("NONE", "감가없음(None)")
         ));
 
         seedItems("MODUL", List.of(
             new SeedCodeItem("PLANT", "설비"),
             new SeedCodeItem("INVET", "재고"),
             new SeedCodeItem("INSP", "점검"),
-            new SeedCodeItem("WORD", "작업지시"),
-            new SeedCodeItem("WPER", "작업허가")
+            new SeedCodeItem("WORK", "작업지시"),
+            new SeedCodeItem("WPER", "작업허가"),
+            new SeedCodeItem("MEMBR", "게시글"),
+            new SeedCodeItem("APPRL", "결재")
         ));
     }
 

@@ -87,31 +87,30 @@
       </footer>
     </div>
     
-    <!-- 필요한 모듈만 직접 로드 (경량화) -->
+    <!-- Unified ES Module Script -->
     <script type="module">
-      // 필요한 모듈만 import
+      // Import modules
       import { initNotification } from '/assets/js/ui/notification.js';
       import { initDataLoader } from '/assets/js/ui/data-loader.js';
       
-      // window.cmms 초기화
+      // Initialize window.cmms
       window.cmms = window.cmms || {};
       
-      // 모듈 초기화
+      // Initialize modules
       initNotification();
       initDataLoader();
       
       console.log('✅ Picker 모듈 로드 완료 (notification, data-loader)');
-    </script>
-    
-    <script th:inline="javascript">
+      
+      // Picker logic (now in same module scope)
       (function() {
         'use strict';
         
-        // 기존 window.cmms 객체들만 사용
-        const notification = window.cmms?.notification || {};
-        const dataLoader = window.cmms?.common?.DataLoader || {};
+        // ✅ Modules are already initialized - safe to use
+        const notification = window.cmms.notification;
+        const dataLoader = window.cmms.common.DataLoader;
         
-        // 설비 선택기 핸들러
+        // Plant Picker Handler
         const PlantPicker = {
           selectedPlant: null,
           selectedFuncId: '',
@@ -124,7 +123,9 @@
           
           loadFuncData: async function() {
             try {
-              const data = await dataLoader.load('/api/domain/funcs', {size: 1000});
+              const data = await dataLoader.load('/api/domain/funcs', {
+                params: {size: 1000}
+              });
               this.funcData = data.content || data;
               this.renderFuncList();
               this.displayPlants('');
@@ -162,7 +163,10 @@
               const params = { size: 1000 };
               if (funcId) params.funcId = funcId;
               
-              const data = await dataLoader.load('/api/plants', params);
+              const data = await dataLoader.load('/api/plants', {
+                params: params,
+                useCache: false  // 기능위치 선택 시마다 새로 조회
+              });
               const plants = data.content || data;
               
               if (!plants || plants.length === 0) {

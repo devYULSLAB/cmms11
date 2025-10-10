@@ -26,7 +26,7 @@ export function initModuleLoader() {
       'plant': '/assets/js/pages/plant.js',
       'member': '/assets/js/pages/member.js',
       'inventory': '/assets/js/pages/inventory.js',
-      'inventory-tx': '/assets/js/pages/inventory-tx.js',
+      'inventoryTx': '/assets/js/pages/inventoryTx.js',
       'inspection': '/assets/js/pages/inspection.js',
       'workpermit': '/assets/js/pages/workpermit.js',
       'approval': '/assets/js/pages/approval.js',

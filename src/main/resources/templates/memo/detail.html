@@ -93,11 +93,32 @@
                         <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                       </div>
                     </header>
-                    <div class="doc-body">
-                      <div class="row"><strong>제목</strong><span class="spacer"></span><span th:text="${memo.title}">설비 점검 주기 변경 안내</span></div>
-                      <div class="row"><strong>참조</strong><span class="spacer"></span><span th:text="${memo.refEntity ?: ''} + '/' + ${memo.refId ?: ''}" th:if="${memo.refEntity}">work_order/O250101001</span></div>
-                      <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${memo.createdAt}">2025-01-05</span></div>
-                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                      <tr>
+                        <th style="width: 15%; padding: 8px; border: 1px solid #999; background: #f4f4f4;">제목</th>
+                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.title}">설비 점검 주기 변경 안내</td>
+                      </tr>
+                      <tr th:if="${memo.refEntity}">
+                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">참조</th>
+                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.refEntity} + ' / ' + ${memo.refId}">work_order / O250101001</td>
+                      </tr>
+                      <tr>
+                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">작성자</th>
+                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.createdBy}">관리자</td>
+                      </tr>
+                      <tr>
+                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">작성일</th>
+                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.createdAt}">2025-01-05</td>
+                      </tr>
+                      <tr>
+                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4; vertical-align: top;">내용</th>
+                        <td style="padding: 12px; border: 1px solid #999;">
+                          <div class="content-body" th:utext="${memo.content}" style="min-height: 100px; line-height: 1.6;">
+                            <p>설비 점검 주기가 월 1회에서 2주 1회로 변경됩니다.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
                   </div>
                 </section>
               </div>

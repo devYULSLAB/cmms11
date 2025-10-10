@@ -119,9 +119,6 @@
       if (quantityInput) {
         quantityInput.addEventListener('input', () => this.updateStockPreview(root));
       }
-      
-      // 거래 내역 로드
-      this.loadTransactionHistory(root);
     },
     
     // 현재 재고 로드
@@ -173,41 +170,6 @@
       }
       
       newStockSpan.textContent = newStock;
-    },
-    
-    // 거래 내역 로드
-    loadTransactionHistory: async function(root) {
-      const tbody = root.querySelector('#txHistoryBody');
-      if (!tbody) return;
-      
-      try {
-        const response = await fetch('/api/inventory-tx?size=5&sort=transactionDate,desc');
-        if (!response.ok) throw new Error('Failed to load transaction history');
-        
-        const data = await response.json();
-        
-        if (!data || !data.content || data.content.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="cell-center">거래 내역이 없습니다.</td></tr>';
-          return;
-        }
-        
-        tbody.innerHTML = data.content.map(tx => `
-          <tr>
-            <td>${tx.transactionDate || '-'}</td>
-            <td class="cell-center">${tx.txType || '-'}</td>
-            <td>${tx.inventoryId || '-'}</td>
-            <td class="cell-center">${tx.storageId || '-'}</td>
-            <td class="cell-right">${tx.inQty ? Number(tx.inQty).toFixed(3) : '0.000'}</td>
-            <td class="cell-right">${tx.outQty ? Number(tx.outQty).toFixed(3) : '0.000'}</td>
-            <td class="cell-right">${tx.unitCost ? Number(tx.unitCost).toLocaleString() : '-'}</td>
-            <td class="cell-right">${tx.amount ? Number(tx.amount).toLocaleString() : '-'}</td>
-            <td>${tx.note || '-'}</td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        console.error('History load error:', error);
-        tbody.innerHTML = '<tr><td colspan="9" class="cell-center error">거래 내역을 불러올 수 없습니다.</td></tr>';
-      }
     },
     
     // 재고 검색 초기화 (root 기반)
@@ -396,7 +358,7 @@
       
       // SPA 네비게이션으로 레이아웃 유지
       setTimeout(() => {
-        window.cmms.navigation.navigate('/inventory-tx/closing');
+        window.cmms.navigation.navigate('/inventoryTx/closing');
       }, 1000);
     },
     
@@ -442,15 +404,15 @@
   });
   
   // 페이지별 초기화 등록 (root 기반 구조)
-  window.cmms.pages.register('inventory-tx-transaction', function(root) {
+  window.cmms.pages.register('inventoryTx-transaction', function(root) {
     window.cmms.inventoryTx.initTransaction(root);
   });
   
-  window.cmms.pages.register('inventory-tx-ledger', function(root) {
+  window.cmms.pages.register('inventoryTx-ledger', function(root) {
     window.cmms.inventoryTx.initLedger(root);
   });
   
-  window.cmms.pages.register('inventory-tx-closing', function(root) {
+  window.cmms.pages.register('inventoryTx-closing', function(root) {
     window.cmms.inventoryTx.initClosing(root);
   });
   

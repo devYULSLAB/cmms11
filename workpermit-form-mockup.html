@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>작업허가 등록/수정 · CMMS</title>
+    <link rel="stylesheet" href="src/main/resources/static/assets/css/base.css">
+    <style>
+        /* 체크리스트 전용 스타일 */
+        .work-type-selection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        
+        .work-type-selection label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .work-type-selection input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .checklist-group {
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        
+        .group-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        .checklist-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .item-name {
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        
+        .checkbox-label {
+            font-size: 12px;
+            color: var(--muted);
+            cursor: pointer;
+        }
+        
+        .checkbox-label.confirm {
+            color: var(--primary);
+        }
+        
+        .checkbox-label.not-applicable {
+            color: var(--danger);
+        }
+        
+        .checklist-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        /* 기존 스타일 유지 */
+        .section {
+            margin-bottom: 24px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--fg);
+        }
+        
+        .form-row {
+            margin-bottom: 16px;
+        }
+        
+        .label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--fg);
+        }
+        
+        .label.required::after {
+            content: " *";
+            color: var(--danger);
+        }
+        
+        .input, .select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+        }
+        
+        .input:focus, .select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--focus);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn.primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .btn:hover {
+            background: var(--surface);
+        }
+        
+        .btn.primary:hover {
+            background: var(--primary-600);
+        }
+        
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+        
+        .cols-12 {
+            grid-template-columns: repeat(12, 1fr);
+        }
+        
+        .col-span-3 {
+            grid-column: span 3;
+        }
+        
+        .col-span-6 {
+            grid-column: span 6;
+        }
+        
+        .col-span-9 {
+            grid-column: span 9;
+        }
+        
+        .col-span-12 {
+            grid-column: span 12;
+        }
+        
+        .card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+        
+        .card-body {
+            padding: 24px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 24px;
+        }
+        
+        .appbar {
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        
+        .appbar-inner {
+            display: flex;
+            align-items: center;
+            gap: var(--space-16);
+            padding: var(--space-12) var(--space-24);
+        }
+        
+        .brand {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+        
+        .spacer {
+            flex: 1;
+        }
+        
+        .meta {
+            display: flex;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        
+        .breadcrumbs {
+            padding: 12px 24px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .breadcrumbs .container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .breadcrumbs a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .breadcrumbs .sep {
+            color: var(--muted);
+        }
+        
+        .container {
+            max-width: var(--container);
+            margin: 0 auto;
+            padding: var(--space-24);
+        }
+        
+        .page {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        
+        footer {
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            margin-top: auto;
+        }
+        
+        footer .container {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="appbar">
+            <div class="appbar-inner">
+                <div class="brand">작업관리</div>
+                <div class="spacer"></div>
+                <div class="meta">
+                    <span class="badge">memberId</span>
+                    <span>운영팀</span>
+                </div>
+            </div>
+        </header>
+        
+        <nav class="breadcrumbs">
+            <div class="container">
+                <a href="#">작업관리</a>
+                <span class="sep">/</span>
+                <a href="/workpermit/list">작업허가</a>
+                <span class="sep">/</span>
+                <span>등록/수정</span>
+            </div>
+        </nav>
+        
+        <main>
+            <div class="container">
+                <section class="card">
+                    <div class="card-header">
+                        <div class="card-title">작업허가 등록/수정</div>
+                        <div class="toolbar">
+                            <a class="btn" href="/workpermit/list">목록</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form data-validate method="post" action="/workpermit/save">
+                            
+                            <input type="hidden" name="_csrf" value="" data-csrf-field="true" />
+                            <input type="hidden" name="isNew" value="true" />
+                            
+                            <!-- 기본정보 -->
+                            <div class="section">
+                                <div class="section-title">기본정보</div>
+                                <div class="grid cols-12">
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="permitId">허가 번호</label>
+                                        <input id="permitId" name="permitId" class="input" maxlength="10" placeholder="자동생성" readonly />
+                                    </div>
+                                    <div class="form-row col-span-9">
+                                        <label class="label required" for="name">작업명</label>
+                                        <input id="name" name="name" class="input" required maxlength="100" placeholder="작업명을 입력하세요" />
+                                    </div>
+                                </div>
+                                <div class="grid cols-12">
+                                    <div class="form-row col-span-3">
+                                        <label class="label required" for="plant_id">설비 번호</label>
+                                        <input id="plant_id" name="plantId" class="input" required maxlength="10" placeholder="EQP000123" />
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label required" for="job_id">허가 유형</label>
+                                        <select id="job_id" name="jobId" required>
+                                            <option value="">선택</option>
+                                            <option value="HOT">HOT - 화기작업</option>
+                                            <option value="COLD">COLD - 일반작업</option>
+                                            <option value="ELECTRIC">ELECTRIC - 전기작업</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="site_id">Site</label>
+                                        <select id="site_id" name="siteId">
+                                            <option value="">(선택)</option>
+                                            <option value="SEOUL">SEOUL - 서울공장</option>
+                                            <option value="BUSAN">BUSAN - 부산공장</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="dept_id">관리부서</label>
+                                        <select id="dept_id" name="deptId">
+                                            <option value="">(선택)</option>
+                                            <option value="DEPT01">DEPT01 - 설비팀</option>
+                                            <option value="DEPT02">DEPT02 - 안전팀</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 일정 / 담당 / 상태 -->
+                            <div class="section">
+                                <div class="section-title">일정 / 담당</div>
+                                <div class="grid cols-12">
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="member_id">담당자</label>
+                                        <input id="member_id" name="memberId" class="input" maxlength="5" placeholder="예: M0001" />
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="planned_date">계획일</label>
+                                        <input id="planned_date" name="plannedDate" class="input" type="date" />
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="actual_date">실적일</label>
+                                        <input id="actual_date" name="actualDate" class="input" type="date" />
+                                    </div>
+                                    <div class="form-row col-span-3">
+                                        <label class="label" for="status">상태</label>
+                                        <select id="status" name="status">
+                                            <option value="REQ">요청</option>
+                                            <option value="APRV">승인</option>
+                                            <option value="REJT">반려</option>
+                                            <option value="DONE">종료</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 작업 개요 / 위험요인 / 안전조치 -->
+                            <div class="section">
+                                <div class="section-title">작업 개요 / 안전</div>
+                                <div class="grid cols-12">
+                                    <div class="form-row col-span-12">
+                                        <label class="label" for="work_summary">작업 개요</label>
+                                        <textarea id="work_summary" name="workSummary" rows="3" maxlength="500" placeholder="작업 내용을 상세히 입력하세요"></textarea>
+                                    </div>
+                                    <div class="form-row col-span-6">
+                                        <label class="label" for="hazard_factor">위험 요인</label>
+                                        <textarea id="hazard_factor" name="hazardFactor" rows="4" maxlength="500" placeholder="예상되는 위험 요인을 입력하세요"></textarea>
+                                    </div>
+                                    <div class="form-row col-span-6">
+                                        <label class="label" for="safety_factor">안전 조치</label>
+                                        <textarea id="safety_factor" name="safetyFactor" rows="4" maxlength="500" placeholder="안전 조치 사항을 입력하세요"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 안전작업 체크리스트 -->
+                            <div class="section">
+                                <div class="section-title">안전작업 체크리스트</div>
+                                
+                                <!-- 보충작업 선택 -->
+                                <div class="work-type-selection">
+                                    <label>
+                                        <input type="checkbox" name="workTypes" value="FIRE">
+                                        화기작업
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="workTypes" value="CONFINED">
+                                        밀폐공간작업
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="workTypes" value="ELECTRIC">
+                                        전기작업
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="workTypes" value="HIGH">
+                                        고소작업
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="workTypes" value="EXCAVATION">
+                                        굴착작업
+                                    </label>
+                                </div>
+                                
+                                <!-- 체크리스트 그룹들 -->
+                                <div class="checklist-container">
+                                    
+                                    <!-- 일반작업 (항상 표시) -->
+                                    <div class="checklist-group" data-work-type="COMMON">
+                                        <div class="group-header">공통(일반작업)</div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">안내표지 및 작업구역 설정</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="common_checked_0" class="check-confirm" id="common_checked_0">
+                                                <label for="common_checked_0" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="common_not_applicable_0" class="check-not-applicable" id="common_not_applicable_0">
+                                                <label for="common_not_applicable_0" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="common_item_name_0" value="안내표지 및 작업구역 설정">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">작업구역 주변 위험요인 제거</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="common_checked_1" class="check-confirm" id="common_checked_1">
+                                                <label for="common_checked_1" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="common_not_applicable_1" class="check-not-applicable" id="common_not_applicable_1">
+                                                <label for="common_not_applicable_1" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="common_item_name_1" value="작업구역 주변 위험요인 제거">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">안전보호구 착용</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="common_checked_2" class="check-confirm" id="common_checked_2">
+                                                <label for="common_checked_2" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="common_not_applicable_2" class="check-not-applicable" id="common_not_applicable_2">
+                                                <label for="common_not_applicable_2" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="common_item_name_2" value="안전보호구 착용">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">안전교육 실시</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="common_checked_3" class="check-confirm" id="common_checked_3">
+                                                <label for="common_checked_3" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="common_not_applicable_3" class="check-not-applicable" id="common_not_applicable_3">
+                                                <label for="common_not_applicable_3" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="common_item_name_3" value="안전교육 실시">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">현장안전관리자 지정</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="common_checked_4" class="check-confirm" id="common_checked_4">
+                                                <label for="common_checked_4" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="common_not_applicable_4" class="check-not-applicable" id="common_not_applicable_4">
+                                                <label for="common_not_applicable_4" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="common_item_name_4" value="현장안전관리자 지정">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 화기작업 (선택 시 표시) -->
+                                    <div class="checklist-group" data-work-type="FIRE" style="display:none">
+                                        <div class="group-header">화기작업</div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">소화기 비치</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="fire_checked_0" class="check-confirm" id="fire_checked_0">
+                                                <label for="fire_checked_0" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="fire_not_applicable_0" class="check-not-applicable" id="fire_not_applicable_0">
+                                                <label for="fire_not_applicable_0" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="fire_item_name_0" value="소화기 비치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">방화막 설치</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="fire_checked_1" class="check-confirm" id="fire_checked_1">
+                                                <label for="fire_checked_1" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="fire_not_applicable_1" class="check-not-applicable" id="fire_not_applicable_1">
+                                                <label for="fire_not_applicable_1" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="fire_item_name_1" value="방화막 설치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">감전방지장치 정상작동</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="fire_checked_2" class="check-confirm" id="fire_checked_2">
+                                                <label for="fire_checked_2" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="fire_not_applicable_2" class="check-not-applicable" id="fire_not_applicable_2">
+                                                <label for="fire_not_applicable_2" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="fire_item_name_2" value="감전방지장치 정상작동">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">작업구역 환기</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="fire_checked_3" class="check-confirm" id="fire_checked_3">
+                                                <label for="fire_checked_3" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="fire_not_applicable_3" class="check-not-applicable" id="fire_not_applicable_3">
+                                                <label for="fire_not_applicable_3" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="fire_item_name_3" value="작업구역 환기">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">가연성/유독가스 농도 측정</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="fire_checked_4" class="check-confirm" id="fire_checked_4">
+                                                <label for="fire_checked_4" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="fire_not_applicable_4" class="check-not-applicable" id="fire_not_applicable_4">
+                                                <label for="fire_not_applicable_4" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="fire_item_name_4" value="가연성/유독가스 농도 측정">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 밀폐공간작업 (선택 시 표시) -->
+                                    <div class="checklist-group" data-work-type="CONFINED" style="display:none">
+                                        <div class="group-header">밀폐공간작업</div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">산소농도 측정 (18~23.5%)</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_0" class="check-confirm" id="confined_checked_0">
+                                                <label for="confined_checked_0" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_0" class="check-not-applicable" id="confined_not_applicable_0">
+                                                <label for="confined_not_applicable_0" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_0" value="산소농도 측정 (18~23.5%)">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">가연성/유독가스 농도 측정</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_1" class="check-confirm" id="confined_checked_1">
+                                                <label for="confined_checked_1" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_1" class="check-not-applicable" id="confined_not_applicable_1">
+                                                <label for="confined_not_applicable_1" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_1" value="가연성/유독가스 농도 측정">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">2인 1조 작업</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_2" class="check-confirm" id="confined_checked_2">
+                                                <label for="confined_checked_2" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_2" class="check-not-applicable" id="confined_not_applicable_2">
+                                                <label for="confined_not_applicable_2" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_2" value="2인 1조 작업">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">환기/배기 조치</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_3" class="check-confirm" id="confined_checked_3">
+                                                <label for="confined_checked_3" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_3" class="check-not-applicable" id="confined_not_applicable_3">
+                                                <label for="confined_not_applicable_3" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_3" value="환기/배기 조치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">출입금지 표지 설치</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_4" class="check-confirm" id="confined_checked_4">
+                                                <label for="confined_checked_4" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_4" class="check-not-applicable" id="confined_not_applicable_4">
+                                                <label for="confined_not_applicable_4" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_4" value="출입금지 표지 설치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">연락수단 적정성</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_5" class="check-confirm" id="confined_checked_5">
+                                                <label for="confined_checked_5" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_5" class="check-not-applicable" id="confined_not_applicable_5">
+                                                <label for="confined_not_applicable_5" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_5" value="연락수단 적정성">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <span class="item-name">개인보호구 착용</span>
+                                            <div class="checkbox-group">
+                                                <input type="checkbox" name="confined_checked_6" class="check-confirm" id="confined_checked_6">
+                                                <label for="confined_checked_6" class="checkbox-label confirm">확인</label>
+                                                <input type="checkbox" name="confined_not_applicable_6" class="check-not-applicable" id="confined_not_applicable_6">
+                                                <label for="confined_not_applicable_6" class="checkbox-label not-applicable">해당없음</label>
+                                            </div>
+                                            <input type="hidden" name="confined_item_name_6" value="개인보호구 착용">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 전기작업 (선택 시 표시) -->
+                                    <div class="checklist-group" data-work-type="ELECTRIC" style="display:none">
+                                        <div class="group-header">전기작업</div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="electric_checked_0" class="check-confirm">
+                                            <input type="checkbox" name="electric_not_applicable_0" class="check-not-applicable">
+                                            <span class="item-name">주전원 차단</span>
+                                            <input type="hidden" name="electric_item_name_0" value="주전원 차단">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="electric_checked_1" class="check-confirm">
+                                            <input type="checkbox" name="electric_not_applicable_1" class="check-not-applicable">
+                                            <span class="item-name">접지 및 방전 확인</span>
+                                            <input type="hidden" name="electric_item_name_1" value="접지 및 방전 확인">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="electric_checked_2" class="check-confirm">
+                                            <input type="checkbox" name="electric_not_applicable_2" class="check-not-applicable">
+                                            <span class="item-name">작업안내표지 설치</span>
+                                            <input type="hidden" name="electric_item_name_2" value="작업안내표지 설치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="electric_checked_3" class="check-confirm">
+                                            <input type="checkbox" name="electric_not_applicable_3" class="check-not-applicable">
+                                            <span class="item-name">작업자 자격상태</span>
+                                            <input type="hidden" name="electric_item_name_3" value="작업자 자격상태">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="electric_checked_4" class="check-confirm">
+                                            <input type="checkbox" name="electric_not_applicable_4" class="check-not-applicable">
+                                            <span class="item-name">무전압 작업회로 로크아웃/태그아웃</span>
+                                            <input type="hidden" name="electric_item_name_4" value="무전압 작업회로 로크아웃/태그아웃">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 고소작업 (선택 시 표시) -->
+                                    <div class="checklist-group" data-work-type="HIGH" style="display:none">
+                                        <div class="group-header">고소작업</div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_0" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_0" class="check-not-applicable">
+                                            <span class="item-name">2인 1조 작업</span>
+                                            <input type="hidden" name="high_item_name_0" value="2인 1조 작업">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_1" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_1" class="check-not-applicable">
+                                            <span class="item-name">추락방지망 설치 확인</span>
+                                            <input type="hidden" name="high_item_name_1" value="추락방지망 설치 확인">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_2" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_2" class="check-not-applicable">
+                                            <span class="item-name">사다리 손상상태</span>
+                                            <input type="hidden" name="high_item_name_2" value="사다리 손상상태">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_3" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_3" class="check-not-applicable">
+                                            <span class="item-name">이동식비계 안전인증</span>
+                                            <input type="hidden" name="high_item_name_3" value="이동식비계 안전인증">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_4" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_4" class="check-not-applicable">
+                                            <span class="item-name">작업지지대 작동상태</span>
+                                            <input type="hidden" name="high_item_name_4" value="작업지지대 작동상태">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_5" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_5" class="check-not-applicable">
+                                            <span class="item-name">안전모 착용</span>
+                                            <input type="hidden" name="high_item_name_5" value="안전모 착용">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="high_checked_6" class="check-confirm">
+                                            <input type="checkbox" name="high_not_applicable_6" class="check-not-applicable">
+                                            <span class="item-name">안전띠 착용 (2m 이상)</span>
+                                            <input type="hidden" name="high_item_name_6" value="안전띠 착용 (2m 이상)">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 굴착작업 (선택 시 표시) -->
+                                    <div class="checklist-group" data-work-type="EXCAVATION" style="display:none">
+                                        <div class="group-header">굴착작업(중장비)</div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_0" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_0" class="check-not-applicable">
+                                            <span class="item-name">전력선 안전배치 조치</span>
+                                            <input type="hidden" name="excavation_item_name_0" value="전력선 안전배치 조치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_1" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_1" class="check-not-applicable">
+                                            <span class="item-name">조종케이블 안전상태</span>
+                                            <input type="hidden" name="excavation_item_name_1" value="조종케이블 안전상태">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_2" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_2" class="check-not-applicable">
+                                            <span class="item-name">지하매설물 확인</span>
+                                            <input type="hidden" name="excavation_item_name_2" value="지하매설물 확인">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_3" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_3" class="check-not-applicable">
+                                            <span class="item-name">출입금지 표지 설치</span>
+                                            <input type="hidden" name="excavation_item_name_3" value="출입금지 표지 설치">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_4" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_4" class="check-not-applicable">
+                                            <span class="item-name">연락수단 적정성</span>
+                                            <input type="hidden" name="excavation_item_name_4" value="연락수단 적정성">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_5" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_5" class="check-not-applicable">
+                                            <span class="item-name">개인보호구 착용</span>
+                                            <input type="hidden" name="excavation_item_name_5" value="개인보호구 착용">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_6" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_6" class="check-not-applicable">
+                                            <span class="item-name">작업구역 주변 정리</span>
+                                            <input type="hidden" name="excavation_item_name_6" value="작업구역 주변 정리">
+                                        </div>
+                                        
+                                        <div class="checklist-item">
+                                            <input type="checkbox" name="excavation_checked_7" class="check-confirm">
+                                            <input type="checkbox" name="excavation_not_applicable_7" class="check-not-applicable">
+                                            <span class="item-name">작업자 자격상태 확인</span>
+                                            <input type="hidden" name="excavation_item_name_7" value="작업자 자격상태 확인">
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                
+                                <!-- 기존 JSON 필드 (숨김) -->
+                                <input type="hidden" name="checksheetJson" id="checksheet-json">
+                            </div>
+
+                            <!-- 첨부 / 메모 -->
+                            <div class="section" data-file-upload>
+                                <div class="section-title">첨부</div>
+                                <input type="hidden" name="fileGroupId" value="" />
+                                <div class="attachments">
+                                    <input id="attachments-input" class="visually-hidden" type="file" 
+                                           multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
+                                    <button type="button" class="btn" data-attachments-add>
+                                        파일 선택
+                                        <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
+                                    </button>
+                                    <ul class="file-list" aria-live="polite" aria-label="첨부된 파일 목록">
+                                        <li class="empty">첨부된 파일이 없습니다.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">메모</div>
+                                <div class="form-row col-span-12">
+                                    <label class="label" for="note">비고</label>
+                                    <textarea id="note" name="note" rows="4" maxlength="500" placeholder="기타 메모(최대 500자)"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- 확인/서명 (work_permit_item 기준) -->
+                            <div class="section" data-signers>
+                                <div class="section-title">확인/서명</div>
+                                <div class="signers">
+                                    <div class="signer-row">
+                                        <div class="form-row">
+                                            <label class="label required" for="signer_0_name">이름</label>
+                                            <input id="signer_0_name" name="items[0].name" class="input" required maxlength="100" />
+                                        </div>
+                                        <div class="form-row">
+                                            <label class="label">서명</label>
+                                            <div class="signature-box" aria-label="서명(펜으로 기입)"></div>
+                                        </div>
+                                        <div class="signer-actions">
+                                            <button type="button" class="btn sm danger" data-remove-signer style="display:none">삭제</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="actions" style="justify-content:flex-start">
+                                    <button type="button" class="btn sm" data-add-signer>서명자 추가</button>
+                                </div>
+                            </div>
+
+                            <div class="actions" style="margin-top:16px">
+                                <button class="btn primary" type="submit">
+                                    <span>등록</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </main>
+        
+        <footer>
+            <div class="container">© 작업관리</div>
+        </footer>
+    </div>
+    
+    <script>
+        // 보충작업 선택에 따른 체크리스트 그룹 표시/숨김
+        document.querySelectorAll('input[name="workTypes"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const group = document.querySelector(`[data-work-type="${this.value}"]`);
+                if (group) {
+                    group.style.display = this.checked ? 'block' : 'none';
+                }
+            });
+        });
+        
+        // 확인/해당없음 체크박스 상호 배타적 처리
+        document.querySelectorAll('.check-confirm').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    const notApplicableCheckbox = this.parentElement.querySelector('.check-not-applicable');
+                    notApplicableCheckbox.checked = false;
+                }
+            });
+        });
+        
+        document.querySelectorAll('.check-not-applicable').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    const confirmCheckbox = this.parentElement.querySelector('.check-confirm');
+                    confirmCheckbox.checked = false;
+                }
+            });
+        });
+        
+        // 폼 제출 시 체크리스트 데이터를 JSON으로 변환
+        const form = document.querySelector('form[data-validate]');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const checklistData = collectChecklistData();
+                document.getElementById('checksheet-json').value = JSON.stringify(checklistData);
+            });
+        }
+        
+        function collectChecklistData() {
+            const workTypes = Array.from(document.querySelectorAll('input[name="workTypes"]:checked'))
+                .map(cb => cb.value);
+            
+            const items = [];
+            
+            // 일반작업 항목들
+            document.querySelectorAll('[name^="common_checked_"]').forEach(checkbox => {
+                const index = checkbox.name.match(/\d+/)[0];
+                const checked = checkbox.checked;
+                const notApplicable = document.querySelector(`[name="common_not_applicable_${index}"]`).checked;
+                const itemName = document.querySelector(`[name="common_item_name_${index}"]`).value;
+                
+                if (checked || notApplicable) {
+                    items.push({
+                        workType: 'COMMON',
+                        itemName: itemName,
+                        checked: checked,
+                        notApplicable: notApplicable
+                    });
+                }
+            });
+            
+            // 화기작업 항목들
+            document.querySelectorAll('[name^="fire_checked_"]').forEach(checkbox => {
+                const index = checkbox.name.match(/\d+/)[0];
+                const checked = checkbox.checked;
+                const notApplicable = document.querySelector(`[name="fire_not_applicable_${index}"]`).checked;
+                const itemName = document.querySelector(`[name="fire_item_name_${index}"]`).value;
+                
+                if (checked || notApplicable) {
+                    items.push({
+                        workType: 'FIRE',
+                        itemName: itemName,
+                        checked: checked,
+                        notApplicable: notApplicable
+                    });
+                }
+            });
+            
+            // 밀폐공간작업 항목들
+            document.querySelectorAll('[name^="confined_checked_"]').forEach(checkbox => {
+                const index = checkbox.name.match(/\d+/)[0];
+                const checked = checkbox.checked;
+                const notApplicable = document.querySelector(`[name="confined_not_applicable_${index}"]`).checked;
+                const itemName = document.querySelector(`[name="confined_item_name_${index}"]`).value;
+                
+                if (checked || notApplicable) {
+                    items.push({
+                        workType: 'CONFINED',
+                        itemName: itemName,
+                        checked: checked,
+                        notApplicable: notApplicable
+                    });
+                }
+            });
+            
+            // 전기작업, 고소작업, 굴착작업도 동일한 패턴으로 처리
+            
+            return {
+                workTypes: workTypes,
+                items: items
+            };
+        }
+    </script>
+</body>
+</html>

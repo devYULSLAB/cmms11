@@ -130,13 +130,59 @@
                       <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                     </div>
                   </header>
-                  <div class="doc-body">
-                    <div class="row"><strong>점검 번호</strong><span class="spacer"></span><span th:text="${inspection.inspectionId}">I250101001</span></div>
-                    <div class="row"><strong>점검명</strong><span class="spacer"></span><span th:text="${inspection.name}">설비 A 정기점검</span></div>
-                    <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${inspection.plantId}">EQP000123</span></div>
-                    <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${inspection.plannedDate}">2025-01-10</span></div>
-                    <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${inspection.actualDate ?: '-'}">2025-01-10</span></div>
-                    <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${inspection.status == 'PLAN' ? '계획' : inspection.status == 'PROC' ? '진행' : '완료'}">계획</span></div>
+                  
+                  <!-- 기본 정보 -->
+                  <div class="section">
+                    <div class="section-title">기본 정보</div>
+                    <table class="row-cols-4">
+                      <tr>
+                        <th>점검 번호</th><td th:text="${inspection.inspectionId}">I250101001</td>
+                        <th>점검명</th><td th:text="${inspection.name}">설비 A 정기점검</td>
+                      </tr>
+                      <tr>
+                        <th>설비 번호</th><td th:text="${inspection.plantId}">EQP000123</td>
+                        <th>상태</th><td th:text="${inspection.status == 'PLAN' ? '계획' : inspection.status == 'PROC' ? '진행' : '완료'}">계획</td>
+                      </tr>
+                      <tr>
+                        <th>계획일</th><td th:text="${inspection.plannedDate ?: '-'}">2025-01-10</td>
+                        <th>실적일</th><td th:text="${inspection.actualDate ?: '-'}">2025-01-10</td>
+                      </tr>
+                      <tr th:if="${inspection.note}">
+                        <th>비고</th><td colspan="3" th:text="${inspection.note}">-</td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <!-- 점검 항목 -->
+                  <div class="section">
+                    <div class="section-title">점검 항목</div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width: 40px;">#</th>
+                          <th>이름</th>
+                          <th>방법</th>
+                          <th style="width: 60px;">최소</th>
+                          <th style="width: 60px;">최대</th>
+                          <th style="width: 60px;">표준</th>
+                          <th>비고</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="item : ${inspection.items}" th:if="${inspection.items != null and !inspection.items.empty}">
+                          <td th:text="${item.lineNo}">1</td>
+                          <td th:text="${item.name ?: '-'}">소음도 측정</td>
+                          <td th:text="${item.method ?: '-'}">소음계 사용</td>
+                          <td th:text="${item.minVal ?: '-'}">55</td>
+                          <td th:text="${item.maxVal ?: '-'}">65</td>
+                          <td th:text="${item.stdVal ?: '-'}">60</td>
+                          <td th:text="${item.note ?: '-'}">-</td>
+                        </tr>
+                        <tr th:if="${inspection.items == null or inspection.items.empty}">
+                          <td colspan="7" class="muted">점검 항목이 없습니다.</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </section>

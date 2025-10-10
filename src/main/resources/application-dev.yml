@@ -46,3 +46,7 @@ logging:
     com.cmms11: INFO
     com.zaxxer.hikari: INFO  # HikariCP 상세 로그
     org.springframework.jdbc: INFO  # JDBC 로그
+  file:
+    name: /opt/cmms11/logs/cmms11-dev.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -7,13 +7,7 @@
     <!-- common CSS is loaded via layout/defaultLayout -->
     <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
-    <style>
-      .tabs{display:flex;gap:8px;flex-wrap:wrap}
-      .tab-btn{padding:6px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer}
-      .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
-      .section.tx-panel{display:none !important}
-      .section.tx-panel.active{display:block !important}
-    </style>
+    <!-- Tab styles moved to base.css for SPA compatibility -->
   </head>
   <body>
     <div class="page">
@@ -35,7 +29,7 @@
         </div>
       </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content" data-page="inventory-tx-transaction" data-module="inventory-tx-transaction">
+      <section data-slot-root th:fragment="content" data-page="inventoryTx-transaction" data-module="inventoryTx-transaction">
         <main>
           <div class="container">
             <section class="card">
@@ -229,36 +223,12 @@
                     <button class="btn primary" type="submit">저장</button>
                   </div>
                 </form>
-
-                <div class="section">
-                  <div class="section-title">최근 거래(미리보기)</div>
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th class="table-col-date-small">일자</th>
-                        <th class="table-col-type-medium">유형</th>
-                        <th class="table-col-id-large">재고번호</th>
-                        <th class="table-col-id-small">창고</th>
-                        <th class="cell-right table-col-amount-small">입고수량</th>
-                        <th class="cell-right table-col-amount-small">출고수량</th>
-                        <th class="cell-right table-col-amount-medium">단가</th>
-                        <th class="cell-right table-col-amount-medium">금액</th>
-                        <th class="table-col-info-small">비고</th>
-                      </tr>
-                    </thead>
-                    <tbody id="txHistoryBody">
-                      <tr>
-                        <td colspan="9" class="cell-center">거래 내역을 불러오는 중...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </section>
           </div>
         </main>
         
-        <!-- 인라인 스크립트는 inventory-tx.js로 이관됨 -->
+        <!-- 인라인 스크립트는 inventoryTx.js로 이관됨 -->
         
       </section>
       <footer>

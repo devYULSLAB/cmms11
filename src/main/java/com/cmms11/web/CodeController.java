@@ -46,10 +46,9 @@ public class CodeController {
 
     // 웹 컨트롤러 화면 제공
     @GetMapping("/code/list")
-    public String listForm(@RequestParam(name = "q", required = false) String q, Pageable pageable, Model model) {
-        Page<CodeTypeResponse> page = service.listTypes(q, pageable);
+    public String listForm(Pageable pageable, Model model) {
+        Page<CodeTypeResponse> page = service.listTypes(null, pageable);
         model.addAttribute("page", page);
-        model.addAttribute("keyword", q);
         return "code/list";
     }
 

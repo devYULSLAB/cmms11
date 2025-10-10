@@ -111,12 +111,10 @@ export function initFileList() {
       return `
         <div class="attachment-item" data-file-id="${fileId}">
           <div class="file-name">
-            <strong>${file.originalName}</strong>
-            <div class="file-size" style="margin-top: 4px;">
-              ${fileSize}
-            </div>
-            ${file.description ? `<div style="margin-top: 4px; color: var(--muted);">${file.description}</div>` : ''}
+            ${file.originalName}
+            ${file.description ? `<div style="margin-top: 4px; font-size: 12px; color: var(--muted);">${file.description}</div>` : ''}
           </div>
+          <div class="file-size">${fileSize}</div>
           <div class="file-actions">
             ${this.createFileActions(file)}
           </div>

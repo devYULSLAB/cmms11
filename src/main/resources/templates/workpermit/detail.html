@@ -83,8 +83,13 @@
               </div>
 
               <div class="section">
-                <div class="section-title">체크리스트(JSON)</div>
-                <pre class="note" style="white-space:pre-wrap" th:text="${workpermit.checksheetJson}">[{"item":"산소농도 측정","result":"OK"}]</pre>
+                <div class="section-title">안전작업 체크리스트</div>
+                <div th:if="${workpermit.checksheetJson}" id="checklist-display">
+                  <!-- JavaScript로 동적 렌더링 -->
+                </div>
+                <div th:unless="${workpermit.checksheetJson}" class="notice">
+                  체크리스트 정보가 없습니다.
+                </div>
               </div>
 
               <div class="section">
@@ -153,14 +158,62 @@
                       <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                     </div>
                   </header>
-                  <div class="doc-body">
-                    <div class="row"><strong>허가 번호</strong><span class="spacer"></span><span th:text="${workpermit.permitId}">P250101001</span></div>
-                    <div class="row"><strong>작업명</strong><span class="spacer"></span><span th:text="${workpermit.name}">배관 용접 작업</span></div>
-                    <div class="row"><strong>설비 번호</strong><span class="spacer"></span><span th:text="${workpermit.plantId}">EQP000123</span></div>
-                    <div class="row"><strong>허가유형</strong><span class="spacer"></span><span th:text="${workpermit.jobId}">HOT</span></div>
-                    <div class="row"><strong>계획일</strong><span class="spacer"></span><span th:text="${workpermit.plannedDate}">2025-01-12</span></div>
-                    <div class="row"><strong>실적일</strong><span class="spacer"></span><span th:text="${workpermit.actualDate}">2025-01-12</span></div>
-                    <div class="row"><strong>상태</strong><span class="spacer"></span><span th:text="${workpermit.status == 'REQ' ? '요청' : workpermit.status == 'APRV' ? '승인' : workpermit.status == 'REJT' ? '반려' : '종료'}">요청</span></div>
+                  
+                  <!-- 기본 정보 -->
+                  <div class="section">
+                    <div class="section-title">기본 정보</div>
+                    <table class="row-cols-4">
+                      <tr>
+                        <th>허가 번호</th><td th:text="${workpermit.permitId}">P250101001</td>
+                        <th>작업명</th><td th:text="${workpermit.name}">배관 용접 작업</td>
+                      </tr>
+                      <tr>
+                        <th>설비 번호</th><td th:text="${workpermit.plantId}">EQP000123</td>
+                        <th>허가유형</th><td th:text="${workpermit.jobId}">HOT</td>
+                      </tr>
+                      <tr>
+                        <th>계획일</th><td th:text="${workpermit.plannedDate ?: '-'}">2025-01-12</td>
+                        <th>실적일</th><td th:text="${workpermit.actualDate ?: '-'}">2025-01-12</td>
+                      </tr>
+                      <tr>
+                        <th>상태</th><td colspan="3" th:text="${workpermit.status == 'REQ' ? '요청' : workpermit.status == 'APRV' ? '승인' : workpermit.status == 'REJT' ? '반려' : '종료'}">요청</td>
+                      </tr>
+                    </table>
+                  </div>
+                  
+                  <!-- 체크리스트 정보 -->
+                  <div class="section">
+                    <div class="section-title">안전작업 체크리스트</div>
+                    <div id="print-checklist-display">
+                      <!-- JavaScript로 동적 렌더링 -->
+                    </div>
+                  </div>
+                  
+                  <!-- 서명 정보 -->
+                  <div class="section">
+                    <div class="section-title">서명</div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width: 50px;">#</th>
+                          <th style="width: 150px;">이름</th>
+                          <th>서명</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="it, iter : ${items}" th:if="${items != null and !items.empty}">
+                          <td th:text="${iter.index + 1}">1</td>
+                          <td th:text="${it.name}">홍길동</td>
+                          <td>
+                            <img th:if="${it.signature}" th:src="${it.signature}" alt="서명" style="max-height: 80px; border: 1px solid #ddd;" />
+                            <span class="muted" th:if="${it.signature == null}">서명 없음</span>
+                          </td>
+                        </tr>
+                        <tr th:if="${items == null or items.empty}">
+                          <td colspan="3" class="muted">서명 정보가 없습니다.</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </section>
@@ -174,6 +227,78 @@
       </footer>
     </div>
     
-    <!-- 인라인 스크립트 제거됨 - workpermit.js로 이관 -->
+    <script>
+      // 체크리스트 데이터 렌더링
+      document.addEventListener('DOMContentLoaded', function() {
+        const checklistData = /*[[${workpermit.checksheetJson}]]*/ null;
+        if (checklistData) {
+          try {
+            const data = JSON.parse(checklistData);
+            renderChecklistDisplay(data, 'checklist-display');
+            renderChecklistDisplay(data, 'print-checklist-display');
+          } catch (e) {
+            console.warn('체크리스트 데이터 파싱 실패:', e);
+          }
+        }
+      });
+      
+      function renderChecklistDisplay(data, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container || !data) return;
+        
+        let html = '';
+        
+        // 작업 유형별 그룹핑
+        const groupedItems = {};
+        data.items.forEach(item => {
+          if (!groupedItems[item.workType]) {
+            groupedItems[item.workType] = [];
+          }
+          groupedItems[item.workType].push(item);
+        });
+        
+        // 각 작업 유형별로 렌더링
+        Object.keys(groupedItems).forEach(workType => {
+          const items = groupedItems[workType];
+          const workTypeName = getWorkTypeName(workType);
+          
+          html += '<div class="checklist-group">';
+          html += `<div class="group-header">${workTypeName}</div>`;
+          
+          items.forEach(item => {
+            html += '<div class="checklist-item">';
+            html += `<span class="item-name">${item.itemName}</span>`;
+            html += '<div class="checkbox-group">';
+            
+            if (item.checked) {
+              html += '<span class="checkbox-label confirm">✓ 확인</span>';
+            } else if (item.notApplicable) {
+              html += '<span class="checkbox-label not-applicable">✓ 해당없음</span>';
+            } else {
+              html += '<span class="checkbox-label">미선택</span>';
+            }
+            
+            html += '</div>';
+            html += '</div>';
+          });
+          
+          html += '</div>';
+        });
+        
+        container.innerHTML = html;
+      }
+      
+      function getWorkTypeName(workType) {
+        const names = {
+          'COMMON': '공통(일반작업)',
+          'FIRE': '화기작업',
+          'CONFINED': '밀폐공간작업',
+          'ELECTRIC': '전기작업',
+          'HIGH': '고소작업',
+          'EXCAVATION': '굴착작업(중장비)'
+        };
+        return names[workType] || workType;
+      }
+    </script>
   </body>
   </html>
