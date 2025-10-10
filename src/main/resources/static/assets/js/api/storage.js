@@ -1,11 +1,33 @@
 /**
  * 로컬 저장소 관리 모듈
  * 
- * 로컬 스토리지, 세션 스토리지, 캐시 관리를 담당하는 모듈입니다.
  * - 로컬 스토리지 관리
  * - 세션 스토리지 관리
  * - 캐시 관리
  * - 데이터 직렬화/역직렬화
+ * 
+ * @functions
+ * - initStorage() - 저장소 모듈 초기화
+ * 
+ * @methods (window.cmms.storage)
+ * - setLocal(key, value, ttl) - 로컬 스토리지에 데이터 저장
+ * - getLocal(key, defaultValue) - 로컬 스토리지에서 데이터 조회
+ * - removeLocal(key) - 로컬 스토리지에서 데이터 삭제
+ * - clearLocal() - 로컬 스토리지 전체 삭제
+ * - setSession(key, value) - 세션 스토리지에 데이터 저장
+ * - getSession(key, defaultValue) - 세션 스토리지에서 데이터 조회
+ * - removeSession(key) - 세션 스토리지에서 데이터 삭제
+ * - clearSession() - 세션 스토리지 전체 삭제
+ * - cache.set(key, value, ttl) - 캐시에 데이터 저장
+ * - cache.get(key) - 캐시에서 데이터 조회
+ * - cache.delete(key) - 캐시에서 데이터 삭제
+ * - cache.clear() - 캐시 전체 삭제
+ * - cache.cleanup() - 만료된 캐시 정리
+ * - cookie.set(name, value, days, path, domain, secure) - 쿠키 설정
+ * - cookie.get(name) - 쿠키 조회
+ * - cookie.remove(name, path, domain) - 쿠키 삭제
+ * - getLocalStorageSize() - 로컬 스토리지 사용량 확인
+ * - getSessionStorageSize() - 세션 스토리지 사용량 확인
  */
 
 /**

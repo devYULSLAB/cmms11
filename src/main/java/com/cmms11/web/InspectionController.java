@@ -7,7 +7,11 @@ import com.cmms11.code.CodeService;
 import com.cmms11.domain.site.SiteService;
 import com.cmms11.domain.dept.DeptService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -71,13 +75,7 @@ public class InspectionController {
         addReferenceData(model);
         return "inspection/form";
     }
-
-    @GetMapping("/inspection/plan")
-    public String planForm(Model model) {
-        addReferenceData(model);
-        return "inspection/plan";
-    }
-
+    
     @GetMapping("/inspection/detail/{inspectionId}")
     public String detailForm(@PathVariable String inspectionId, Model model) {
         InspectionResponse inspection = service.get(inspectionId);
@@ -108,6 +106,79 @@ public class InspectionController {
     public String deleteForm(@PathVariable String inspectionId) {
         service.delete(inspectionId);
         return "redirect:/inspection/list";
+    }
+
+    /* 점검 계획 일괄 수립 */
+
+    @GetMapping("/inspection/plan")
+    public String planForm(Model model) {
+        addReferenceData(model);
+        return "inspection/plan";
+    }
+
+    @PostMapping("/inspection/plan/save")
+    public String savePlan(@RequestParam Map<String, String> params) {
+        // inspections[0].name, inspections[0].plantId, inspections[0].status, ...
+        // inspections[1].name, inspections[1].plantId, inspections[1].status, ...
+        // 이런 형태의 파라미터를 파싱해서 여러 개 저장
+        // status는 plan.html의 hidden field에서 "PLAN"으로 주입되어 넘어옴
+        
+        List<InspectionRequest> inspections = parseInspectionArray(params);
+        inspections.forEach(service::create);
+        
+        return "redirect:/inspection/list";
+    }
+
+    private List<InspectionRequest> parseInspectionArray(Map<String, String> params) {
+        // inspections[0], inspections[1] ... 파싱 로직
+        Map<Integer, Map<String, String>> grouped = new HashMap<>();
+        
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith("inspections[")) {
+                // inspections[0].name -> index=0, field=name
+                int start = key.indexOf('[') + 1;
+                int end = key.indexOf(']');
+                int index = Integer.parseInt(key.substring(start, end));
+                String field = key.substring(end + 2); // ].name -> name
+                
+                grouped.computeIfAbsent(index, k -> new HashMap<>())
+                    .put(field, entry.getValue());
+            }
+        }
+        
+        List<InspectionRequest> result = new ArrayList<>();
+        for (Map<String, String> fields : grouped.values()) {
+            result.add(createInspectionFromMap(fields));
+        }
+        
+        return result;
+    }
+    
+    private InspectionRequest createInspectionFromMap(Map<String, String> fields) {
+        // HTML에서 snake_case로 넘어온 필드명을 camelCase로 매핑
+        return new InspectionRequest(
+            null, // inspectionId - 자동생성
+            fields.get("name"),
+            fields.get("plant_id"),
+            fields.get("job_id"),
+            fields.get("site_id"),
+            fields.get("dept_id"),
+            fields.get("member_id"),
+            parseDate(fields.get("planned_date")),
+            parseDate(fields.get("actual_date")),
+            fields.get("status"),
+            null, // fileGroupId
+            fields.get("note"),
+            new ArrayList<>() // items - 계획 단계에서는 비어있음
+        );
+    }
+    
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(dateStr);
     }
 
     // API 엔드포인트 제공

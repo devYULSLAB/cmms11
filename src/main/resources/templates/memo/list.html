@@ -96,11 +96,11 @@
                   <div class="pagination">
                     <button class="btn btn-sm" th:disabled="${page.first}" 
                             th:data-url="@{/memo/list(page=${page.number - 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
-                            data-nav-button>이전</button>
+                            data-nav-btn>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
                     <button class="btn btn-sm" th:disabled="${page.last}" 
                             th:data-url="@{/memo/list(page=${page.number + 1}, title=${title}, createdBy=${createdBy}, refEntity=${refEntity})}"
-                            data-nav-button>다음</button>
+                            data-nav-btn>다음</button>
                   </div>
                 </div>
               </div>

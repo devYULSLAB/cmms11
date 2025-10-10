@@ -47,7 +47,7 @@
                 <form method="POST" 
                       th:action="@{/workorder/save}" 
                       data-validate="true"
-                      data-redirect="@{/workorder/list}">
+                      th:data-redirect="@{/workorder/list}">
 
                   <!-- 기본 정보 섹션 -->
                   <div class="section">
@@ -196,8 +196,8 @@
                       <table class="table" data-table-manager
                              data-row-selector=".wo-item-row"
                              data-number-field=".line-no"
-                             data-add-button="[data-add-item]"
-                             data-remove-button="[data-remove-item]"
+                             data-add-btn="[data-add-item]"
+                             data-remove-btn="[data-remove-item]"
                              data-min-rows="1"
                              th:attr="data-server-items=${items}">
                         <thead>

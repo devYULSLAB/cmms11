@@ -48,7 +48,7 @@
     // 페이지네이션 초기화 (공통 유틸 사용, root 기반)
     initPagination: function(root) {
       console.log('Inspection pagination initialized - app.js 공통 로직에서 처리됨');
-      // app.js의 공통 페이지네이션 로직이 data-nav-button을 자동으로 처리
+      // app.js의 공통 페이지네이션 로직이 data-nav-btn을 자동으로 처리
       // root 범위 내에서만 처리되므로 중복 바인딩 방지됨
     },
     

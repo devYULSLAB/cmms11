@@ -1,10 +1,22 @@
 /**
  * 유효성 검사 모듈
  * 
- * common.js에서 유효성 검사 기능을 추출한 모듈입니다.
  * - 폼 유효성 검사
  * - 필드별 유효성 검사
  * - 에러 메시지 표시
+ * 
+ * @functions
+ * - validateForm(form) - 폼 유효성 검사
+ * - validateField(field) - 특정 필드 유효성 검사
+ * - isValidEmail(email) - 이메일 유효성 검사
+ * - isValidDate(dateString) - 날짜 유효성 검사
+ * - isValidNumber(value, options) - 숫자 유효성 검사
+ * - isValidLength(value, options) - 문자열 길이 검사
+ * - isValidPattern(value, pattern) - 패턴 검사
+ * - validatePasswordStrength(password) - 비밀번호 강도 검사
+ * - showValidationErrors(form, errors) - 에러 메시지 표시
+ * - setupRealTimeValidation(form) - 실시간 유효성 검사 설정
+ * - initValidator() - 유효성 검사 모듈 초기화
  */
 
 /**

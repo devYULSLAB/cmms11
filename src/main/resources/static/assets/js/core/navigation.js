@@ -5,6 +5,22 @@
  * - 브라우저 히스토리 관리
  * - URL 해석 및 라우팅
  * - 동적 모듈 로딩 연동
+ * 
+ * @functions
+ * - initNavigation() - 네비게이션 모듈 초기화
+ * 
+ * @methods (window.cmms.navigation)
+ * - resolveUrl(href, basePath) - Thymeleaf 링크를 URL로 변환
+ * - setState(contentUrl, push) - 브라우저 스택 리스트에 URL 데이터 추가
+ * - setActive(contentUrl) - 현재 활성화된 메뉴 설정
+ * - loadContent(contentUrl, opts) - AJAX 콘텐츠 가져오기와 출력
+ * - navigate(targetHref) - URL 해석 및 네비게이션
+ * - executePageScripts(doc) - 페이지별 스크립트 실행
+ * - fetchAndInject(url, slotEl, opts) - HTML 부분을 가져와서 슬롯 요소에 주입
+ * - bindDeleteHandler() - 삭제 핸들러 바인딩
+ * - bindActionHandler() - 액션 버튼 이벤트 핸들러 바인딩
+ * - initSidebarToggle() - 사이드바 토글 기능 초기화
+ * - init() - 네비게이션 시스템 초기화
  */
 
 /**
@@ -186,39 +202,6 @@ export function initNavigation() {
             console.warn('File widget initialization failed:', error);
           }
         }, 10);
-
-        // Intercept SPA-friendly form submissions inside slot
-        const forms = this.slot.querySelectorAll('form[data-redirect]');
-        forms.forEach((form) => {
-          if (form.__cmmsHandled) return;
-          form.__cmmsHandled = true;
-          form.addEventListener('submit', (e) => {
-            try {
-              e.preventDefault();
-              const action = form.getAttribute('action') || '';
-              const method = (form.getAttribute('method') || 'post').toUpperCase();
-              const redirectTo = form.getAttribute('data-redirect') || this.currentContentUrl;
-              const formData = new FormData(form);
-              fetch(action, {
-                method,
-                body: formData,
-                credentials: 'same-origin'
-              }).then((res) => {
-                if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
-                if (!res.ok) throw new Error('Submit failed: ' + res.status);
-                this.navigate(redirectTo);
-              }).catch((err) => {
-                console.error(err);
-                const notice = document.createElement('div');
-                notice.className = 'notice danger';
-                notice.textContent = '요청에 실패했습니다. 다시 시도해주세요.';
-                form.prepend(notice);
-              });
-            } catch (err) {
-              console.error(err);
-            }
-          });
-        });
 
         // data-validate 폼 처리
         const validateForms = this.slot.querySelectorAll('form[data-validate]');

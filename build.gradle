@@ -61,3 +61,15 @@ bootJar {
 bootJar {
     archiveFileName = "${project.name}-${project.version}.jar"
 }
+
+// bootRun 실행 시 UTF-8 인코딩 설정
+bootRun {
+    jvmArgs = [
+        '-Dfile.encoding=UTF-8',
+        '-Dconsole.encoding=UTF-8',
+        '-Dstdout.encoding=UTF-8',
+        '-Dstderr.encoding=UTF-8'
+    ]
+    // 개발 프로파일 활성화
+    systemProperty 'spring.profiles.active', 'dev'
+}

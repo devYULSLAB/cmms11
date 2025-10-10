@@ -62,7 +62,7 @@
         window.cmms.common.initPagination(root);
       } else {
         // 기본 pagination 처리
-        const paginationBtns = root.querySelectorAll('[data-nav-button]');
+        const paginationBtns = root.querySelectorAll('[data-nav-btn]');
         paginationBtns.forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.preventDefault();

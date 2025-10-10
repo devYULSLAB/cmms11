@@ -125,6 +125,21 @@ function setupCommonEventHandlers() {
       }
     });
   });
+
+  // data-logout 처리
+  document.querySelectorAll('[data-logout]').forEach(btn => {
+    if (btn.__logoutBound) return;
+    btn.__logoutBound = true;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.cmms?.auth?.logout) {
+        window.cmms.auth.logout();
+      } else {
+        console.error('Auth module not found. Redirecting to login...');
+        window.location.href = '/auth/login.html';
+      }
+    });
+  });
 }
 
 // 개별 모듈 초기화 함수들도 export

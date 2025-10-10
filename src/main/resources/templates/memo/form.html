@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/memo/save}" data-redirect="@{/memo/list}">
+                <form data-validate method="post" th:action="@{/memo/save}" th:data-redirect="@{/memo/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
@@ -72,6 +72,7 @@
                         <label class="label" for="ref_id">참조 ID</label>
                         <input id="ref_id" name="refId" class="input" maxlength="10" placeholder="예: O250101001" 
                               th:value="${memo.refId}" />
+                        <small class="hint">다른 문서나 작업지시서 등을 참조할 경우 ID 입력</small>
                       </div>
                     </div>
                   </div>
@@ -86,9 +87,21 @@
                     </div>
                   </div>
 
-                  <!-- 첨부 -->
+                  <!-- 기존 첨부 파일 (수정 모드) -->
+                  <div class="section" th:if="${memo.fileGroupId}">
+                    <div class="section-title">기존 첨부 파일</div>
+                    <div data-file-list 
+                         th:attr="data-file-group-id=${memo.fileGroupId}"
+                         data-empty-text="첨부된 파일이 없습니다."
+                         data-loading-text="첨부 파일을 불러오는 중..."
+                         data-error-text="첨부 파일을 불러올 수 없습니다.">
+                      <div class="file-list"></div>
+                    </div>
+                  </div>
+
+                  <!-- 새 첨부 파일 업로드 -->
                   <div class="section" data-file-upload>
-                    <div class="section-title">첨부</div>
+                    <div class="section-title">새 파일 추가</div>
                     <input type="hidden" name="fileGroupId" th:value="${memo.fileGroupId}" />
                     <div class="attachments">
                       <input id="attachments-input" class="visually-hidden" type="file" 

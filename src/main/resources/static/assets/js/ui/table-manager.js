@@ -1,10 +1,23 @@
 /**
  * 테이블 관리 모듈
  * 
- * common.js에서 테이블 관리 기능을 추출한 모듈입니다.
  * - 동적 테이블 행 관리 (추가/삭제/재정렬)
  * - 데이터 바인딩
  * - 이벤트 처리
+ * 
+ * @functions
+ * - initTableManager(table, options) - 테이블 매니저 초기화
+ * - initTableManagerModule() - 테이블 매니저 모듈 초기화
+ * 
+ * @methods (manager 객체)
+ * - renumber() - 순번 재정렬
+ * - addRow(data) - 행 추가
+ * - removeRow(rowElement) - 행 삭제
+ * - attachRowHandlers(rowElement) - 행 이벤트 바인딩
+ * - initExistingRows() - 기존 행들 이벤트 바인딩
+ * - loadFromData(dataArray) - 서버 데이터로 행들 초기화
+ * - serialize() - 폼 데이터 직렬화
+ * - validate() - 테이블 데이터 검증
  */
 
 /**
@@ -17,8 +30,8 @@ export function initTableManager(table, options = {}) {
   const config = Object.assign({
     rowSelector: '.item-row',
     numberField: '.line-no',
-    addButton: '[data-add-row]',
-    removeButton: '[data-remove-row]',
+    addBtn: '[data-add-row]',
+    removeBtn: '[data-remove-row]',
     namePattern: /items\[(\d+)\]\.(\w+)/,
     minRows: 1
   }, options);
@@ -56,7 +69,7 @@ export function initTableManager(table, options = {}) {
         });
         
         // 삭제 버튼 표시/숨김
-        const removeBtn = row.querySelector(config.removeButton);
+        const removeBtn = row.querySelector(config.removeBtn);
         if (removeBtn && rows.length <= config.minRows) {
           removeBtn.style.display = 'none';
         } else if (removeBtn) {
@@ -160,7 +173,7 @@ export function initTableManager(table, options = {}) {
      * @param {HTMLElement} rowElement - 행 요소
      */
     attachRowHandlers: function(rowElement) {
-      const removeBtn = rowElement.querySelector(config.removeButton);
+      const removeBtn = rowElement.querySelector(config.removeBtn);
       if (removeBtn && !removeBtn.__bound) {
         removeBtn.__bound = true;
         removeBtn.addEventListener('click', (e) => {
@@ -250,7 +263,7 @@ export function initTableManager(table, options = {}) {
   };
   
   // 추가 버튼 이벤트 바인딩
-  const addBtn = table.querySelector(config.addButton);
+  const addBtn = table.querySelector(config.addBtn);
   if (addBtn && !addBtn.__bound) {
     addBtn.__bound = true;
     addBtn.addEventListener('click', (e) => {

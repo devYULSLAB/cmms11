@@ -105,14 +105,15 @@ export function initFileList() {
      */
     createFileItem: function(file) {
       const fileSize = this.formatFileSize(file.size);
-      const uploadDate = this.formatDate(file.uploadDate);
+      // FileItemResponse에는 fileId 필드 사용
+      const fileId = file.fileId || file.id;
       
       return `
-        <div class="attachment-item" data-file-id="${file.id}">
+        <div class="attachment-item" data-file-id="${fileId}">
           <div class="file-name">
             <strong>${file.originalName}</strong>
             <div class="file-size" style="margin-top: 4px;">
-              ${fileSize} • ${uploadDate}
+              ${fileSize}
             </div>
             ${file.description ? `<div style="margin-top: 4px; color: var(--muted);">${file.description}</div>` : ''}
           </div>
@@ -129,11 +130,13 @@ export function initFileList() {
      * @returns {string} 액션 버튼 HTML
      */
     createFileActions: function(file) {
+      // FileItemResponse에는 fileId 필드 사용
+      const fileId = file.fileId || file.id;
       // 다운로드 버튼만 제공
       return `
         <button class="btn btn-download" 
                 data-action="download" 
-                data-file-id="${file.id}"
+                data-file-id="${fileId}"
                 title="다운로드">
           📥 다운로드
         </button>

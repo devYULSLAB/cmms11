@@ -4,6 +4,14 @@
  * - 페이지별 모듈 매핑 및 로딩
  * - 스크립트 동적 주입
  * - 로딩 상태 관리
+ * 
+ * @functions
+ * - initModuleLoader() - 모듈 로더 초기화
+ * 
+ * @methods (window.cmms.moduleLoader)
+ * - extractModuleId(path) - 경로에서 모듈 식별자 추출
+ * - injectScript(src) - 스크립트 동적 주입
+ * - loadModule(contentUrl) - 모듈 동적 로딩
  */
 
 /**

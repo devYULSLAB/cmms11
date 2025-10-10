@@ -42,7 +42,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/workpermit/save}" data-redirect="@{/workpermit/list}">
+                <form data-validate method="post" th:action="@{/workpermit/save}" th:data-redirect="@{/workpermit/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />

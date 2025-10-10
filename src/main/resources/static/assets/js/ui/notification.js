@@ -1,11 +1,22 @@
 /**
  * 알림 시스템 모듈
  * 
- * app.js에서 알림 기능을 추출한 모듈입니다.
  * - 성공/에러/경고 알림
  * - 토스트 메시지
  * - 확인 대화상자
  * - 로딩 대화상자
+ * 
+ * @functions
+ * - showNotification(message, type, duration) - 기본 알림 표시
+ * - showSuccess(message, duration) - 성공 알림 표시
+ * - showError(message, duration) - 에러 알림 표시
+ * - showWarning(message, duration) - 경고 알림 표시
+ * - showInfo(message, duration) - 정보 알림 표시
+ * - showToast(message, type, duration) - 토스트 메시지 표시
+ * - createToastContainer() - 토스트 컨테이너 생성 (내부 함수)
+ * - showConfirmDialog(message, title, confirmText, cancelText) - 확인 대화상자 표시
+ * - showLoadingDialog(message) - 로딩 대화상자 표시
+ * - initNotification() - 알림 모듈 초기화
  */
 
 /**

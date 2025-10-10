@@ -1,12 +1,33 @@
 /**
  * 공통 유틸리티 모듈
  * 
- * app.js에서 유틸리티 함수들을 추출한 모듈입니다.
  * - 파일 크기 포맷팅
  * - DOM 유틸리티 함수들
  * - 문자열 처리 함수들
  * - 날짜 처리 함수들
  * - 기타 공통 함수들
+ * 
+ * @functions
+ * - findAll(root, selector) - 루트 요소에서 선택자 검색
+ * - formatFileSize(bytes) - 바이트 크기를 읽기 쉬운 형식으로 변환
+ * - createAttachmentListItem(file, doc) - 첨부 파일 목록 아이템 생성
+ * - debounce(func, wait) - 디바운스 함수
+ * - throttle(func, limit) - 쓰로틀 함수
+ * - isValidEmail(email) - 이메일 유효성 검사
+ * - sanitizeHtml(html) - HTML 태그 제거 및 안전화
+ * - getCookie(name) - 쿠키 값 읽기
+ * - setCookie(name, value, days) - 쿠키 설정
+ * - removeCookie(name) - 쿠키 삭제
+ * - copyToClipboard(text) - 클립보드에 텍스트 복사
+ * - downloadFile(url, filename) - 파일 다운로드
+ * - formatDate(date, format) - 날짜 포맷팅
+ * - parseDate(dateString, format) - 날짜 문자열 파싱
+ * - isDateValid(date) - 날짜 유효성 검사
+ * - getRandomId(prefix) - 랜덤 ID 생성
+ * - deepClone(obj) - 깊은 복사
+ * - isEmpty(value) - 값이 비어있는지 확인
+ * - generateUUID() - UUID 생성
+ * - initUtils() - 유틸리티 모듈 초기화
  */
 
 /**

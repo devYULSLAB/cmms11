@@ -1,10 +1,19 @@
 /**
  * 페이지 초기화 훅 시스템
  * 
- * app.js에서 페이지 초기화 기능을 추출한 모듈입니다.
  * - 페이지별 초기화 함수 등록
  * - 페이지 생명주기 관리
  * - 컨테이너 기반 초기화 실행
+ * 
+ * @functions
+ * - initPages() - 페이지 초기화 모듈 초기화
+ * 
+ * @methods (window.cmms.pages)
+ * - register(name, initFn) - 페이지 초기화 함수 등록
+ * - run(container, ctx) - 페이지 초기화 실행
+ * - reset(container) - 페이지 초기화 상태 초기화
+ * - list() - 등록된 페이지 목록 조회
+ * - unregister(name) - 페이지 초기화 함수 제거
  */
 
 /**

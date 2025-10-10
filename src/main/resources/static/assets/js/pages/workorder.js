@@ -21,7 +21,6 @@
       this.initSearch(root);
       this.initResetForm(root);
       this.initNavButtons(root);
-      this.initConfirmButtons(root);
     },
     
     // 상세 페이지 초기화 (root 기반)
@@ -40,7 +39,7 @@
     // 페이지네이션 초기화 (공통 유틸 사용, root 기반)
     initPagination: function(root) {
       console.log('WorkOrder pagination initialized - app.js 공통 로직에서 처리됨');
-      // app.js의 공통 페이지네이션 로직이 data-nav-button을 자동으로 처리
+      // app.js의 공통 페이지네이션 로직이 data-nav-btn을 자동으로 처리
       // root 범위 내에서만 처리되므로 중복 바인딩 방지됨
     },
     
@@ -68,23 +67,11 @@
     
     // 네비게이션 버튼 초기화 (root 기반)
     initNavButtons: function(root) {
-      root.querySelectorAll('[data-nav-button]').forEach(btn => {
+      root.querySelectorAll('[data-nav-btn]').forEach(btn => {
         btn.addEventListener('click', () => {
           const url = btn.dataset.url;
           if (url) {
             window.cmms.navigation.navigate(url);
-          }
-        });
-      });
-    },
-    
-    // 확인 버튼 초기화 (root 기반)
-    initConfirmButtons: function(root) {
-      root.querySelectorAll('[data-confirm-message]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const message = btn.dataset.confirmMessage;
-          if (message && !confirm(message)) {
-            e.preventDefault();
           }
         });
       });

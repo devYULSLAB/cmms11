@@ -101,7 +101,7 @@ public class FileService {
             // ✅ UUID 기반 fileId 생성 (sequence LOCK 제거!)
             String fileId = generateShortFileId();
             String storedName = buildStoredName(fileId, extension);
-            Path target = prepareTargetPath(group.getId().getFileGroupId(), storedName);
+            Path target = prepareTargetPath(companyId, group.getId().getFileGroupId(), storedName);
             String checksum = storeFile(file, target);
 
             FileItem item = new FileItem();
@@ -140,9 +140,18 @@ public class FileService {
     public FileDownload download(String groupId, String fileId) {
         FileItem item = requireActiveFile(groupId, fileId);
         Path filePath = storageRoot.resolve(item.getStoragePath()).normalize();
+        
+        // 기존 경로 호환성: 새 경로에 파일이 없으면 구 경로(groupId만) 확인
         if (!filePath.startsWith(storageRoot) || !Files.exists(filePath)) {
-            throw new NotFoundException("파일을 찾을 수 없습니다: " + fileId);
+            // Fallback: storage/uploads/{groupId}/{storedName} 경로 시도
+            Path legacyPath = storageRoot.resolve(groupId).resolve(item.getStoredName()).normalize();
+            if (legacyPath.startsWith(storageRoot) && Files.exists(legacyPath)) {
+                filePath = legacyPath;
+            } else {
+                throw new NotFoundException("파일을 찾을 수 없습니다: " + fileId);
+            }
         }
+        
         try {
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
@@ -164,6 +173,15 @@ public class FileService {
     public void delete(String groupId, String fileId) {
         FileItem item = requireActiveFile(groupId, fileId);
         Path filePath = storageRoot.resolve(item.getStoragePath()).normalize();
+        
+        // 기존 경로 호환성: 새 경로에 파일이 없으면 구 경로(groupId만) 확인
+        if (!filePath.startsWith(storageRoot) || !Files.exists(filePath)) {
+            // Fallback: storage/uploads/{groupId}/{storedName} 경로 시도
+            Path legacyPath = storageRoot.resolve(groupId).resolve(item.getStoredName()).normalize();
+            if (legacyPath.startsWith(storageRoot) && Files.exists(legacyPath)) {
+                filePath = legacyPath;
+            }
+        }
         
         // 물리적 파일 삭제
         try {
@@ -291,8 +309,9 @@ public class FileService {
         return fileId + "." + extension;
     }
 
-    private Path prepareTargetPath(String groupId, String storedName) {
-        Path groupDir = storageRoot.resolve(groupId);
+    private Path prepareTargetPath(String companyId, String groupId, String storedName) {
+        // storage/uploads/{companyId}/{groupId} 구조
+        Path groupDir = storageRoot.resolve(companyId).resolve(groupId);
         try {
             Files.createDirectories(groupDir);
         } catch (IOException e) {

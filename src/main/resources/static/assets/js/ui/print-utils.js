@@ -1,10 +1,19 @@
 /**
  * 인쇄 유틸리티 모듈
  * 
- * 인쇄 관련 기능을 제공하는 모듈입니다.
  * - 인쇄 기능
  * - 인쇄 스타일링
  * - 인쇄 최적화
+ * 
+ * @functions
+ * - printPage(options) - 현재 페이지 인쇄
+ * - printElement(element, options) - 특정 요소 인쇄
+ * - createPrintStyles(config) - 인쇄용 스타일 생성 (내부 함수)
+ * - addPageBreak(element) - 페이지 나누기 요소 추가
+ * - optimizeForPrint(element) - 인쇄 최적화 클래스 추가
+ * - createPrintButton(options) - 인쇄 버튼 생성
+ * - initPrintButton(root) - 인쇄 버튼 초기화
+ * - initPrintUtils() - 인쇄 유틸리티 모듈 초기화
  */
 
 /**
@@ -267,50 +276,80 @@ export function createPrintButton(options = {}) {
 }
 
 /**
- * 인쇄 미리보기
- * @param {HTMLElement} element - 미리보기할 요소
- * @param {Object} options - 미리보기 옵션
+ * 인쇄 메타데이터 채우기 (출력일시, 인쇄자)
+ * @param {HTMLElement} root - 루트 요소
  */
-export function printPreview(element, options = {}) {
-  const config = Object.assign({
-    title: '인쇄 미리보기',
-    width: '80%',
-    height: '80%'
-  }, options);
+function fillPrintMetadata(root) {
+  // 출력일시 채우기
+  const printDateElement = root.querySelector('#print-date');
+  if (printDateElement) {
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(now.getDate()).padStart(2, '0') + ' ' +
+                    String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0');
+    printDateElement.textContent = dateStr;
+  }
   
-  const previewWindow = window.open('', '_blank', 
-    `width=${config.width},height=${config.height},scrollbars=yes,resizable=yes`
-  );
-  
-  if (!previewWindow) {
-    console.error('Failed to open preview window');
+  // 인쇄자 정보 채우기
+  const printUserElement = root.querySelector('#print-user');
+  if (printUserElement) {
+    // 로그인 사용자 정보 가져오기
+    // 1. appbar의 .meta > .badge에서 memberId 가져오기
+    const memberBadge = document.querySelector('.appbar .meta .badge');
+    const currentUser = memberBadge?.textContent?.trim() || 
+                       window.cmms?.auth?.currentUser || 
+                       localStorage.getItem('currentUser') || 
+                       'Unknown';
+    printUserElement.textContent = currentUser;
+  }
+}
+
+/**
+ * 인쇄 버튼 초기화 (root 기반)
+ * @param {HTMLElement} root - 루트 요소
+ */
+export function initPrintButton(root) {
+  const printBtn = root.querySelector('[data-print-btn]');
+  if (!printBtn) {
+    console.log('Print button not found in root');
     return;
   }
   
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${config.title}</title>
-      <meta charset="utf-8">
-      <style>
-        ${createPrintStyles(config)}
-        ${config.styles ? config.styles.join('\n') : ''}
-        body { margin: 20px; }
-      </style>
-    </head>
-    <body>
-      ${element ? element.outerHTML : document.body.innerHTML}
-      <div style="margin-top: 20px; text-align: center;">
-        <button onclick="window.print()" class="btn btn-primary">인쇄</button>
-        <button onclick="window.close()" class="btn btn-secondary">닫기</button>
-      </div>
-    </body>
-    </html>
-  `;
+  // 중복 초기화 방지
+  if (printBtn.dataset.initialized === 'true') {
+    console.log('Print button already initialized');
+    return;
+  }
   
-  previewWindow.document.write(html);
-  previewWindow.document.close();
+  printBtn.addEventListener('click', () => {
+    // 인쇄 전에 출력일시와 인쇄자 정보 채우기
+    fillPrintMetadata(root);
+    
+    // data-print-target 속성이 있으면 해당 요소만 인쇄
+    const targetSelector = printBtn.dataset.printTarget;
+    if (targetSelector) {
+      const targetElement = root.querySelector(targetSelector);
+      if (targetElement) {
+        printElement(targetElement, {
+          title: document.title,
+          styles: []
+        });
+      } else {
+        console.error('Print target element not found:', targetSelector);
+      }
+    } else {
+      // 전체 페이지 인쇄
+      printPage({
+        title: document.title,
+        hideElements: ['.no-print', '.sidebar', '.navbar', '.footer', '.btn']
+      });
+    }
+  });
+  
+  printBtn.dataset.initialized = 'true';
+  console.log('Print button initialized');
 }
 
 /**
@@ -325,6 +364,6 @@ export function initPrintUtils() {
     addPageBreak: addPageBreak,
     optimizeForPrint: optimizeForPrint,
     createPrintButton: createPrintButton,
-    printPreview: printPreview
+    initPrintButton: initPrintButton
   };
 }

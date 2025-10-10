@@ -1,10 +1,23 @@
 /**
  * 인증 API 모듈
  * 
- * auth.js에서 인증 관련 기능을 추출한 모듈입니다.
  * - 로그인/로그아웃 처리
  * - 인증 상태 관리
  * - 세션 처리
+ * 
+ * @functions
+ * - initAuth() - 인증 모듈 초기화
+ * 
+ * @methods (window.cmms.auth)
+ * - logout(options) - 표준화된 로그아웃 처리
+ * - logoutWithForm() - 폼 기반 로그아웃
+ * - showLogoutLoading() - 로그아웃 로딩 표시
+ * - showLogoutSuccess() - 로그아웃 성공 표시
+ * - showLogoutError(error) - 로그아웃 에러 표시
+ * - redirectToLogin() - 로그인 페이지로 리다이렉트
+ * - isAuthenticated() - 현재 인증 상태 확인
+ * - getUserInfo() - 사용자 정보 가져오기
+ * - hasPermission(permission) - 권한 확인
  */
 
 /**

@@ -41,7 +41,10 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate data-redirect="@{/inspection/list}">
+                <form data-validate 
+                      method="post" 
+                      th:action="@{/inspection/plan/save}" 
+                      th:data-redirect="@{/inspection/list}">
 
                   <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <!-- 계획 대상(행 추가/삭제) -->
@@ -100,8 +103,6 @@
                   </div>
 
                   <div class="actions actions-top-medium">
-                    <button class="btn" type="button" data-cancel-btn>취소</button>
-                    <button class="btn" type="reset">초기화</button>
                     <button class="btn primary" type="submit">계획 생성</button>
                   </div>
                 </form>

@@ -1,10 +1,18 @@
 /**
  * 확인 대화상자 모듈
  * 
- * common.js에서 확인 대화상자 기능을 추출한 모듈입니다.
  * - 표준화된 확인 대화상자
  * - 삭제 확인 대화상자
  * - 저장 확인 대화상자
+ * 
+ * @functions
+ * - showConfirmDialog(message, options) - 표준화된 확인 다이얼로그
+ * - confirmDelete(message) - 삭제 확인 대화상자
+ * - confirmSave(message) - 저장 확인 대화상자
+ * - confirmWarning(message) - 경고 확인 대화상자
+ * - confirmInfo(message) - 정보 확인 대화상자
+ * - showSelectDialog(message, options, config) - 선택 대화상자
+ * - initConfirmDialog() - 확인 대화상자 모듈 초기화
  */
 
 /**
