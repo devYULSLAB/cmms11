@@ -38,37 +38,41 @@
 
 ### 1. DB 스키마
 
+**⚠️ 참고**: 
+- 상태값은 `DataInitializer.java`의 APPRV, DECSN 코드 참조
+- NOT NULL 제약은 PK만 적용 (나머지는 nullable)
+
 ```sql
 CREATE TABLE approval_inbox (
-  -- PK
+  -- PK (NOT NULL 필수)
   company_id   CHAR(5) NOT NULL,
   inbox_id     CHAR(10) NOT NULL,
   
-  -- 수신자
-  member_id    CHAR(5) NOT NULL,
+  -- 수신자 (NOT NULL 해제)
+  member_id    CHAR(5),
   
-  -- 결재 문서 연결
-  approval_id  CHAR(10) NOT NULL,
-  step_no      INTEGER NOT NULL,
+  -- 결재 문서 연결 (NOT NULL 해제)
+  approval_id  CHAR(10),
+  step_no      INTEGER,
   
-  -- Inbox 상태
-  inbox_type   VARCHAR(10),        -- PENDING(미결), APPROVED(기결), REJECTED(반려), INFORMED(통보확인)
+  -- Inbox 상태 (APPRV 코드와 통일)
+  inbox_type   VARCHAR(10),        -- SUBMT(미결), APPRV(승인), REJCT(반려), CMPLT(통보확인)
   is_read      CHAR(1) DEFAULT 'N',
   read_at      TIMESTAMP,
   
-  -- 알림 연계
+  -- 알림 연계 (향후 확장)
   notified_at  TIMESTAMP,
-  notification_type VARCHAR(20),   -- EMAIL, PUSH, SMS (향후 확장)
+  notification_type VARCHAR(20),   -- EMAIL, PUSH, SMS
   
-  -- Denormalized 필드 (조회 성능)
+  -- Denormalized 필드 (조회 성능 최적화)
   title        VARCHAR(100),
-  ref_entity   VARCHAR(64),
+  ref_entity   VARCHAR(64),        -- INSP, WORK, WPER (MODUL 코드 참조)
   ref_id       CHAR(10),
   submitted_by CHAR(10),
   submitted_at TIMESTAMP,
-  decision     VARCHAR(10),        -- APPROVAL, AGREE, INFORM
+  decision     VARCHAR(10),        -- APPRL(결재), AGREE(합의), INFO(참조) - DECSN 코드
   
-  -- 감사
+  -- 감사 (created_at만 NOT NULL)
   created_at   TIMESTAMP NOT NULL,
   updated_at   TIMESTAMP,
   
@@ -79,59 +83,95 @@ CREATE TABLE approval_inbox (
     REFERENCES approval_step(company_id, approval_id, step_no) ON DELETE CASCADE
 );
 
--- 인덱스
+-- 인덱스 (성능 최적화)
 CREATE INDEX ix_inbox_member_read ON approval_inbox(company_id, member_id, is_read, inbox_type);
 CREATE INDEX ix_inbox_approval ON approval_inbox(company_id, approval_id);
 CREATE INDEX ix_inbox_submitted ON approval_inbox(company_id, member_id, submitted_at DESC);
 CREATE INDEX ix_inbox_type_member ON approval_inbox(company_id, inbox_type, member_id);
 ```
 
+**코드값 참조 (DataInitializer.java)**:
+```java
+// DECSN (결재자유형) - decision 필드
+seedItems("DECSN", List.of(
+    new SeedCodeItem("APPRL", "결재"),
+    new SeedCodeItem("AGREE", "합의"),
+    new SeedCodeItem("INFO", "참조")
+));
+
+// MODUL (참조모듈) - ref_entity 필드
+seedItems("MODUL", List.of(
+    new SeedCodeItem("INSP", "점검"),
+    new SeedCodeItem("WORK", "작업지시"),
+    new SeedCodeItem("WPER", "작업허가"),
+    new SeedCodeItem("APPRL", "결재")
+));
+```
+
 ---
 
 ### 2. Inbox Type 상태
 
-| inbox_type | 설명 | 전환 시점 |
-|------------|------|-----------|
-| PENDING | 미결 | 결재선 생성 시 (초기값) |
-| APPROVED | 기결 (승인) | approve() 호출 시 |
-| REJECTED | 반려 | reject() 호출 시 |
-| INFORMED | 통보 확인 | INFORM decision 처리 시 |
+**⚠️ 참고**: inbox_type도 `DataInitializer.java`의 APPRV 코드와 통일
+
+| inbox_type | 설명 | 전환 시점 | 연관 decision |
+|------------|------|-----------|---------------|
+| **SUBMT** | 미결 (제출됨) | 결재선 생성 시 (초기값) | - |
+| **APPRV** | 기결 (승인) | approve() 호출 시 | APPRL, AGREE |
+| **REJCT** | 반려 | reject() 호출 시 | APPRL, AGREE |
+| **CMPLT** | 통보 확인 | 확인 처리 시 | **INFO**(참조) |
+
+**매핑 변경**:
+- ~~PENDING~~ → **SUBMT** (제출 - 미결재 상태)
+- ~~APPROVED~~ → **APPRV** (승인)
+- ~~REJECTED~~ → **REJCT** (반려)
+- ~~INFORMED~~ → **CMPLT** (완료 - 통보 확인)
 
 ---
 
 ### 3. 순서 제어 규칙
 
-| decision | 순서 제어 | 설명 |
-|----------|-----------|------|
-| APPROVAL | ✅ 필수 | 이전 APPROVAL/AGREE 모두 완료 후 가능 |
-| AGREE | ✅ 필수 | 이전 APPROVAL/AGREE 모두 완료 후 가능 |
-| INFORM | ❌ 없음 | 순서 무관, 언제든 확인 가능 |
+**⚠️ 참고**: decision 값은 `DataInitializer.java`의 DECSN 코드 참조
+
+| decision | 코드명 | 순서 제어 | 설명 |
+|----------|--------|-----------|------|
+| APPRL | 결재 | ✅ 필수 | 이전 APPRL/AGREE 모두 완료 후 가능 |
+| AGREE | 합의 | ✅ 필수 | 이전 APPRL/AGREE 모두 완료 후 가능 |
+| INFO | 참조 | ❌ 없음 | 순서 무관, 언제든 확인 가능 |
+
+**매핑 규칙**:
+- `APPRL` (코드) = "결재(APPROVAL)" (화면 표시)
+- `AGREE` (코드) = "합의(AGREE)" (화면 표시)
+- `INFO` (코드) = "참조(INFORM)" (화면 표시)
 
 ---
 
 ### 4. Java Entity
 
+**⚠️ 참고**: nullable = false는 PK(EmbeddedId)와 created_at만 적용
+
 ```java
 @Entity
 @Table(name = "approval_inbox")
+@Data  // Lombok getter/setter
 public class ApprovalInbox {
     @EmbeddedId
-    private ApprovalInboxId id;
+    private ApprovalInboxId id;  // PK는 NOT NULL
     
-    @Column(name = "member_id", length = 5, nullable = false)
+    @Column(name = "member_id", length = 5)
     private String memberId;
     
-    @Column(name = "approval_id", length = 10, nullable = false)
+    @Column(name = "approval_id", length = 10)
     private String approvalId;
     
-    @Column(name = "step_no", nullable = false)
+    @Column(name = "step_no")
     private Integer stepNo;
     
     @Column(name = "inbox_type", length = 10)
-    private String inboxType;
+    private String inboxType;  // SUBMT, APPRV, REJCT, CMPLT (APPRV 코드)
     
     @Column(name = "is_read", length = 1)
-    private String isRead = "N";
+    private String isRead = "N";  // 기본값 'N'
     
     @Column(name = "read_at")
     private LocalDateTime readAt;
@@ -142,12 +182,12 @@ public class ApprovalInbox {
     @Column(name = "notification_type", length = 20)
     private String notificationType;
     
-    // Denormalized fields
+    // Denormalized fields (조회 성능 최적화)
     @Column(length = 100)
     private String title;
     
     @Column(name = "ref_entity", length = 64)
-    private String refEntity;
+    private String refEntity;  // INSP, WORK, WPER (MODUL 코드)
     
     @Column(name = "ref_id", length = 10)
     private String refId;
@@ -159,22 +199,33 @@ public class ApprovalInbox {
     private LocalDateTime submittedAt;
     
     @Column(length = 10)
-    private String decision;
+    private String decision;  // APPRL, AGREE, INFO (DECSN 코드)
     
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt;  // 유일한 NOT NULL
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
 
 @Embeddable
+@Data
+@EqualsAndHashCode
 public class ApprovalInboxId implements Serializable {
     @Column(name = "company_id", length = 5, nullable = false)
-    private String companyId;
+    private String companyId;  // PK는 NOT NULL
     
     @Column(name = "inbox_id", length = 10, nullable = false)
-    private String inboxId;
+    private String inboxId;  // PK는 NOT NULL
+    
+    // 기본 생성자
+    public ApprovalInboxId() {}
+    
+    // 전체 생성자
+    public ApprovalInboxId(String companyId, String inboxId) {
+        this.companyId = companyId;
+        this.inboxId = inboxId;
+    }
 }
 ```
 
@@ -192,29 +243,41 @@ public class ApprovalInboxId implements Serializable {
 - [ ] 이전 단계 완료 여부 확인 로직 추가
   - [ ] 현재 사용자의 step_no 확인
   - [ ] step_no < 현재 단계인 step들의 decided_at 확인
-  - [ ] INFORM은 순서 체크 제외
+  - [ ] **INFO**(참조)는 순서 체크 제외 ⚠️ DataInitializer 코드 참조
   - [ ] 미완료 발견 시 예외: "이전 결재자(N번: memberId)가 먼저 결재해야 합니다"
 - [ ] 이전 단계 반려 확인
   - [ ] result="REJECT"인 경우 예외: "N번 결재자가 반려하여 결재가 종료되었습니다"
 - [ ] 단위 테스트 작성
-  - [ ] 정상: 순서대로 결재
+  - [ ] 정상: 순서대로 결재 (APPRL → AGREE)
   - [ ] 예외: 2번이 1번보다 먼저 결재 시도
   - [ ] 예외: 1번 반려 후 2번 결재 시도
-  - [ ] 정상: INFORM은 순서 무관
+  - [ ] 정상: **INFO**(참조)는 순서 무관
 
 #### Checklist 1.2: 다단계 결재 완료 감지
 
 - [ ] checkAllApproversCompleted() 메서드 추가
-  - [ ] 모든 APPROVAL/AGREE의 decided_at 확인
-  - [ ] INFORM은 제외
+  - [ ] 모든 **APPRL**(결재)/**AGREE**(합의)의 decided_at 확인
+  - [ ] **INFO**(참조)는 제외 ⚠️ DataInitializer 코드 참조
   - [ ] 하나라도 미결재면 status="PROC"
-  - [ ] 모두 완료면 status="APPROV" → 콜백 호출
+  - [ ] 모두 완료면 status="APPRV" → 콜백 호출
 - [ ] 반려 시 즉시 종료 로직
-  - [ ] result="REJECT"면 즉시 status="REJECT" → 콜백 호출
+  - [ ] result="REJCT"면 즉시 status="REJCT" → 콜백 호출
 - [ ] 단위 테스트 작성
   - [ ] 1번 승인 → PROC 유지
-  - [ ] 1,2번 모두 승인 → APPROV 전환
-  - [ ] 1번 반려 → REJECT 전환 (2번 무시)
+  - [ ] 1,2번 모두 승인 → APPRV 전환
+  - [ ] 1번 반려 → REJCT 전환 (2번 무시)
+
+**참고**: 상태값은 `DataInitializer.java`의 APPRV 코드 참조
+```java
+seedItems("APPRV", List.of(
+    new SeedCodeItem("DRAFT", "기안"),
+    new SeedCodeItem("SUBMT", "제출"),
+    new SeedCodeItem("PROC", "처리중"),
+    new SeedCodeItem("APPRV", "승인"),
+    new SeedCodeItem("REJCT", "반려"),
+    new SeedCodeItem("CMPLT", "결재없이확정건")
+));
+```
 
 #### 예상 산출물
 
@@ -299,9 +362,9 @@ public class ApprovalInboxId implements Serializable {
   - [ ] approval_step 생성 후 inbox 생성 로직 추가
     - [ ] inbox_id 자동 채번 (I + YYMMDD + 순번)
     - [ ] member_id, approval_id, step_no 설정
-    - [ ] inbox_type = "PENDING" (초기값)
+    - [ ] inbox_type = "**SUBMT**" (초기값 - 제출/미결) ⚠️ APPRV 코드
     - [ ] is_read = "N" (초기값)
-    - [ ] decision 복사
+    - [ ] decision 복사 (APPRL, AGREE, INFO)
     - [ ] Denormalized 필드 복사 (title, ref_entity, ref_id, submitted_by, submitted_at)
     - [ ] created_at 설정
   - [ ] 트랜잭션 범위 확인 (동일 @Transactional 내)
@@ -340,10 +403,10 @@ public class ApprovalInboxId implements Serializable {
 - [ ] ApprovalService.processApproval() 메서드 수정
   - [ ] 결재 처리 후 inbox 조회
     - [ ] inboxRepository.findByApprovalIdAndStepNo(companyId, approvalId, myStepNo)
-  - [ ] inbox_type 전환 로직
-    - [ ] stepResult="APPROVE" → inbox_type="APPROVED"
-    - [ ] stepResult="REJECT" → inbox_type="REJECTED"
-    - [ ] decision="INFORM" → inbox_type="INFORMED"
+  - [ ] inbox_type 전환 로직 ⚠️ APPRV 코드 사용
+    - [ ] stepResult="APPROVE" → inbox_type="**APPRV**"
+    - [ ] stepResult="REJECT" → inbox_type="**REJCT**"
+    - [ ] decision="**INFO**" → inbox_type="**CMPLT**" (통보 확인 완료)
   - [ ] is_read 자동 처리
     - [ ] 결재 처리 = 읽음으로 간주
     - [ ] is_read="N"이면 "Y"로 전환
@@ -357,9 +420,9 @@ public class ApprovalInboxId implements Serializable {
 
 #### Checklist 4.3: 단위 테스트
 
-- [ ] 1번 승인 → inbox_type="APPROVED" 확인
-- [ ] 2번 반려 → inbox_type="REJECTED" 확인
-- [ ] 3번 통보 → inbox_type="INFORMED" 확인
+- [ ] 1번 승인 → inbox_type="**APPRV**" 확인
+- [ ] 2번 반려 → inbox_type="**REJCT**" 확인
+- [ ] 3번 통보 → inbox_type="**CMPLT**" 확인
 - [ ] is_read="Y", read_at 설정 확인
 
 #### 예상 산출물
@@ -541,7 +604,7 @@ public class ApprovalInboxId implements Serializable {
   ```java
   /**
    * Inbox 타입별 통계 조회 (탭 배지 업데이트용)
-   * @return { pending: 5, approved: 12, rejected: 1, informed: 3 }
+   * @return { pending: 5, approved: 12, rejected: 1, completed: 3 }
    */
   @GetMapping("/inbox/stats")
   public ResponseEntity<Map<String, Long>> getInboxStats() {
@@ -550,10 +613,10 @@ public class ApprovalInboxId implements Serializable {
           String memberId = sessionInfo.getMemberId();
           
           Map<String, Long> stats = new HashMap<>();
-          stats.put("pending", approvalService.countInboxByType(companyId, memberId, "PENDING"));
-          stats.put("approved", approvalService.countInboxByType(companyId, memberId, "APPROVED"));
-          stats.put("rejected", approvalService.countInboxByType(companyId, memberId, "REJECTED"));
-          stats.put("informed", approvalService.countInboxByType(companyId, memberId, "INFORMED"));
+          stats.put("pending", approvalService.countInboxByType(companyId, memberId, "SUBMT"));   // 미결
+          stats.put("approved", approvalService.countInboxByType(companyId, memberId, "APPRV"));  // 승인
+          stats.put("rejected", approvalService.countInboxByType(companyId, memberId, "REJCT"));  // 반려
+          stats.put("completed", approvalService.countInboxByType(companyId, memberId, "CMPLT")); // 통보확인
           
           return ResponseEntity.ok(stats);
           
@@ -563,7 +626,7 @@ public class ApprovalInboxId implements Serializable {
               "pending", 0L,
               "approved", 0L,
               "rejected", 0L,
-              "informed", 0L
+              "completed", 0L
           ));
       }
   }
@@ -806,16 +869,16 @@ public class ApprovalInboxId implements Serializable {
       @Test
       void testGetInboxStats_Success() throws Exception {
           // given
-          when(approvalService.countInboxByType(anyString(), anyString(), eq("PENDING")))
+          when(approvalService.countInboxByType(anyString(), anyString(), eq("SUBMT")))
               .thenReturn(3L);
-          when(approvalService.countInboxByType(anyString(), anyString(), eq("APPROVED")))
+          when(approvalService.countInboxByType(anyString(), anyString(), eq("APPRV")))
               .thenReturn(10L);
           
           // when & then
           mockMvc.perform(get("/api/approvals/inbox/stats"))
               .andExpect(status().isOk())
-              .andExpect(jsonPath("$.pending").value(3))
-              .andExpect(jsonPath("$.approved").value(10));
+              .andExpect(jsonPath("$.pending").value(3))  // key는 pending이지만 실제 DB는 SUBMT
+              .andExpect(jsonPath("$.approved").value(10)); // key는 approved이지만 실제 DB는 APPRV
       }
   }
   ```
@@ -866,14 +929,16 @@ public class ApprovalInboxId implements Serializable {
 
 - [ ] **Inbox 목록 조회 테스트**
   ```
-  GET /api/approvals/inbox?type=PENDING&page=0&size=10
+  GET /api/approvals/inbox?type=SUBMT&page=0&size=10
   Expected: Page<ApprovalInboxResponse>
   ```
 
 - [ ] **통계 조회 테스트**
   ```
   GET /api/approvals/inbox/stats
-  Expected: { pending: 3, approved: 10, rejected: 1, informed: 2 }
+  Expected: { pending: 3, approved: 10, rejected: 1, completed: 2 }
+  
+  ⚠️ 실제 DB는 SUBMT, APPRV, REJCT, CMPLT 저장됨
   ```
 
 - [ ] **내 Inbox 조회 테스트**
@@ -1039,13 +1104,14 @@ public class ApprovalInboxId implements Serializable {
   ```html
   <div class="tabs">
     <a class="tab-item active" data-inbox-type="ALL">전체</a>
-    <a class="tab-item" data-inbox-type="PENDING">
+    <a class="tab-item" data-inbox-type="SUBMT">
       미결 <span class="badge sm">0</span>
     </a>
-    <a class="tab-item" data-inbox-type="APPROVED">기결</a>
-    <a class="tab-item" data-inbox-type="REJECTED">반려</a>
-    <a class="tab-item" data-inbox-type="INFORMED">통보</a>
+    <a class="tab-item" data-inbox-type="APPRV">기결</a>
+    <a class="tab-item" data-inbox-type="REJCT">반려</a>
+    <a class="tab-item" data-inbox-type="CMPLT">통보</a>
   </div>
+  <!-- ⚠️ data-inbox-type은 APPRV 코드 사용 -->
   ```
 
 - [ ] 테이블 구조
@@ -1283,9 +1349,10 @@ public class ApprovalInboxId implements Serializable {
       if (!response.ok) return;
       
       const stats = await response.json();
-      // { pending: 5, approved: 12, rejected: 1, informed: 3 }
+      // { pending: 5, approved: 12, rejected: 1, completed: 3 }
       
-      document.querySelector('[data-inbox-type="PENDING"] .badge')
+      // ⚠️ data-inbox-type은 APPRV 코드 (SUBMT, APPRV, REJCT, CMPLT)
+      document.querySelector('[data-inbox-type="SUBMT"] .badge')
         .textContent = stats.pending || 0;
       
     } catch (error) {
@@ -1446,21 +1513,24 @@ public class ApprovalInboxId implements Serializable {
 #### Checklist 8.1: 시나리오 테스트
 
 ##### 시나리오 1: 순차 결재
+
+**⚠️ 참고**: DataInitializer 코드값 사용 (inbox_type도 APPRV 코드와 통일)
+
 - [ ] Inspection 실적 결재 상신 (admin)
-  - [ ] 결재선: 1번 user1(APPROVAL), 2번 user2(APPROVAL), 3번 user3(INFORM)
-  - [ ] inbox 3개 생성 확인 (PENDING)
-- [ ] user1 승인 → inbox[1].inbox_type="APPROVED", approval.status="PROC"
-- [ ] user2 승인 → inbox[2].inbox_type="APPROVED", approval.status="APPROV" → 콜백 호출
-  - [ ] inspection.status="APPRV" 확인 ⭐
-- [ ] user3 통보 확인 → inbox[3].inbox_type="INFORMED"
+  - [ ] 결재선: 1번 user1(**APPRL**), 2번 user2(**APPRL**), 3번 user3(**INFO**)
+  - [ ] inbox 3개 생성 확인 (inbox_type="**SUBMT**")
+- [ ] user1 승인 → inbox[1].inbox_type="**APPRV**", approval.status="**PROC**"
+- [ ] user2 승인 → inbox[2].inbox_type="**APPRV**", approval.status="**APPRV**" → 콜백 호출
+  - [ ] inspection.status="**APPRV**" 확인 ⭐
+- [ ] user3 통보 확인 → inbox[3].inbox_type="**CMPLT**"
 
 ##### 시나리오 2: 순서 위반 방지
 - [ ] user2가 먼저 승인 시도 → 예외: "이전 결재자(1번: user1)가 먼저 결재해야 합니다"
-- [ ] user3(INFORM)는 언제든 확인 가능 → 정상 처리
+- [ ] user3(**INFO**/참조)는 언제든 확인 가능 → 정상 처리
 
 ##### 시나리오 3: 중간 반려
-- [ ] user1 반려 → inbox[1].inbox_type="REJECTED", approval.status="REJECT" → 콜백 호출
-  - [ ] inspection.status="DRAFT" 확인 (콜백으로 복원) ⭐
+- [ ] user1 반려 → inbox[1].inbox_type="**REJCT**", approval.status="**REJCT**" → 콜백 호출
+  - [ ] inspection.status="**DRAFT**" 확인 (콜백으로 복원) ⭐
 - [ ] user2 결재 시도 → 예외: "1번 결재자가 반려하여 결재가 종료되었습니다"
 
 ##### 시나리오 4: 읽음 처리
@@ -1547,10 +1617,16 @@ public class ApprovalInboxId implements Serializable {
 
 ### Approval Inbox 시스템을 다음 순서로 구현해 주세요:
 
+**⚠️ 중요**: 
+- 모든 코드값은 `DataInitializer.java` 참조
+- decision: **APPRL**(결재), **AGREE**(합의), **INFO**(참조)
+- status: **DRAFT**, **SUBMT**, **PROC**, **APPRV**, **REJCT**, **CMPLT**
+- NOT NULL 제약은 PK와 created_at만 적용
+
 #### 1. TASK 1 (순서 제어 로직) - 필수 선행 작업
    - ApprovalService.processApproval() 수정
    - 이전 단계 완료 여부 확인
-   - INFORM은 순서 무관 처리
+   - **INFO**(참조)는 순서 무관 처리 ⚠️
    - 다단계 결재 완료 감지 로직
    - 단위 테스트 작성
 
@@ -1594,7 +1670,40 @@ public class ApprovalInboxId implements Serializable {
 
 ## 🔒 중요 제약사항
 
-- ✅ 기존 콜백 메커니즘 100% 보존
-- ✅ 원본 모듈 (Inspection, WorkOrder, WorkPermit) 영향 없음
-- ✅ 트랜잭션 안전성 보장
-- ✅ 각 TASK별로 사용자 승인 받고 다음 진행
+- ✅ **코드값 일관성**: `DataInitializer.java`의 APPRV, DECSN, MODUL 코드 반드시 준수
+- ✅ **기존 콜백 메커니즘 100% 보존**
+- ✅ **원본 모듈** (Inspection, WorkOrder, WorkPermit) 영향 없음
+- ✅ **트랜잭션 안전성 보장**
+- ✅ **NOT NULL 최소화**: PK와 created_at 제외하고 모두 nullable
+- ✅ **각 TASK별로 사용자 승인** 받고 다음 진행
+
+---
+
+## 📚 참조 코드 (DataInitializer.java)
+
+```java
+// 결재 상태 (APPRV) - approval.status 및 inbox_type에 사용
+DRAFT  - 기안
+SUBMT  - 제출 (inbox_type의 미결 상태로도 사용)
+PROC   - 처리중
+APPRV  - 승인 (inbox_type의 기결 상태로도 사용)
+REJCT  - 반려 (inbox_type의 반려 상태로도 사용)
+CMPLT  - 결재없이확정건 (inbox_type의 통보확인으로도 사용)
+
+// 결재자 유형 (DECSN) - decision 필드에 사용
+APPRL  - 결재
+AGREE  - 합의
+INFO   - 참조
+
+// 참조 모듈 (MODUL) - ref_entity 필드에 사용
+INSP   - 점검
+WORK   - 작업지시
+WPER   - 작업허가
+APPRL  - 결재
+
+// ⚠️ inbox_type도 APPRV 코드 재사용:
+// - 초기 생성: SUBMT (제출/미결)
+// - 승인 완료: APPRV
+// - 반려: REJCT
+// - 통보 확인: CMPLT
+```
