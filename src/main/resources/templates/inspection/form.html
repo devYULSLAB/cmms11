@@ -35,16 +35,28 @@
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="card-title">점검 계획/결과 등록/수정</div>
+                <div class="card-title" th:text="${isNew ? '점검 등록' : '점검 수정'}">점검 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/inspection/list}">목록</a>
+                  <button class="btn primary" type="submit" form="inspection-form">
+                    <span th:text="${isNew ? '등록' : '저장'}">저장</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/inspection/save}" th:data-redirect="@{/inspection/list}">
+                <form id="inspection-form" 
+                      data-form-manager
+                      th:attr="data-action=${isNew ? '/api/inspections' : '/api/inspections/' + inspection.inspectionId},
+                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/inspection/detail/{id}">
 
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                  <input type="hidden" name="isNew" th:value="${isNew}" />
+                  <!-- Hidden fields -->
+                  <input type="hidden" name="inspectionId" th:value="${inspection?.inspectionId}" />
+                  <input type="hidden" name="stage" th:value="${stage}" />
+                  <input type="hidden" name="status" value="DRAFT" />
+                  <input type="hidden" name="refEntity" th:value="${inspection?.refEntity}" />
+                  <input type="hidden" name="refId" th:value="${inspection?.refId}" />
+                  <input type="hidden" name="refStage" th:value="${inspection?.refStage}" />
                   <!-- 점검 정보 -->
                   <div class="section">
                     <div class="section-title">점검 정보</div>
@@ -122,15 +134,18 @@
                       <div class="form-row col-span-3">
                         <label class="label" for="actual_date">실적일</label>
                         <input id="actual_date" name="actualDate" class="input" type="date" 
-                              th:value="${inspection.actualDate}" />
+                              th:value="${inspection.actualDate}"
+                              th:readonly="${inspection.status != 'ACT_DRAFT'}"
+                              th:disabled="${inspection.status != 'ACT_DRAFT'}" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="status">상태</label>
-                        <select id="status" name="status">
-                          <option value="PLAN" th:selected="${inspection.status == 'PLAN'}">계획</option>
-                          <option value="PROC" th:selected="${inspection.status == 'PROC'}">진행</option>
-                          <option value="DONE" th:selected="${inspection.status == 'DONE'}">완료</option>
-                        </select>
+                        <label class="label" for="status_display">상태</label>
+                        <input type="text" id="status_display" class="input" readonly
+                               th:value="${inspection.status == 'PLN_APPROV' ? '계획 확정' : 
+                                        inspection.status == 'ACT_DRAFT' ? '실적 작성' : 
+                                        inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : 
+                                        inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}" />
+                        <input type="hidden" name="status" th:value="${inspection.status}" />
                       </div>
                     </div>
                     <div class="form-row col-span-12">
@@ -200,11 +215,6 @@
                     </div>
                   </div>
 
-                  <div class="actions actions-top-medium">
-                    <button class="btn primary" type="submit">
-                      <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                    </button>
-                  </div>
                 </form>
               </div>
             </section>

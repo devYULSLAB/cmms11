@@ -18,7 +18,7 @@
             <span class="badge">memberId</span>
             <span>운영팀</span>
           </div>
-        </div></div>
+        </div>
       </header>
       
       <nav class="breadcrumbs">
@@ -41,13 +41,17 @@
                 <div class="card-title">작업지시 생성/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/workorder/list}">목록</a>
+                  <button type="submit" form="workorder-form" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '저장'}">저장</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form method="POST" 
-                      th:action="@{/workorder/save}" 
-                      data-validate="true"
-                      th:data-redirect="@{/workorder/list}">
+                <form id="workorder-form"
+                      data-form-manager
+                      th:attr="data-action=${isNew ? '/api/workorders' : '/api/workorders/' + workOrder.orderId},
+                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/workorder/detail/{id}">
 
                   <!-- 기본 정보 섹션 -->
                   <div class="section">
@@ -122,29 +126,29 @@
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="memberId">담당자</label>
-                          <input class="input" id="memberId" name="memberId" th:value="${workOrder.memberId}" maxlength="5" placeholder="?? M0001" 
-                                 th:readonly="${mode == 'actual'}" />
+                          <input class="input" id="memberId" name="memberId" th:value="${workOrder.memberId}" maxlength="5" placeholder="M0001" 
+                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedDate">계획일</label>
                           <input class="input" id="plannedDate" name="plannedDate" type="date" th:value="${workOrder.plannedDate}"
-                                 th:readonly="${mode == 'actual'}" />
+                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedCost">계획비용</label>
                           <input class="input" id="plannedCost" name="plannedCost" type="number" step="0.01" min="0" th:value="${workOrder.plannedCost}"
-                                 th:readonly="${mode == 'actual'}" />
+                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedLabor">계획공수</label>
                           <input class="input" id="plannedLabor" name="plannedLabor" type="number" step="0.01" min="0" th:value="${workOrder.plannedLabor}"
-                                 th:readonly="${mode == 'actual'}" />
+                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
                         </div>
                       </div>
                     </div>
@@ -158,32 +162,37 @@
                         <div class="form-row">
                           <label class="label" for="actualDate">실적일</label>
                           <input class="input" id="actualDate" name="actualDate" type="date" th:value="${workOrder.actualDate}"
-                                 th:readonly="${mode == 'plan'}" />
+                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
+                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="actualCost">실적비용</label>
                           <input class="input" id="actualCost" name="actualCost" type="number" step="0.01" min="0" th:value="${workOrder.actualCost}"
-                                 th:readonly="${mode == 'plan'}" />
+                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
+                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="actualLabor">실적공수</label>
                           <input class="input" id="actualLabor" name="actualLabor" type="number" step="0.01" min="0" th:value="${workOrder.actualLabor}"
-                                 th:readonly="${mode == 'plan'}" />
+                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
+                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
-                          <label class="label" for="status">상태</label>
-                          <select id="status" name="status">
-                            <option value="PLAN" th:selected="${workOrder.status == 'PLAN' or (mode == 'plan' and isNew)}">계획</option>
-                            <option value="ASGN" th:selected="${workOrder.status == 'ASGN'}">배정</option>
-                            <option value="PROC" th:selected="${workOrder.status == 'PROC'}">진행</option>
-                            <option value="DONE" th:selected="${workOrder.status == 'DONE'}">완료</option>
-                          </select>
+                          <label class="label" for="status_display">상태</label>
+                          <input type="text" id="status_display" class="input" readonly
+                                 th:value="${workOrder.status == 'PLN_DRAFT' ? '계획 작성' : 
+                                          workOrder.status == 'PLN_SUBMIT' ? '계획 결재상신' : 
+                                          workOrder.status == 'PLN_APPROV' ? '계획 승인완료' : 
+                                          workOrder.status == 'ACT_DRAFT' ? '실적 작성' : 
+                                          workOrder.status == 'ACT_SUBMIT' ? '실적 결재상신' : 
+                                          workOrder.status == 'ACT_APPROV' ? '실적 승인완료' : workOrder.status}" />
+                          <input type="hidden" name="status" th:value="${workOrder.status}" />
                         </div>
                       </div>
                     </div>

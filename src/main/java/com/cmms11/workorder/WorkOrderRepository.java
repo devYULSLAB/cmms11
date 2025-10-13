@@ -17,6 +17,7 @@ import org.springframework.data.repository.query.Param;
 public interface WorkOrderRepository extends JpaRepository<WorkOrder, WorkOrderId> {
 
     Page<WorkOrder> findByIdCompanyId(String companyId, Pageable pageable);
+    Page<WorkOrder> findByIdCompanyIdAndPlantId(String companyId, String plantId, Pageable pageable);
 
     @Query(
         "select w from WorkOrder w " +
@@ -34,6 +35,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, WorkOrderI
         "and (:orderId is null or :orderId = '' or w.id.orderId like concat('%', :orderId, '%')) " +
         "and (:plantId is null or :plantId = '' or w.plantId like concat('%', :plantId, '%')) " +
         "and (:status is null or :status = '' or w.status = :status) " +
+        "and (:stage is null or :stage = '' or w.stage = :stage) " +
         "and (:plannedDateFrom is null or w.plannedDate >= :plannedDateFrom) " +
         "and (:plannedDateTo is null or w.plannedDate <= :plannedDateTo)"
     )
@@ -42,6 +44,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, WorkOrderI
         @Param("orderId") String orderId,
         @Param("plantId") String plantId,
         @Param("status") String status,
+        @Param("stage") String stage,
         @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
         @Param("plannedDateTo") java.time.LocalDate plannedDateTo,
         Pageable pageable

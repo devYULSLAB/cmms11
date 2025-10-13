@@ -17,6 +17,14 @@
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
       console.log('WorkOrder list page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('WorkOrder list already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPagination(root);
       this.initSearch(root);
       this.initResetForm(root);
@@ -26,12 +34,35 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('WorkOrder detail page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('WorkOrder detail already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPrintButton(root);
+      this.initApprovalButtons(root);
+    },
+    
+    // 결재 상신 버튼 초기화 (공통 submitApproval 함수 사용)
+    initApprovalButtons: function(root) {
+      // inspection.js에서 이미 window.submitApproval 전역 함수 등록됨
+      // 모든 모듈에서 공통 사용
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('WorkOrder form page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('WorkOrder form already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initTableManager(root);
       // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
     },

@@ -17,6 +17,14 @@
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
       console.log('Workpermit list page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Workpermit list already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPagination(root);
       this.initSearch(root);
       this.initResetForm(root);
@@ -25,12 +33,35 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Workpermit detail page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Workpermit detail already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPrintButton(root);
+      this.initApprovalButtons(root);
+    },
+    
+    // 결재 상신 버튼 초기화 (공통 submitApproval 함수 사용)
+    initApprovalButtons: function(root) {
+      // inspection.js에서 이미 window.submitApproval 전역 함수 등록됨
+      // 모든 모듈에서 공통 사용
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Workpermit form page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Workpermit form already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initCancelButton(root);
       // this.initSignatureCanvas(root); // 주석 처리 - initSigners에서 처리됨
       this.initSigners(root);

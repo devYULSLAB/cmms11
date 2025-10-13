@@ -49,8 +49,12 @@
                   </div>
                 </div>
 
-                <form data-validate id="txForm">
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <form id="txForm"
+                      data-form-manager
+                      data-action="/api/inventoryTx/transaction"
+                      data-method="POST"
+                      data-redirect="/inventoryTx/transaction">
+                  
                   <input type="hidden" id="txType" name="txType" value="IN" />
                   
                   <!-- 입고: inventory_history.in_qty, unit_cost, amount; stock 가산 -->

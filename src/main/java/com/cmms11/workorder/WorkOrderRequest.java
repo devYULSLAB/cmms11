@@ -29,6 +29,11 @@ public record WorkOrderRequest(
     BigDecimal actualCost,
     BigDecimal actualLabor,
     @Size(max = 10) String status,
+    @Size(max = 10) String stage,
+    @Size(max = 10) String refEntity,
+    @Size(max = 10) String refId,
+    @Size(max = 10) String refStage,
+    @Size(max = 20) String approvalId,
     @Size(max = 10) String fileGroupId,
     @Size(max = 500) String note,
     @Valid List<WorkOrderItemRequest> items

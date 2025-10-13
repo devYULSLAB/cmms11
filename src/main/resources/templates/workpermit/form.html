@@ -36,16 +36,25 @@
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="card-title">작업허가 등록/수정</div>
+                <div class="card-title" th:text="${isNew ? '작업허가 등록' : '작업허가 수정'}">작업허가 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/workpermit/list}">목록</a>
+                  <button type="submit" form="workpermit-form" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '저장'}">저장</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/workpermit/save}" th:data-redirect="@{/workpermit/list}">
+                <form id="workpermit-form" 
+                      data-form-manager
+                      th:attr="data-action=${isNew ? '/api/workpermits' : '/api/workpermits/' + workPermit.permitId},
+                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/workpermit/detail/{id}">
 
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                  <input type="hidden" name="isNew" th:value="${isNew}" />
+                  <!-- Hidden fields -->
+                  <input type="hidden" name="permitId" th:value="${workPermit?.permitId}" />
+                  <input type="hidden" name="stage" th:value="${stage}" />
+                  <input type="hidden" name="status" value="DRAFT" />
                   <!-- 기본정보 -->
                   <div class="section">
                     <div class="section-title">기본정보</div>
@@ -123,13 +132,12 @@
                               th:value="${workPermit.actualDate}" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="status">상태</label>
-                        <select id="status" name="status">
-                          <option value="REQ" th:selected="${workPermit.status == 'REQ'}">요청</option>
-                          <option value="APRV" th:selected="${workPermit.status == 'APRV'}">승인</option>
-                          <option value="REJT" th:selected="${workPermit.status == 'REJT'}">반려</option>
-                          <option value="DONE" th:selected="${workPermit.status == 'DONE'}">종료</option>
-                        </select>
+                        <label class="label" for="status_display">상태</label>
+                        <input type="text" id="status_display" class="input" readonly
+                               th:value="${workPermit.status == 'PLN_DRAFT' ? '계획 작성' : 
+                                        workPermit.status == 'PLN_SUBMIT' ? '계획 결재상신' : 
+                                        workPermit.status == 'PLN_APPROV' ? '계획 승인완료' : workPermit.status}" />
+                        <input type="hidden" name="status" th:value="${workPermit.status}" />
                       </div>
                     </div>
                   </div>
@@ -664,11 +672,6 @@
                     </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
-                    <button class="btn primary" type="submit">
-                      <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                    </button>
-                  </div>
                 </form>
               </div>
             </section>

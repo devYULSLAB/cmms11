@@ -12,12 +12,6 @@
   if (!window.cmms) window.cmms = {};
   if (!window.cmms.domain) window.cmms.domain = {};
 
-  // 초기화 상태 추적을 위한 플래그
-  window.cmms.domain.initialized = {
-    list: false,
-    form: false
-  };
-
   // 기존 객체를 보존하면서 메서드만 추가
   Object.assign(window.cmms.domain, {
     
@@ -25,12 +19,12 @@
     initList: function(root) {
       console.log('Domain list page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.domain.initialized.list) {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Domain list already initialized, skipping');
         return;
       }
-      window.cmms.domain.initialized.list = true;
+      root.dataset.initialized = 'true';
       
       this.initPagination(root);
       this.initSearch(root);
@@ -42,12 +36,12 @@
     initForm: function(root) {
       console.log('Domain form page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.domain.initialized.form) {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Domain form already initialized, skipping');
         return;
       }
-      window.cmms.domain.initialized.form = true;
+      root.dataset.initialized = 'true';
       
       // this.initFormManager(root); // 주석처리: 이미 app.js SPA 폼 처리로 충분
       // this.initCancelButton(root); // 주석처리: 취소 버튼 제거됨

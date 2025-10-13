@@ -39,6 +39,9 @@ public class Approval {
     @Column(name = "ref_id", length = 10)
     private String refId;
 
+    @Column(name = "ref_stage", length = 10)
+    private String refStage;
+
     @Lob
     @Column
     private String content;

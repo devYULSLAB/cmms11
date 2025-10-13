@@ -17,6 +17,14 @@
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
       console.log('Inventory list page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Inventory list already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPagination(root);
       this.initSearch(root);
     },
@@ -24,18 +32,42 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Inventory detail page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Inventory detail already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPrintButton(root);
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Inventory form page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Inventory form already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initCancelButton(root);
     },
     
     // 업로드 페이지 초기화 (root 기반)
     initUpload: function(root) {
       console.log('Inventory upload page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Inventory upload already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initUploadForm(root);
     },
     

@@ -17,6 +17,14 @@
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
       console.log('Inspection list page initialized', root);
+      
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.inspListInit === 'true') {
+        console.log('Inspection list already initialized, skipping');
+        return;
+      }
+      root.dataset.inspListInit = 'true';
+      
       this.initPagination(root);
       this.initSearch(root);
       this.initResetForm(root);
@@ -25,13 +33,73 @@
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Inspection detail page initialized', root);
+      
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.inspDetailInit === 'true') {
+        console.log('Inspection detail already initialized, skipping');
+        return;
+      }
+      root.dataset.inspDetailInit = 'true';
+      
       this.initPrintButton(root);
+      this.initApprovalButtons(root);
+    },
+    
+    // 결재 상신 버튼 초기화
+    initApprovalButtons: function(root) {
+      // submitApproval 전역 함수 등록 (공통 - 모든 모듈에서 사용)
+      if (!window.submitApproval) {
+        window.submitApproval = async function(id, stage, module = 'inspections', detailPath = 'inspection') {
+          try {
+            if (!confirm('결재를 상신하시겠습니까?')) {
+              return;
+            }
+            
+            // stage에 따라 API 선택
+            const apiUrl = stage === 'PLN' 
+              ? `/api/${module}/${id}/submit-plan-approval`
+              : `/api/${module}/${id}/submit-actual-approval`;
+            
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+              throw new Error('결재 상신 실패: ' + response.status);
+            }
+            
+            if (window.cmms?.notification) {
+              window.cmms.notification.success('결재가 상신되었습니다.');
+            }
+            
+            // 상세 페이지 새로고침
+            setTimeout(() => {
+              window.cmms.navigation.navigate(`/${detailPath}/detail/${id}`);
+            }, 1000);
+            
+          } catch (error) {
+            console.error('Approval submission error:', error);
+            if (window.cmms?.notification) {
+              window.cmms.notification.error('결재 상신 중 오류가 발생했습니다.');
+            }
+          }
+        };
+      }
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Inspection form page initialized', root);
-      this.initCancelButton(root);
+      
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.inspFormInit === 'true') {
+        console.log('Inspection form already initialized, skipping');
+        return;
+      }
+      root.dataset.inspFormInit = 'true';
+      
       this.initPlantPicker(root);
       this.initInspectionItems(root);
       // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
@@ -40,8 +108,15 @@
     // 계획 페이지 초기화 (root 기반)
     initPlan: function(root) {
       console.log('Inspection plan page initialized', root);
+      
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.inspPlanInit === 'true') {
+        console.log('Inspection plan already initialized, skipping');
+        return;
+      }
+      root.dataset.inspPlanInit = 'true';
+      
       this.initPlanItems(root);
-      this.initCancelButton(root);
       this.initPlanSubmit(root);
     },
     
@@ -77,16 +152,6 @@
     // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButton: function(root) {
       window.cmms.printUtils.initPrintButton(root);
-    },
-    
-    // 취소 버튼 초기화 (root 기반)
-    initCancelButton: function(root) {
-      const cancelBtn = root.querySelector('[data-cancel-btn]');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-          window.cmms.navigation.navigate('/inspection/list');
-        });
-      }
     },
     
     // 설비 선택 팝업 초기화 (root 기반)

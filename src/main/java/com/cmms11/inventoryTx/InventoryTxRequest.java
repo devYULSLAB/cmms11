@@ -21,5 +21,12 @@ public record InventoryTxRequest(
     BigDecimal outQty,
     BigDecimal unitCost,
     BigDecimal amount,
-    String note
+    String note,
+    // 이동(MOVE) 전용 필드
+    String srcStorageId,
+    String dstStorageId,
+    BigDecimal moveQty,
+    // 조정(ADJ) 전용 필드
+    BigDecimal adjQty,
+    BigDecimal adjAmount
 ) {}

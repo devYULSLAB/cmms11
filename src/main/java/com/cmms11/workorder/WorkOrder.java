@@ -57,6 +57,21 @@ public class WorkOrder {
     @Column(name = "status", length = 10)
     private String status;
 
+    @Column(name = "stage", length = 10)
+    private String stage;
+
+    @Column(name = "ref_entity", length = 10)
+    private String refEntity;
+
+    @Column(name = "ref_id", length = 10)
+    private String refId;
+
+    @Column(name = "ref_stage", length = 10)
+    private String refStage;
+
+    @Column(name = "approval_id", length = 10)
+    private String approvalId;
+
     @Column(name = "file_group_id", length = 10)
     private String fileGroupId;
 

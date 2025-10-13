@@ -11,6 +11,9 @@ import com.cmms11.domain.member.MemberRepository;
 import com.cmms11.domain.site.Site;
 import com.cmms11.domain.site.SiteId;
 import com.cmms11.domain.site.SiteRepository;
+import com.cmms11.domain.role.Role;
+import com.cmms11.domain.role.RoleId;
+import com.cmms11.domain.role.RoleRepository;
 import com.cmms11.code.CodeType;
 import com.cmms11.code.CodeTypeId;
 import com.cmms11.code.CodeTypeRepository;
@@ -35,7 +38,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class DataInitializer implements ApplicationRunner {
-    private static final String DEFAULT_COMPANY = "C0001";
+    private static final String DEFAULT_COMPANY = "CHROK";
     private static final String SYSTEM_USER = "system";
   
     private final MemberRepository memberRepository;
@@ -43,6 +46,7 @@ public class DataInitializer implements ApplicationRunner {
     private final CompanyRepository companyRepository;
     private final SiteRepository siteRepository;
     private final DeptRepository deptRepository;
+    private final RoleRepository roleRepository;
 
     private final CodeTypeRepository codeTypeRepository;
     private final CodeItemRepository codeItemRepository;
@@ -53,6 +57,7 @@ public class DataInitializer implements ApplicationRunner {
         CompanyRepository companyRepository,
         SiteRepository siteRepository,
         DeptRepository deptRepository,
+        RoleRepository roleRepository,
         CodeTypeRepository codeTypeRepository,
         CodeItemRepository codeItemRepository
     ) {
@@ -61,6 +66,7 @@ public class DataInitializer implements ApplicationRunner {
         this.companyRepository = companyRepository;
         this.siteRepository = siteRepository;
         this.deptRepository = deptRepository;
+        this.roleRepository = roleRepository;
         this.codeTypeRepository = codeTypeRepository;
         this.codeItemRepository = codeItemRepository;
     }
@@ -70,6 +76,7 @@ public class DataInitializer implements ApplicationRunner {
         LocalDateTime now = LocalDateTime.now();
         seedAdmin(now);
         seedCompanyHierarchy(now);
+        seedRoles(now);
         seedCodes();
     }
 
@@ -177,6 +184,34 @@ public class DataInitializer implements ApplicationRunner {
         return member;
     }
 
+    private void seedRoles(LocalDateTime now) {
+        List<SeedRole> roles = List.of(
+            new SeedRole("ADMIN", "System Administrator", "시스템 관리자"),
+            new SeedRole("MANGR", "Business Manager", "업무 관리자"),
+            new SeedRole("ASSNT", "Business Assistant", "업무 보조자"),
+            new SeedRole("PARTR", "Partner", "협력업체")
+        );
+
+        roles.forEach(seedRole -> {
+            RoleId id = new RoleId(DEFAULT_COMPANY, seedRole.roleId());
+            Role role = roleRepository.findById(id).orElseGet(Role::new);
+            
+            if (role.getId() == null) {
+                role.setId(id);
+                role.setCreatedAt(now);
+                role.setCreatedBy(SYSTEM_USER);
+            }
+            
+            role.setName(seedRole.name());
+            role.setNote(seedRole.note());
+            role.setDeleteMark("N");
+            role.setUpdatedAt(now);
+            role.setUpdatedBy(SYSTEM_USER);
+            
+            roleRepository.save(role);
+        });
+    }
+
     private void seedCodes() {
         Map<String, String> codeTypes = new LinkedHashMap<>();
         codeTypes.put("ASSET", "자산유형");
@@ -184,6 +219,8 @@ public class DataInitializer implements ApplicationRunner {
         codeTypes.put("PERMT", "허가유형");
         codeTypes.put("DEPRE", "감가유형");
         codeTypes.put("MODUL", "참조모듈");
+        codeTypes.put("APPRV", "결재상태-STATUS:시스템 사용용도이므로 수정금지");
+        codeTypes.put("DECSN", "결재자유형-DECISION:시스템 사용용도이므로 수정금지");
 
         LocalDateTime now = LocalDateTime.now();
         codeTypes.forEach((codeType, name) -> {
@@ -236,8 +273,23 @@ public class DataInitializer implements ApplicationRunner {
             new SeedCodeItem("INSP", "점검"),
             new SeedCodeItem("WORK", "작업지시"),
             new SeedCodeItem("WPER", "작업허가"),
-            new SeedCodeItem("MEMBR", "게시글"),
+            new SeedCodeItem("MEMO", "게시글"),
             new SeedCodeItem("APPRL", "결재")
+        ));
+
+        seedItems("APPRV", List.of(
+            new SeedCodeItem("DRAFT", "기안"),
+            new SeedCodeItem("SUBMT", "제출"),
+            new SeedCodeItem("PROC", "처리중"),
+            new SeedCodeItem("APPRV", "승인"),
+            new SeedCodeItem("REJCT", "반려"),
+            new SeedCodeItem("CMPLT", "결재없이확정건")
+        ));
+
+        seedItems("DECSN", List.of(
+            new SeedCodeItem("APPRL", "결재"),
+            new SeedCodeItem("AGREE", "합의"),
+            new SeedCodeItem("INFO", "참조")
         ));
     }
 
@@ -253,6 +305,9 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private record SeedCodeItem(String code, String name) {
+    }
+
+    private record SeedRole(String roleId, String name, String note) {
     }
 }
 

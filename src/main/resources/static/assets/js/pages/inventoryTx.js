@@ -18,6 +18,14 @@
     initTransaction: function(root) {
       console.log('InventoryTx transaction page initialized', root);
       console.log('Root element:', root.tagName, root.className);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('InventoryTx transaction already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initTransactionForm(root);
       this.initInventorySearch(root);
     },
@@ -25,6 +33,14 @@
     // 원장 페이지 초기화 (root 기반)
     initLedger: function(root) {
       console.log('InventoryTx ledger page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('InventoryTx ledger already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPagination(root);
       this.initSearch(root);
     },
@@ -32,6 +48,14 @@
     // 마감 페이지 초기화 (root 기반)
     initClosing: function(root) {
       console.log('InventoryTx closing page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('InventoryTx closing already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initClosingForm(root);
     },
     
@@ -118,6 +142,94 @@
       const quantityInput = root.querySelector('#quantity');
       if (quantityInput) {
         quantityInput.addEventListener('input', () => this.updateStockPreview(root));
+      }
+      
+      // ⭐ 폼 제출 처리
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.submitTransaction(form, root);
+      });
+    },
+    
+    // 거래 제출 처리
+    submitTransaction: async function(form, root) {
+      try {
+        const formData = new FormData(form);
+        const txType = formData.get('txType');
+        
+        // 활성화된 패널의 데이터만 수집
+        const activePanel = root.querySelector('.tx-panel.active');
+        if (!activePanel) {
+          throw new Error('활성화된 거래 패널을 찾을 수 없습니다.');
+        }
+        
+        // 공통 데이터
+        const requestData = {
+          txType: txType,
+          txDate: activePanel.querySelector('input[name="txDate"]')?.value,
+          inventoryId: activePanel.querySelector('input[name="inventoryId"]')?.value,
+          note: activePanel.querySelector('input[name="note"]')?.value
+        };
+        
+        // 거래 유형별 데이터 추가
+        switch(txType) {
+          case 'IN':
+            requestData.storageId = formData.get('storageId');
+            requestData.inQty = formData.get('inQty');
+            requestData.unitCost = formData.get('unitCost');
+            requestData.amount = formData.get('amount');
+            break;
+          case 'OUT':
+            requestData.storageId = activePanel.querySelector('select[name="storageId"]')?.value;
+            requestData.outQty = formData.get('outQty');
+            break;
+          case 'MOVE':
+            requestData.srcStorageId = formData.get('srcStorageId');
+            requestData.dstStorageId = formData.get('dstStorageId');
+            requestData.moveQty = formData.get('moveQty');
+            break;
+          case 'ADJ':
+            requestData.storageId = activePanel.querySelector('select[name="storageId"]')?.value;
+            requestData.adjQty = formData.get('adjQty');
+            requestData.adjAmount = formData.get('adjAmount');
+            break;
+        }
+        
+        // 서버 전송
+        const response = await fetch('/api/inventoryTx/transaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': formData.get('_csrf')
+          },
+          body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+          throw new Error('거래 처리에 실패했습니다.');
+        }
+        
+        const result = await response.json();
+        
+        // 성공 처리
+        if (window.cmms?.notification) {
+          window.cmms.notification.success('거래가 성공적으로 처리되었습니다.');
+        } else {
+          alert('거래가 성공적으로 처리되었습니다.');
+        }
+        
+        // 폼 초기화
+        form.reset();
+        const today = new Date().toISOString().split('T')[0];
+        activePanel.querySelector('input[name="txDate"]').value = today;
+        
+      } catch (error) {
+        console.error('Transaction submit error:', error);
+        if (window.cmms?.notification) {
+          window.cmms.notification.error(error.message || '거래 처리 중 오류가 발생했습니다.');
+        } else {
+          alert(error.message || '거래 처리 중 오류가 발생했습니다.');
+        }
       }
     },
     

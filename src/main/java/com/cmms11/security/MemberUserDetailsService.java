@@ -15,7 +15,7 @@ import java.util.List;
 
 @Service
 public class MemberUserDetailsService implements UserDetailsService {
-    public static final String DEFAULT_COMPANY = "C0001";
+    public static final String DEFAULT_COMPANY = "CHROK";
 
     private final MemberRepository memberRepository;
 

@@ -8,10 +8,28 @@
     <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
+    
+    <!-- 팝업 모드 스타일 -->
+    <style th:if="${param.popup != null}">
+      body::before {
+        content: '📄 작업허가 상세 정보';
+        display: block;
+        padding: 16px 20px;
+        background: var(--primary);
+        color: white;
+        font-size: 18px;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .page { padding: 0; }
+      .container { max-width: 100%; padding: 20px; }
+    </style>
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
+      <header class="appbar" th:unless="${param.popup != null}">
         <div class="appbar-inner">
           <div class="brand">작업관리</div>
           <div class="spacer"></div>
@@ -21,7 +39,7 @@
           </div>
         </div>
       </header>
-      <nav class="breadcrumbs">
+      <nav class="breadcrumbs" th:unless="${param.popup != null}">
         <div class="container">
           <a th:href="@{#}" href="#">작업관리</a>
           <span class="sep">/</span>
@@ -38,14 +56,26 @@
             <div class="card-header">
               <div class="row" style="width:100%;justify-content:space-between">
                 <div class="card-title">작업허가 상세</div>
-                <div class="toolbar">
+                <div class="toolbar" th:unless="${param.popup != null}">
+                  <!-- 항상 활성화 -->
                   <a class="btn" th:href="@{/workpermit/list}">목록</a>
                   <a class="btn" href="#" data-print-btn>인쇄</a>
-                  <a class="btn" th:href="@{/workpermit/edit/{id}(id=${workpermit.permitId})}">수정</a>
-                  <button class="btn danger" 
-                          th:data-delete-url="@{/workpermit/delete/{id}(id=${workpermit.permitId})}"
-                          data-redirect="@{/workpermit/list}"
-                          data-confirm="정말 삭제하시겠습니까?">삭제</button>
+                  
+                  <!-- 수정: status=DRAFT일 때만 활성화 -->
+                  <a class="btn" 
+                     th:classappend="${workpermit.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                     th:href="${workpermit.status == 'DRAFT' ? '/workpermit/form?id=' + workpermit.permitId : '#'}"
+                     th:onclick="${workpermit.status != 'DRAFT' ? 'return false;' : ''}">
+                    수정
+                  </a>
+                  
+                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
+                  <button class="btn" 
+                          th:classappend="${workpermit.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                          th:disabled="${workpermit.status != 'DRAFT'}"
+                          th:onclick="${workpermit.status == 'DRAFT' ? 'submitApproval(\'' + workpermit.permitId + '\', \'' + workpermit.stage + '\', \'workpermits\', \'workpermit\')' : 'return false;'}">
+                    결재 상신
+                  </button>
                 </div>
               </div>
             </div>
@@ -68,8 +98,39 @@
                   <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${workpermit.memberId}">M0001</div></div>
                   <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${workpermit.plannedDate}">2025-01-12</div></div>
                   <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${workpermit.actualDate}">2025-01-12</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div><span class="badge" th:text="${workpermit.status == 'REQ' ? '요청' : workpermit.status == 'APRV' ? '승인' : workpermit.status == 'REJT' ? '반려' : '종료'}" 
-                            th:classappend="${workpermit.status == 'REQ' ? 'badge' : workpermit.status == 'APRV' ? 'badge success' : workpermit.status == 'REJT' ? 'badge danger' : 'badge success'}">요청</span></div></div>
+                  <div class="stack col-span-3"><div class="label">상태</div><div>
+                    <span class="badge" 
+                          th:text="${workpermit.status == 'PLAN' ? '계획' : workpermit.status == 'PROC' ? '진행' : workpermit.status == 'SUBMIT' ? '결재 중' : workpermit.status == 'COMPLETE' ? '완료' : workpermit.status == 'REJECT' ? '반려' : workpermit.status}" 
+                          th:classappend="${workpermit.status == 'PLAN' ? '' : workpermit.status == 'PROC' ? 'warning' : workpermit.status == 'SUBMIT' ? 'info' : workpermit.status == 'COMPLETE' ? 'success' : workpermit.status == 'REJECT' ? 'danger' : ''}">요청</span>
+                  </div></div>
+                </div>
+              </div>
+
+              <!-- 결재 정보 섹션 -->
+              <div class="section" th:if="${workpermit.approvalId != null}">
+                <div class="section-title">결재 정보</div>
+                <div class="grid cols-12">
+                  <div class="stack col-span-4">
+                    <div class="label">결재 번호</div>
+                    <div>
+                      <a th:href="@{/approval/detail/{id}(id=${workpermit.approvalId})}" 
+                         th:text="${workpermit.approvalId}">A250101001</a>
+                    </div>
+                  </div>
+                  <div class="stack col-span-8">
+                    <div class="label">액션</div>
+                    <div>
+                      <a class="btn btn-sm" 
+                         th:href="@{/approval/edit/{id}(id=${workpermit.approvalId})}"
+                         th:if="${workpermit.status == 'SUBMIT'}">
+                        결재 수정
+                      </a>
+                      <a class="btn btn-sm" 
+                         th:href="@{/approval/detail/{id}(id=${workpermit.approvalId})}">
+                        결재 확인
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -176,7 +237,14 @@
                         <th>실적일</th><td th:text="${workpermit.actualDate ?: '-'}">2025-01-12</td>
                       </tr>
                       <tr>
-                        <th>상태</th><td colspan="3" th:text="${workpermit.status == 'REQ' ? '요청' : workpermit.status == 'APRV' ? '승인' : workpermit.status == 'REJT' ? '반려' : '종료'}">요청</td>
+                        <th>상태</th>
+                        <td colspan="3">
+                          <span class="badge"
+                                th:classappend="${workpermit.status == 'PLN_APPROV' ? 'success' : workpermit.status == 'PLN_SUBMIT' ? 'info' : ''}"
+                                th:text="${workpermit.status == 'PLN_DRAFT' ? '계획 작성' : workpermit.status == 'PLN_SUBMIT' ? '계획 결재상신' : workpermit.status == 'PLN_APPROV' ? '계획 승인완료' : workpermit.status}">
+                            계획 작성
+                          </span>
+                        </td>
                       </tr>
                     </table>
                   </div>
@@ -222,7 +290,7 @@
         </div>
         </main>
       </section>
-      <footer>
+      <footer th:unless="${param.popup != null}">
         <div class="container">© 작업관리</div>
       </footer>
     </div>

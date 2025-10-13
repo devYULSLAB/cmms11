@@ -13,12 +13,6 @@
   if (!window.cmms) window.cmms = {};
   if (!window.cmms.code) window.cmms.code = {};
 
-  // 초기화 상태 추적을 위한 플래그
-  window.cmms.code.initialized = {
-    list: false,
-    form: false
-  };
-
   // 기존 객체를 보존하면서 메서드만 추가
   Object.assign(window.cmms.code, {
     
@@ -26,12 +20,12 @@
     initList: function(root) {
       console.log('Code list page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.code.initialized.list) {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Code list already initialized, skipping');
         return;
       }
-      window.cmms.code.initialized.list = true;
+      root.dataset.initialized = 'true';
       
       // 기본 목록 페이지는 공통 기능으로 충분
       console.log('Code list uses common functionality');
@@ -41,12 +35,12 @@
     initForm: function(root) {
       console.log('Code form page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.code.initialized.form) {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Code form already initialized, skipping');
         return;
       }
-      window.cmms.code.initialized.form = true;
+      root.dataset.initialized = 'true';
       
       this.initDynamicTable(root);
       this.initCancelButton(root);
@@ -227,18 +221,11 @@
     //   }
     // },
     
-    // 초기화 상태 리셋 (페이지 전환 시 호출)
-    resetInitialization: function(pageType) {
-      if (pageType) {
-        window.cmms.code.initialized[pageType] = false;
-      } else {
-        // 모든 초기화 상태 리셋
-        Object.keys(window.cmms.code.initialized).forEach(key => {
-          window.cmms.code.initialized[key] = false;
-        });
-      }
-      console.log('Code initialization state reset:', pageType || 'all');
-    }
+    // [DEPRECATED] 초기화 상태 리셋 (페이지 전환 시 호출)
+    // DOM 기반 초기화로 변경되어 더 이상 필요하지 않음
+    // resetInitialization: function(pageType) {
+    //   console.log('Code initialization state reset (deprecated):', pageType || 'all');
+    // }
   });
   
   // 페이지별 초기화 등록 (root 기반 구조)

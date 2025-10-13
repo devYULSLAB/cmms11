@@ -28,6 +28,11 @@ public record WorkPermitRequest(
     @Size(max = 500) String safetyFactor,
     String checksheetJson,
     @Size(max = 10) String status,
+    @Size(max = 10) String stage,
+    @Size(max = 10) String refEntity,
+    @Size(max = 10) String refId,
+    @Size(max = 10) String refStage,
+    @Size(max = 20) String approvalId,
     @Size(max = 10) String fileGroupId,
     @Size(max = 500) String note,
     @Valid List<WorkPermitItemRequest> items

@@ -17,6 +17,7 @@ import org.springframework.data.repository.query.Param;
 public interface MemoRepository extends JpaRepository<Memo, MemoId> {
 
     Page<Memo> findByIdCompanyId(String companyId, Pageable pageable);
+    Page<Memo> findByIdCompanyIdAndPlantId(String companyId, String plantId, Pageable pageable);
 
     @Query(
         "select m from Memo m " +
@@ -33,13 +34,17 @@ public interface MemoRepository extends JpaRepository<Memo, MemoId> {
         "where m.id.companyId = :companyId " +
         "and (:title is null or :title = '' or m.title like concat('%', :title, '%')) " +
         "and (:createdBy is null or :createdBy = '' or m.createdBy like concat('%', :createdBy, '%')) " +
-        "and (:refEntity is null or :refEntity = '' or m.refEntity like concat('%', :refEntity, '%'))"
+        "and (:refEntity is null or :refEntity = '' or m.refEntity like concat('%', :refEntity, '%')) " +
+        "and (:status is null or :status = '' or m.status = :status) " +
+        "and (:stage is null or :stage = '' or m.stage = :stage)"
     )
     Page<Memo> findByFilters(
         @Param("companyId") String companyId,
         @Param("title") String title,
         @Param("createdBy") String createdBy,
         @Param("refEntity") String refEntity,
+        @Param("status") String status,
+        @Param("stage") String stage,
         Pageable pageable
     );
 

@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate th:action="@{/domain/role/save}" method="post" th:data-redirect="@{/domain/role/list}">
+                <form method="post" th:action="@{/domain/role/save}">
                   <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
                   <input type="hidden" name="isNew" th:value="${isNew}" />
                   

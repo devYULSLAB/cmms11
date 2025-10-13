@@ -2,12 +2,18 @@ package com.cmms11.approval;
 
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
+import com.cmms11.inspection.InspectionService;
 import com.cmms11.security.MemberUserDetailsService;
+import com.cmms11.workorder.WorkOrderService;
+import com.cmms11.workpermit.WorkPermitService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -27,10 +33,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApprovalService {
 
     private static final String MODULE_CODE = "A";
+    private static final Logger log = LoggerFactory.getLogger(ApprovalService.class);
 
     private final ApprovalRepository repository;
     private final ApprovalStepRepository stepRepository;
     private final AutoNumberService autoNumberService;
+    
+    @Autowired
+    private InspectionService inspectionService;
+    
+    @Autowired
+    private WorkOrderService workOrderService;
+    
+    @Autowired
+    private WorkPermitService workPermitService;
 
     public ApprovalService(
         ApprovalRepository repository,
@@ -52,7 +68,7 @@ public class ApprovalService {
             String trimmed = "%" + keyword.trim() + "%";
             page = repository.search(companyId, trimmed, pageable);
         }
-        return page.map(approval -> ApprovalResponse.from(approval, Collections.emptyList()));
+        return page.map(this::toResponseWithoutSteps);
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +83,54 @@ public class ApprovalService {
             pageable
         );
         
-        return page.map(approval -> ApprovalResponse.from(approval, Collections.emptyList()));
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    /**
+     * 미결함: 내가 결재해야 할 문서
+     */
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findPendingApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findPendingByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    /**
+     * 기결함: 내가 승인/합의한 문서
+     */
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findApprovedApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findApprovedByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    /**
+     * 반려함: 내가 반려한 문서
+     */
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findRejectedApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findRejectedByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    /**
+     * 상신함: 내가 상신한 문서
+     */
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findSentApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findSentByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    /**
+     * 목록 조회 시 단계 정보 제외한 응답 생성 (성능 최적화)
+     */
+    private ApprovalResponse toResponseWithoutSteps(Approval approval) {
+        return ApprovalResponse.from(approval, Collections.emptyList());
     }
 
     @Transactional(readOnly = true)
@@ -123,53 +186,126 @@ public class ApprovalService {
 
     public void delete(String approvalId) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        stepRepository.deleteByIdCompanyIdAndIdApprovalId(companyId, approvalId);
         Approval entity = getExisting(approvalId);
+        
+        // 원본 모듈 상태 복원 콜백 (DRAFT로 되돌림)
+        notifyRefModule(entity, "DELETE");
+        
+        stepRepository.deleteByIdCompanyIdAndIdApprovalId(companyId, approvalId);
         repository.delete(entity);
     }
 
-    public ApprovalResponse approve(String approvalId) {
-        Approval entity = getExisting(approvalId);
-        LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
-
-        // 결재 상태 업데이트
-        if ("SUBMIT".equals(entity.getStatus()) || "APPROVAL".equals(entity.getStatus())) {
-            entity.setStatus("COMPLETE");
-            entity.setCompletedAt(now);
-        }
-        entity.setUpdatedAt(now);
-        entity.setUpdatedBy(memberId);
-        
-        Approval saved = repository.save(entity);
-        
-        List<ApprovalStepResponse> steps = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
-            .stream()
-            .map(ApprovalStepResponse::from)
-            .collect(Collectors.toList());
-        return ApprovalResponse.from(saved, steps);
+    public ApprovalResponse approve(String approvalId, String comment) {
+        return processApproval(approvalId, comment, "APPROVE", "APPROV");
     }
 
-    public ApprovalResponse reject(String approvalId) {
+    public ApprovalResponse reject(String approvalId, String comment) {
+        return processApproval(approvalId, comment, "REJECT", "REJECT");
+    }
+
+    /**
+     * 승인/반려 공통 처리 (중복 제거)
+     */
+    private ApprovalResponse processApproval(
+        String approvalId,
+        String comment,
+        String stepResult,      // "APPROVE" or "REJECT"
+        String finalStatus      // "APPROV" or "REJECT"
+    ) {
         Approval entity = getExisting(approvalId);
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
 
-        // 반려 상태 업데이트
-        entity.setStatus("REJECT");
+        // 결재 상태 확인
+        if (!"SUBMIT".equals(entity.getStatus()) && !"PROC".equals(entity.getStatus())) {
+            throw new IllegalStateException("결재 대기 중인 문서만 처리할 수 있습니다. 현재 상태: " + entity.getStatus());
+        }
+        
+        // ⭐ 스텝 1회만 조회
+        List<ApprovalStep> steps = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(entity.getCompanyId(), approvalId);
+        
+        // 현재 사용자의 결재 단계 처리
+        boolean found = false;
+        for (ApprovalStep step : steps) {
+            if (memberId.equals(step.getMemberId())) {
+                // 이미 결재한 경우
+                if (step.getDecidedAt() != null) {
+                    throw new IllegalStateException("이미 결재한 문서입니다");
+                }
+                
+                // 결재 처리
+                step.setDecidedAt(now);
+                step.setComment(comment);
+                step.setResult(stepResult);  // "APPROVE" or "REJECT"
+                stepRepository.save(step);
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            throw new IllegalStateException("결재 권한이 없습니다");
+        }
+        
+        // 엔티티 업데이트
+        entity.setStatus(finalStatus);  // "APPROV" or "REJECT"
         entity.setCompletedAt(now);
         entity.setUpdatedAt(now);
         entity.setUpdatedBy(memberId);
         
         Approval saved = repository.save(entity);
         
-        List<ApprovalStepResponse> steps = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
+        // 원본 모듈 콜백
+        notifyRefModule(saved, finalStatus);
+        
+        // 응답 생성 (이미 로드된 steps 재사용)
+        List<ApprovalStepResponse> stepResponses = steps.stream()
+            .map(ApprovalStepResponse::from)
+            .collect(Collectors.toList());
+        
+        log.info("결재 처리 완료: approvalId={}, result={}", approvalId, stepResult);
+        
+        return ApprovalResponse.from(saved, stepResponses);
+    }
+
+    /**
+     * 결재선 입력 후 상신 처리 (DRAFT → SUBMIT)
+     */
+    public ApprovalResponse submit(String approvalId, List<ApprovalStepRequest> steps) {
+        Approval entity = getExisting(approvalId);
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = currentMemberId();
+        
+        // 상태 검증
+        if (!"DRAFT".equals(entity.getStatus())) {
+            throw new IllegalStateException("임시저장 상태에서만 상신할 수 있습니다. 현재 상태: " + entity.getStatus());
+        }
+        
+        // 결재선 등록 (제공된 경우에만)
+        if (steps != null && !steps.isEmpty()) {
+            replaceSteps(entity.getCompanyId(), approvalId, steps);
+        }
+        // 빈 리스트면 기존 스텝 유지
+        
+        // 상태 전환: DRAFT → SUBMIT
+        entity.setStatus("SUBMIT");
+        entity.setSubmittedAt(now);
+        entity.setUpdatedAt(now);
+        entity.setUpdatedBy(memberId);
+        
+        Approval saved = repository.save(entity);
+        
+        // 응답 생성
+        List<ApprovalStepResponse> stepResponses = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(entity.getCompanyId(), approvalId)
             .stream()
             .map(ApprovalStepResponse::from)
             .collect(Collectors.toList());
-        return ApprovalResponse.from(saved, steps);
+            
+        log.info("결재 상신 완료: approvalId={}, steps={}", approvalId, stepResponses.size());
+        
+        return ApprovalResponse.from(saved, stepResponses);
     }
 
     private Approval getExisting(String approvalId) {
@@ -183,6 +319,8 @@ public class ApprovalService {
         entity.setStatus(request.status());
         entity.setRefEntity(request.refEntity());
         entity.setRefId(request.refId());
+        entity.setRefStage(request.refStage());  // ⭐ 추가: 결재 단계 저장
+        
         entity.setContent(request.content());
         entity.setFileGroupId(request.fileGroupId());
     }
@@ -199,6 +337,7 @@ public class ApprovalService {
             step.setId(new ApprovalStepId(companyId, approvalId, stepNo));
             step.setMemberId(request.memberId());
             step.setDecision(request.decision());
+            step.setResult(request.result());  // result 추가
             step.setDecidedAt(request.decidedAt());
             step.setComment(request.comment());
             stepRepository.save(step);
@@ -225,5 +364,104 @@ public class ApprovalService {
         }
         String name = authentication.getName();
         return name != null ? name : "system";
+    }
+
+    /**
+     * 원본 모듈에 상태 변경 통보
+     */
+    private void notifyRefModule(Approval approval, String action) {
+        if (approval.getRefEntity() == null || approval.getRefId() == null) {
+            return;
+        }
+        
+        try {
+            String refEntity = approval.getRefEntity();
+            String refId = approval.getRefId();
+            String refStage = approval.getRefStage();
+            
+            switch (refEntity) {
+                case "INSP":
+                    // ⭐ Stage 분기 필수 (PLN/ACT)
+                    if (refStage == null) {
+                        log.warn("INSP 모듈 콜백 시 refStage가 NULL입니다: {}", refId);
+                        break;
+                    }
+                    
+                    if ("PLN".equals(refStage)) {
+                        if ("APPROV".equals(action)) {
+                            inspectionService.onPlanApprovalApprove(refId);
+                        } else if ("REJECT".equals(action)) {
+                            inspectionService.onPlanApprovalReject(refId);
+                        } else if ("DELETE".equals(action)) {
+                            inspectionService.onPlanApprovalDelete(refId);
+                        }
+                        log.info("Inspection 계획 결재 콜백 완료: {} - {}", refId, action);
+                        
+                    } else if ("ACT".equals(refStage)) {
+                        if ("APPROV".equals(action)) {
+                            inspectionService.onActualApprovalApprove(refId);
+                        } else if ("REJECT".equals(action)) {
+                            inspectionService.onActualApprovalReject(refId);
+                        } else if ("DELETE".equals(action)) {
+                            inspectionService.onActualApprovalDelete(refId);
+                        }
+                        log.info("Inspection 실적 결재 콜백 완료: {} - {}", refId, action);
+                        
+                    } else {
+                        log.warn("알 수 없는 INSP refStage: {} (refId={})", refStage, refId);
+                    }
+                    break;
+                    
+                case "WORK":
+                    // ⭐ Stage 분기 필수 (PLN/ACT)
+                    if (refStage == null) {
+                        log.warn("WORK 모듈 콜백 시 refStage가 NULL입니다: {}", refId);
+                        break;
+                    }
+                    
+                    if ("PLN".equals(refStage)) {
+                        if ("APPROV".equals(action)) {
+                            workOrderService.onPlanApprovalApprove(refId);
+                        } else if ("REJECT".equals(action)) {
+                            workOrderService.onPlanApprovalReject(refId);
+                        } else if ("DELETE".equals(action)) {
+                            workOrderService.onPlanApprovalDelete(refId);
+                        }
+                        log.info("WorkOrder 계획 결재 콜백 완료: {} - {}", refId, action);
+                        
+                    } else if ("ACT".equals(refStage)) {
+                        if ("APPROV".equals(action)) {
+                            workOrderService.onActualApprovalApprove(refId);
+                        } else if ("REJECT".equals(action)) {
+                            workOrderService.onActualApprovalReject(refId);
+                        } else if ("DELETE".equals(action)) {
+                            workOrderService.onActualApprovalDelete(refId);
+                        }
+                        log.info("WorkOrder 실적 결재 콜백 완료: {} - {}", refId, action);
+                        
+                    } else {
+                        log.warn("알 수 없는 WORK refStage: {} (refId={})", refStage, refId);
+                    }
+                    break;
+                    
+                case "WPER":
+                    // WorkPermit은 계획(PLN)만 있음
+                    if ("APPROV".equals(action)) {
+                        workPermitService.onPlanApprovalApprove(refId);
+                    } else if ("REJECT".equals(action)) {
+                        workPermitService.onPlanApprovalReject(refId);
+                    } else if ("DELETE".equals(action)) {
+                        workPermitService.onPlanApprovalDelete(refId);
+                    }
+                    log.info("WorkPermit 계획 결재 콜백 완료: {} - {}", refId, action);
+                    break;
+                    
+                default:
+                    log.warn("처리되지 않은 ref_entity: {}", refEntity);
+            }
+        } catch (Exception e) {
+            log.error("원본 모듈 콜백 실패: refEntity={}, refId={}, refStage={}, action={}", 
+                approval.getRefEntity(), approval.getRefId(), approval.getRefStage(), action, e);
+        }
     }
 }

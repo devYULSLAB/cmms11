@@ -25,6 +25,11 @@ public record InspectionRequest(
     LocalDate plannedDate,
     LocalDate actualDate,
     @Size(max = 10) String status,
+    @Size(max = 10) String stage,
+    @Size(max = 10) String refEntity,
+    @Size(max = 10) String refId,
+    @Size(max = 10) String refStage,
+    @Size(max = 10) String approvalId,
     @Size(max = 10) String fileGroupId,
     @Size(max = 500) String note,
     @Valid List<InspectionItemRequest> items

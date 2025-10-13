@@ -47,7 +47,7 @@ public class MemoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MemoResponse> list(String title, String createdBy, String refEntity, Pageable pageable) {
+    public Page<MemoResponse> list(String title, String createdBy, String refEntity, String status, String stage, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         
         Page<Memo> page = repository.findByFilters(
@@ -55,6 +55,8 @@ public class MemoService {
             title, 
             createdBy, 
             refEntity, 
+            status,
+            stage,
             pageable
         );
         

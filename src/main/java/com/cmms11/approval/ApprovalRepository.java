@@ -44,4 +44,76 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
     );
 
     Optional<Approval> findByIdCompanyIdAndIdApprovalId(String companyId, String approvalId);
+
+    // 결재함 조회 쿼리
+    
+    /**
+     * 미결함: 내가 결재해야 할 문서
+     */
+    @Query(
+        "SELECT DISTINCT a FROM Approval a " +
+        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
+        "WHERE a.id.companyId = :companyId " +
+        "AND s.memberId = :memberId " +
+        "AND s.decidedAt IS NULL " +
+        "AND a.status IN ('SUBMIT', 'PROC') " +
+        "ORDER BY a.createdAt DESC"
+    )
+    Page<Approval> findPendingByMemberId(
+        @Param("companyId") String companyId,
+        @Param("memberId") String memberId,
+        Pageable pageable
+    );
+
+    /**
+     * 기결함: 내가 승인/합의한 문서
+     */
+    @Query(
+        "SELECT DISTINCT a FROM Approval a " +
+        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
+        "WHERE a.id.companyId = :companyId " +
+        "AND s.memberId = :memberId " +
+        "AND s.decidedAt IS NOT NULL " +
+        "AND s.result = 'APPROVE' " +
+        "ORDER BY s.decidedAt DESC"
+    )
+    Page<Approval> findApprovedByMemberId(
+        @Param("companyId") String companyId,
+        @Param("memberId") String memberId,
+        Pageable pageable
+    );
+
+    /**
+     * 반려함: 내가 반려한 문서
+     */
+    @Query(
+        "SELECT DISTINCT a FROM Approval a " +
+        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
+        "WHERE a.id.companyId = :companyId " +
+        "AND s.memberId = :memberId " +
+        "AND s.decidedAt IS NOT NULL " +
+        "AND s.result = 'REJECT' " +
+        "ORDER BY s.decidedAt DESC"
+    )
+    Page<Approval> findRejectedByMemberId(
+        @Param("companyId") String companyId,
+        @Param("memberId") String memberId,
+        Pageable pageable
+    );
+
+    /**
+     * 상신함: 내가 상신한 문서
+     */
+    @Query(
+        "SELECT a FROM Approval a " +
+        "WHERE a.id.companyId = :companyId " +
+        "AND a.createdBy = :memberId " +
+        "AND a.status IN ('SUBMIT', 'PROC', 'APPROV', 'REJECT') " +
+        "ORDER BY a.createdAt DESC"
+    )
+    Page<Approval> findSentByMemberId(
+        @Param("companyId") String companyId,
+        @Param("memberId") String memberId,
+        Pageable pageable
+    );
 }

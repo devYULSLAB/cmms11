@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 public record ApprovalStepRequest(
     Integer stepNo,
     @NotBlank @Size(max = 5) String memberId,
-    @Size(max = 5) String decision,
+    @Size(max = 10) String decision,
+    @Size(max = 10) String result,
     LocalDateTime decidedAt,
     @Size(max = 500) String comment
 ) {

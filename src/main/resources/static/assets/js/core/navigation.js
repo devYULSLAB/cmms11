@@ -203,77 +203,8 @@ export function initNavigation() {
           }
         }, 10);
 
-        // data-validate 폼 처리
-        const validateForms = this.slot.querySelectorAll('form[data-validate]');
-        validateForms.forEach((form) => {
-          if (form.__cmmsValidateHandled) return;
-          form.__cmmsValidateHandled = true;
-          form.addEventListener('submit', async (e) => {
-            try {
-              e.preventDefault();
-              const action = form.getAttribute('action') || '';
-              const method = (form.getAttribute('method') || 'post').toUpperCase();
-              const redirectTo = form.getAttribute('data-redirect');
-              
-              // 유효성 검사
-              if (window.cmms && window.cmms.common && window.cmms.common.Validator) {
-                const validation = window.cmms.common.Validator.validate(form);
-                if (!validation.isValid) {
-                  window.cmms.common.Validator.showErrors(form, validation.errors);
-                  return;
-                }
-              }
-              
-              // 파일 업로드 처리 (file-upload.js 모듈 사용)
-              if (window.cmms?.fileUpload) {
-                try {
-                  const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
-                  if (fileGroupId) {
-                    // fileGroupId를 hidden field에 설정
-                    let fileGroupIdInput = form.querySelector('[name="fileGroupId"]');
-                    if (fileGroupIdInput) {
-                      fileGroupIdInput.value = fileGroupId;
-                    }
-                  }
-                } catch (uploadError) {
-                  console.error('File upload failed:', uploadError);
-                  if (window.cmms?.notification) {
-                    window.cmms.notification.error('파일 업로드에 실패했습니다.');
-                  }
-                  return; // 파일 업로드 실패 시 form submit 중단
-                }
-              }
-              
-              // Form 데이터 생성
-              const formData = new FormData(form);
-              
-              // Form submit
-              const res = await fetch(action, {
-                method,
-                body: formData,
-                credentials: 'same-origin'
-              });
-              
-              if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
-              if (!res.ok) throw new Error('Submit failed: ' + res.status);
-              
-              if (redirectTo) {
-                this.navigate(redirectTo);
-              } else {
-                // 성공 알림
-                if (window.cmms?.notification) {
-                  window.cmms.notification.success('저장되었습니다.');
-                }
-              }
-            } catch (err) {
-              console.error(err);
-              const notice = document.createElement('div');
-              notice.className = 'notice danger';
-              notice.textContent = '요청에 실패했습니다. 다시 시도해주세요.';
-              form.prepend(notice);
-            }
-          });
-        });
+        // ⭐ data-form-manager 폼 처리 (업무 모듈용 - API 호출)
+        this.handleSPAForms();
         
         this.setActive(this.currentContentUrl);
         const title = doc.querySelector('title');
@@ -392,39 +323,9 @@ export function initNavigation() {
         try { document.title = title.textContent; } catch (_) {}
       }
 
-      // SPA 스타일 제출을 위한 [data-validate] 폼 연결
-      const forms = slotEl.querySelectorAll('form[data-validate]');
-      forms.forEach((form) => {
-        if (form.__cmmsBound) return;
-        form.__cmmsBound = true;
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          const fd = new FormData(form);
-          const action = form.getAttribute('action') || window.location.href;
-          const method = (form.getAttribute('method') || 'post').toUpperCase();
-          const redirectTo = form.getAttribute('data-redirect');
-          fetch(action, {
-            method,
-            credentials: 'same-origin',
-            body: fd,
-          })
-            .then((res) => {
-              if (!res.ok) throw new Error('Submit failed: ' + res.status);
-              if (redirectTo) {
-                window.location.href = redirectTo;
-              } else if (typeof options.onAfterInject === 'function') {
-                options.onAfterInject({ form, res });
-              }
-            })
-            .catch((err) => {
-              console.error(err);
-              const notice = document.createElement('div');
-              notice.className = 'notice danger';
-              notice.textContent = '요청이 실패했습니다. 잠시 후 다시 시도하세요';
-              form.prepend(notice);
-            });
-        });
-      });
+      // ⚠️ data-validate 폼 처리 제거됨 (data-form-manager로 대체)
+      // 도메인/코드/마스터 모듈은 순수 HTML form (서버 직접 처리)
+      // 업무 모듈은 data-form-manager (handleSPAForms에서 처리)
 
       // CSRF 토큰은 fetch wrapper에서 자동 처리됨
 
@@ -441,6 +342,131 @@ export function initNavigation() {
     //   // JavaScript에서 별도로 로드하는 경우 사용
     //   console.log('사용자 정보 로드 함수 (Thymeleaf 템플릿에서 직접 주입된 경우)');
     // },
+
+    /**
+     * data-form-manager 폼 자동 바인딩 (업무 모듈용)
+     */
+    handleSPAForms: function handleSPAForms() {
+      const forms = this.slot.querySelectorAll('form[data-form-manager]');
+      
+      forms.forEach((form) => {
+        if (form.__cmmsFormManagerHandled) return;
+        form.__cmmsFormManagerHandled = true;
+        
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          try {
+            const action = form.getAttribute('data-action');
+            const method = form.getAttribute('data-method') || 'POST';
+            const redirectTemplate = form.getAttribute('data-redirect');
+            
+            if (!action) {
+              console.error('data-action is required for data-form-manager');
+              return;
+            }
+            
+            // 파일 업로드 처리
+            if (window.cmms?.fileUpload) {
+              try {
+                const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+                if (fileGroupId) {
+                  let fileGroupIdInput = form.querySelector('[name="fileGroupId"]');
+                  if (!fileGroupIdInput) {
+                    fileGroupIdInput = document.createElement('input');
+                    fileGroupIdInput.type = 'hidden';
+                    fileGroupIdInput.name = 'fileGroupId';
+                    form.appendChild(fileGroupIdInput);
+                  }
+                  fileGroupIdInput.value = fileGroupId;
+                }
+              } catch (uploadError) {
+                console.error('File upload failed:', uploadError);
+                if (window.cmms?.notification) {
+                  window.cmms.notification.error('파일 업로드에 실패했습니다.');
+                }
+                return;
+              }
+            }
+            
+            // FormData를 JSON으로 변환
+            const formData = new FormData(form);
+            const jsonData = {};
+            
+            // items 배열 처리
+            const items = [];
+            formData.forEach((value, key) => {
+              if (key.startsWith('items[')) {
+                const match = key.match(/items\[(\d+)\]\.(\w+)/);
+                if (match) {
+                  const index = parseInt(match[1]);
+                  const field = match[2];
+                  if (!items[index]) items[index] = {};
+                  items[index][field] = value;
+                }
+              } else {
+                jsonData[key] = value;
+              }
+            });
+            
+            if (items.length > 0) {
+              jsonData.items = items.filter(item => item && Object.keys(item).length > 0);
+            }
+            
+            // API 호출
+            const response = await fetch(action, {
+              method: method,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify(jsonData)
+            });
+            
+            if (response.status === 403) {
+              throw window.cmms.csrf.toCsrfError(response);
+            }
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error('API 요청 실패: ' + response.status + ' - ' + errorText);
+            }
+            
+            const result = await response.json();
+            
+            // ⭐ {id} 치환 로직
+            if (redirectTemplate) {
+              let redirectUrl = redirectTemplate;
+              
+              // {id} 패턴을 실제 ID로 치환
+              const idMatches = redirectTemplate.match(/\{(\w+)\}/g);
+              if (idMatches) {
+                idMatches.forEach(placeholder => {
+                  const fieldName = placeholder.slice(1, -1); // {id} → id
+                  const fieldValue = result[fieldName] || result.inspectionId || result.orderId || result.permitId || result.memoId || result.approvalId;
+                  if (fieldValue) {
+                    redirectUrl = redirectUrl.replace(placeholder, fieldValue);
+                  }
+                });
+              }
+              
+              this.navigate(redirectUrl);
+            } else {
+              // 성공 알림
+              if (window.cmms?.notification) {
+                window.cmms.notification.success('저장되었습니다.');
+              }
+            }
+            
+          } catch (err) {
+            console.error('Form submission error:', err);
+            if (window.cmms?.notification) {
+              window.cmms.notification.error('요청 처리 중 오류가 발생했습니다: ' + err.message);
+            }
+          }
+        });
+      });
+    },
 
     /**
      * 삭제 핸들러 바인딩 함수

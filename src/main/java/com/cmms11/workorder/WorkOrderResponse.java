@@ -3,6 +3,8 @@ package com.cmms11.workorder;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 이름: WorkOrderResponse
@@ -26,15 +28,33 @@ public record WorkOrderResponse(
     BigDecimal actualCost,
     BigDecimal actualLabor,
     String status,
+    String stage,
+    String refEntity,
+    String refId,
+    String refStage,
+    String approvalId,
     String fileGroupId,
     String note,
     LocalDateTime createdAt,
     String createdBy,
     LocalDateTime updatedAt,
-    String updatedBy
+    String updatedBy,
+    List<WorkOrderItemResponse> items
 ) {
+    public WorkOrderResponse {
+        items = items == null ? List.of() : List.copyOf(items);
+    }
+
     public static WorkOrderResponse from(WorkOrder workOrder) {
+        return from(workOrder, List.of());
+    }
+
+    public static WorkOrderResponse from(WorkOrder workOrder, List<WorkOrderItem> itemEntities) {
         String orderId = workOrder.getId() != null ? workOrder.getId().getOrderId() : null;
+        List<WorkOrderItemResponse> itemResponses = itemEntities
+            .stream()
+            .map(WorkOrderItemResponse::from)
+            .collect(Collectors.toList());
         return new WorkOrderResponse(
             orderId,
             workOrder.getName(),
@@ -50,12 +70,18 @@ public record WorkOrderResponse(
             workOrder.getActualCost(),
             workOrder.getActualLabor(),
             workOrder.getStatus(),
+            workOrder.getStage(),
+            workOrder.getRefEntity(),
+            workOrder.getRefId(),
+            workOrder.getRefStage(),
+            workOrder.getApprovalId(),
             workOrder.getFileGroupId(),
             workOrder.getNote(),
             workOrder.getCreatedAt(),
             workOrder.getCreatedBy(),
             workOrder.getUpdatedAt(),
-            workOrder.getUpdatedBy()
+            workOrder.getUpdatedBy(),
+            itemResponses
         );
     }
 }

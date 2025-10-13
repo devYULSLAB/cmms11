@@ -392,7 +392,277 @@ loadContent(url, { push = true } = {}) {
 - ✅ 트리 셰이킹 가능
 - ✅ 코드 재사용성 향상
 
-### 2.5 ES 모듈 시스템의 장점
+### 2.5 SPA 폼 처리 (handleSPAForms)
+
+#### 2.5.1 data-form-manager 아키텍처
+
+**목적**: 업무 모듈의 폼을 SPA 환경에서 API로 전송하고, 응답 결과에 따라 자동 리다이렉트
+
+**핵심 로직**: `core/navigation.js`의 `handleSPAForms()` 메서드
+
+#### 2.5.2 구현 상세
+
+```javascript
+// core/navigation.js
+handleSPAForms: function handleSPAForms() {
+  const forms = this.slot.querySelectorAll('form[data-form-manager]');
+  
+  forms.forEach((form) => {
+    // 중복 처리 방지
+    if (form.__cmmsFormManagerHandled) return;
+    form.__cmmsFormManagerHandled = true;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        // 1. 폼 속성 읽기
+        const action = form.getAttribute('data-action');
+        const method = form.getAttribute('data-method') || 'POST';
+        const redirectTemplate = form.getAttribute('data-redirect');
+        
+        // 2. 파일 업로드 (파일이 있으면)
+        const fileUploadContainer = form.querySelector('[data-file-upload]');
+        if (fileUploadContainer) {
+          const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+          if (fileGroupId) {
+            const hiddenField = form.querySelector('input[name="fileGroupId"]');
+            if (hiddenField) {
+              hiddenField.value = fileGroupId;
+            }
+          }
+        }
+        
+        // 3. FormData → JSON 변환
+        const formData = new FormData(form);
+        const jsonData = {};
+        
+        for (let [key, value] of formData.entries()) {
+          // items 배열 처리 (예: items[0].name → jsonData.items[0].name)
+          if (key.includes('[')) {
+            const matches = key.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
+            if (matches) {
+              const [, arrayName, index, fieldName] = matches;
+              if (!jsonData[arrayName]) jsonData[arrayName] = [];
+              if (!jsonData[arrayName][index]) jsonData[arrayName][index] = {};
+              jsonData[arrayName][index][fieldName] = value;
+            } else {
+              jsonData[key] = value;
+            }
+          } else {
+            jsonData[key] = value;
+          }
+        }
+        
+        // 4. API 호출
+        const response = await fetch(action, {
+          method: method,
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': this.getCSRFToken()
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(jsonData)
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        
+        // 5. 리다이렉트 URL 생성 ({id} 치환)
+        if (redirectTemplate) {
+          let redirectUrl = redirectTemplate;
+          
+          // {id}, {inspectionId}, {orderId} 등 placeholder 치환
+          const idMatches = redirectTemplate.match(/\{(\w+)\}/g);
+          if (idMatches) {
+            idMatches.forEach(placeholder => {
+              const fieldName = placeholder.slice(1, -1);  // {id} → id
+              const fieldValue = result[fieldName] || 
+                                 result.inspectionId || 
+                                 result.orderId || 
+                                 result.permitId || 
+                                 result.memoId || 
+                                 result.approvalId;
+              if (fieldValue) {
+                redirectUrl = redirectUrl.replace(placeholder, fieldValue);
+              }
+            });
+          }
+          
+          // 6. SPA 네비게이션
+          this.navigate(redirectUrl);
+        } else {
+          if (window.cmms?.notification) {
+            window.cmms.notification.success('저장되었습니다.');
+          }
+        }
+      } catch (err) {
+        console.error('폼 제출 오류:', err);
+        if (window.cmms?.notification) {
+          window.cmms.notification.error('저장 중 오류가 발생했습니다: ' + err.message);
+        }
+      }
+    });
+  });
+},
+
+getCSRFToken: function() {
+  const cookies = document.cookie.split('; ');
+  for (const cookie of cookies) {
+    if (cookie.startsWith('XSRF-TOKEN=')) {
+      return decodeURIComponent(cookie.split('=')[1]);
+    }
+  }
+  return '';
+}
+```
+
+#### 2.5.3 HTML 사용 예시
+
+```html
+<!-- Inspection form.html -->
+<form id="inspection-form" 
+      data-form-manager
+      th:attr="data-action=${isNew ? '/api/inspections' : '/api/inspections/' + inspection.inspectionId},
+               data-method=${isNew ? 'POST' : 'PUT'}"
+      data-redirect="/inspection/detail/{id}">
+  
+  <!-- Hidden fields -->
+  <input type="hidden" name="inspectionId" th:value="${inspection?.inspectionId}" />
+  <input type="hidden" name="stage" th:value="${stage}" />
+  <input type="hidden" name="status" value="DRAFT" />
+  
+  <!-- Items -->
+  <input type="text" name="items[0].name" value="항목1" />
+  <input type="text" name="items[0].method" value="방법1" />
+  
+  <button type="submit">저장</button>
+</form>
+```
+
+**처리 흐름**:
+1. 사용자가 "저장" 버튼 클릭
+2. `handleSPAForms()`가 submit 이벤트 가로챔
+3. 파일 업로드 (있으면)
+4. FormData를 JSON으로 변환 (`items` 배열 포함)
+5. `POST /api/inspections` 또는 `PUT /api/inspections/{id}` 호출
+6. 응답 JSON에서 `id` 추출
+7. `/inspection/detail/{id}` → `/inspection/detail/I250113001` 치환
+8. SPA 네비게이션으로 detail 페이지 이동
+
+### 2.6 결재 상신 (submitApproval)
+
+#### 2.6.1 전역 함수 구조
+
+**목적**: detail.html의 "결재 상신" 버튼에서 호출하여 API로 결재 요청
+
+**구현 위치**: `pages/inspection.js` (모든 모듈에서 공통 사용)
+
+```javascript
+// pages/inspection.js
+const InspectionModule = {
+  init: function(container) {
+    this.initApprovalButtons(container);
+    // ... 기타 초기화
+  },
+  
+  initApprovalButtons: function(root) {
+    // 전역 함수 등록 (한 번만)
+    if (!window.submitApproval) {
+      window.submitApproval = async function(id, stage, module = 'inspections', detailPath = 'inspection') {
+        // stage: PLN 또는 ACT
+        // module: inspections, workorders, workpermits
+        // detailPath: inspection, workorder, workpermit
+        
+        if (!confirm('결재를 상신하시겠습니까?')) {
+          return;
+        }
+        
+        try {
+          // API URL 구성
+          const apiUrl = stage === 'PLN' 
+            ? `/api/${module}/${id}/submit-plan-approval`
+            : `/api/${module}/${id}/submit-actual-approval`;
+          
+          // API 호출
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': getCSRFToken()
+            },
+            credentials: 'same-origin'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const result = await response.json();
+          
+          // 성공 알림 및 리다이렉트
+          if (window.cmms?.notification) {
+            window.cmms.notification.success('결재가 상신되었습니다.');
+          }
+          
+          // detail 페이지 새로고침
+          if (window.cmms?.navigation) {
+            window.cmms.navigation.navigate(`/${detailPath}/detail?id=${id}`);
+          }
+        } catch (error) {
+          console.error('결재 상신 오류:', error);
+          if (window.cmms?.notification) {
+            window.cmms.notification.error('결재 상신 중 오류가 발생했습니다.');
+          }
+        }
+      };
+      
+      function getCSRFToken() {
+        const cookies = document.cookie.split('; ');
+        for (const cookie of cookies) {
+          if (cookie.startsWith('XSRF-TOKEN=')) {
+            return decodeURIComponent(cookie.split('=')[1]);
+          }
+        }
+        return '';
+      }
+    }
+  }
+};
+```
+
+#### 2.6.2 HTML 사용 예시
+
+```html
+<!-- inspection/detail.html -->
+<button class="btn" 
+        th:classappend="${inspection.status == 'DRAFT' ? 'primary' : 'disabled'}"
+        th:disabled="${inspection.status != 'DRAFT'}"
+        th:onclick="${inspection.status == 'DRAFT' ? 'submitApproval(\'' + inspection.inspectionId + '\', \'' + inspection.stage + '\', \'inspections\', \'inspection\')' : 'return false;'}">
+  결재 상신
+</button>
+
+<!-- workorder/detail.html -->
+<button class="btn" 
+        th:classappend="${workOrder.status == 'DRAFT' ? 'primary' : 'disabled'}"
+        th:disabled="${workOrder.status != 'DRAFT'}"
+        th:onclick="${workOrder.status == 'DRAFT' ? 'submitApproval(\'' + workOrder.orderId + '\', \'' + workOrder.stage + '\', \'workorders\', \'workorder\')' : 'return false;'}">
+  결재 상신
+</button>
+```
+
+**처리 흐름**:
+1. 사용자가 "결재 상신" 버튼 클릭
+2. `submitApproval(id, stage, module, detailPath)` 호출
+3. `POST /api/inspections/{id}/submit-plan-approval` 또는 `submit-actual-approval`
+4. 서버에서 Approval 생성 및 원본 모듈 status → *_SUBMIT
+5. 성공 알림 및 detail 페이지 새로고침
+
+### 2.7 ES 모듈 시스템의 장점
 
 **기존 방식 (app.js) vs 신규 방식 (main.js + ES 모듈)**:
 

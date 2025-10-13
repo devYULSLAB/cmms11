@@ -8,10 +8,28 @@
     <!-- local fallback for design-only preview without server -->
     <link rel="stylesheet" href="../../static/assets/css/base.css" />
     <link rel="stylesheet" href="../../static/assets/css/print.css" />
+    
+    <!-- 팝업 모드 스타일 -->
+    <style th:if="${param.popup != null}">
+      body::before {
+        content: '📄 점검 상세 정보';
+        display: block;
+        padding: 16px 20px;
+        background: var(--primary);
+        color: white;
+        font-size: 18px;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .page { padding: 0; }
+      .container { max-width: 100%; padding: 20px; }
+    </style>
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
+      <header class="appbar" th:unless="${param.popup != null}">
         <div class="appbar-inner">
           <div class="brand">점검 관리</div>
           <div class="spacer"></div>
@@ -21,7 +39,7 @@
           </div>
         </div>
       </header>
-      <nav class="breadcrumbs">
+      <nav class="breadcrumbs" th:unless="${param.popup != null}">
         <div class="container">
           <a th:href="@{#}" href="#">점검</a>
           <span class="sep">/</span>
@@ -38,18 +56,51 @@
             <div class="card-header">
               <div class="row actions-space-between">
                 <div class="card-title">점검 상세</div>
-                <div class="toolbar">
+                <div class="toolbar" th:unless="${param.popup != null}">
+                  <!-- 항상 활성화 -->
                   <a class="btn" th:href="@{/inspection/list}">목록</a>
                   <a class="btn" href="#" data-print-btn>인쇄</a>
-                  <a class="btn" th:href="@{/inspection/edit/{id}(id=${inspection.inspectionId})}">수정</a>
-                  <button class="btn danger" 
-                          th:data-delete-url="@{/inspection/delete/{id}(id=${inspection.inspectionId})}"
-                          data-redirect="@{/inspection/list}"
-                          data-confirm="정말 삭제하시겠습니까?">삭제</button>
+                  
+                  <!-- 수정: status=DRAFT일 때만 활성화 -->
+                  <a class="btn" 
+                     th:classappend="${inspection.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                     th:href="${inspection.status == 'DRAFT' ? '/inspection/form?id=' + inspection.inspectionId : '#'}"
+                     th:onclick="${inspection.status != 'DRAFT' ? 'return false;' : ''}">
+                    수정
+                  </a>
+                  
+                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
+                  <button class="btn" 
+                          th:classappend="${inspection.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                          th:disabled="${inspection.status != 'DRAFT'}"
+                          th:onclick="${inspection.status == 'DRAFT' ? 'submitApproval(\'' + inspection.inspectionId + '\', \'' + inspection.stage + '\', \'inspections\', \'inspection\')' : 'return false;'}">
+                    결재 상신
+                  </button>
+                  
+                  <!-- 실적 입력: stage=PLN AND status=APPRV일 때만 활성화 -->
+                  <a class="btn" 
+                     th:classappend="${inspection.stage == 'PLN' and inspection.status == 'APPRV' ? 'success' : 'disabled'}"
+                     th:href="${inspection.stage == 'PLN' and inspection.status == 'APPRV' ? '/inspection/form?stage=ACT&amp;refEntity=INSP&amp;refId=' + inspection.inspectionId + '&amp;refStage=PLN' : '#'}"
+                     th:onclick="${inspection.stage != 'PLN' or inspection.status != 'APPRV' ? 'return false;' : ''}">
+                    실적 입력
+                  </a>
                 </div>
               </div>
             </div>
             <div class="card-body">
+              
+              <!-- 알림 메시지 표시 -->
+              <div th:if="${message}" 
+                   class="alert alert-success"
+                   style="margin-bottom: 20px; padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"
+                   th:text="${message}">
+              </div>
+              <div th:if="${errorMessage}" 
+                   class="alert alert-error"
+                   style="margin-bottom: 20px; padding: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"
+                   th:text="${errorMessage}">
+              </div>
+              
               <div class="section">
                 <div class="section-title">기본정보</div>
                 <div class="grid cols-12">
@@ -68,9 +119,40 @@
                   <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${inspection.memberId ?: '-'}">M0001</div></div>
                   <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${inspection.plannedDate ?: '-'}">2025-01-10</div></div>
                   <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${inspection.actualDate ?: '-'}">2025-01-10</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div><span class="badge" th:text="${inspection.status == 'PLAN' ? '계획' : inspection.status == 'PROC' ? '진행' : '완료'}" 
-                              th:classappend="${inspection.status == 'PLAN' ? 'badge' : inspection.status == 'PROC' ? 'badge warning' : 'badge success'}">계획</span></div></div>
+                  <div class="stack col-span-3"><div class="label">상태</div><div>
+                    <span class="badge" 
+                          th:text="${inspection.status == 'PLN_APPROV' ? '계획 확정' : inspection.status == 'ACT_DRAFT' ? '실적 작성' : inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}" 
+                          th:classappend="${inspection.status == 'ACT_APPROV' ? 'success' : inspection.status == 'ACT_SUBMIT' ? 'info' : inspection.status == 'PLN_APPROV' ? 'warning' : ''}">계획 확정</span>
+                  </div></div>
                   <div class="stack col-span-12"><div class="label">비고</div><div class="muted" th:text="${inspection.note ?: '-'}">-</div></div>
+                </div>
+              </div>
+
+              <!-- 결재 정보 섹션 -->
+              <div class="section" th:if="${inspection.approvalId != null}">
+                <div class="section-title">결재 정보</div>
+                <div class="grid cols-12">
+                  <div class="stack col-span-4">
+                    <div class="label">결재 번호</div>
+                    <div>
+                      <a th:href="@{/approval/detail/{id}(id=${inspection.approvalId})}" 
+                         th:text="${inspection.approvalId}">A250101001</a>
+                    </div>
+                  </div>
+                  <div class="stack col-span-8">
+                    <div class="label">액션</div>
+                    <div>
+                      <a class="btn btn-sm" 
+                         th:href="@{/approval/edit/{id}(id=${inspection.approvalId})}"
+                         th:if="${inspection.status == 'SUBMIT'}">
+                        결재 수정
+                      </a>
+                      <a class="btn btn-sm" 
+                         th:href="@{/approval/detail/{id}(id=${inspection.approvalId})}">
+                        결재 확인
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -141,7 +223,14 @@
                       </tr>
                       <tr>
                         <th>설비 번호</th><td th:text="${inspection.plantId}">EQP000123</td>
-                        <th>상태</th><td th:text="${inspection.status == 'PLAN' ? '계획' : inspection.status == 'PROC' ? '진행' : '완료'}">계획</td>
+                        <th>상태</th>
+                        <td>
+                          <span class="badge"
+                                th:classappend="${inspection.status == 'ACT_APPROV' ? 'success' : inspection.status == 'ACT_SUBMIT' ? 'info' : inspection.status == 'PLN_APPROV' ? 'warning' : ''}"
+                                th:text="${inspection.status == 'PLN_APPROV' ? '계획 확정' : inspection.status == 'ACT_DRAFT' ? '실적 작성' : inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}">
+                            계획 확정
+                          </span>
+                        </td>
                       </tr>
                       <tr>
                         <th>계획일</th><td th:text="${inspection.plannedDate ?: '-'}">2025-01-10</td>
@@ -193,7 +282,7 @@
         
         <!-- 인라인 스크립트 제거됨 - inspection.js로 이관 -->
       </section>
-      <footer>
+      <footer th:unless="${param.popup != null}">
         <div class="container">© 점검 관리</div>
       </footer>
     </div>

@@ -17,24 +17,56 @@
     // 목록 페이지 초기화 (root 기반)
     initList: function(root) {
       console.log('Plant list page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Plant list already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPagination(root);
     },
     
     // 상세 페이지 초기화 (root 기반)
     initDetail: function(root) {
       console.log('Plant detail page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Plant detail already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initPrintButton(root);
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Plant form page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Plant form already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initCancelButton(root);
     },
     
     // 이력 페이지 초기화 (root 기반)
     initHistory: function(root) {
       console.log('Plant history page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Plant history already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initSearch(root);
       this.initHistoryLoad(root);
     },
@@ -42,6 +74,14 @@
     // 업로드 페이지 초기화 (root 기반)
     initUpload: function(root) {
       console.log('Plant upload page initialized', root);
+      
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
+        console.log('Plant upload already initialized, skipping');
+        return;
+      }
+      root.dataset.initialized = 'true';
+      
       this.initUploadForm(root);
     },
     

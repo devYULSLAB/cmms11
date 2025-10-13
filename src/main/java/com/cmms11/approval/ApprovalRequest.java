@@ -18,6 +18,7 @@ public record ApprovalRequest(
     @Size(max = 10) String status,
     @Size(max = 64) String refEntity,
     @Size(max = 10) String refId,
+    @Size(max = 10) String refStage,
     String content,
     @Size(max = 10) String fileGroupId,
     @Valid List<ApprovalStepRequest> steps

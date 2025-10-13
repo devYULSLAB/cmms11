@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/defaultLayout :: layout(~{::title}, ~{::section})}">
+  <head>
+    <title>결재함 · CMMS</title>
+  </head>
+  <body>
+    <div class="page">
+      <main>
+        <div class="container">
+          <section data-slot-root th:fragment="content" data-page="approval-inbox" data-module="approval-inbox">
+          <section class="card">
+            <div class="card-header">
+              <div class="card-title">결재함</div>
+            </div>
+            <div class="card-body">
+              <!-- 결재함 탭 -->
+              <div class="tabs">
+                <button class="tab-btn" 
+                        th:classappend="${type=='pending'?'active':''}"
+                        onclick="location.href='/approval/inbox?type=pending'">
+                  미결함
+                </button>
+                <button class="tab-btn" 
+                        th:classappend="${type=='approved'?'active':''}"
+                        onclick="location.href='/approval/inbox?type=approved'">
+                  기결함
+                </button>
+                <button class="tab-btn" 
+                        th:classappend="${type=='rejected'?'active':''}"
+                        onclick="location.href='/approval/inbox?type=rejected'">
+                  반려함
+                </button>
+                <button class="tab-btn" 
+                        th:classappend="${type=='sent'?'active':''}"
+                        onclick="location.href='/approval/inbox?type=sent'">
+                  상신함
+                </button>
+              </div>
+
+              <!-- 결재 목록 테이블 -->
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="table-col-id-large">결재번호</th>
+                    <th class="table-col-name-large">제목</th>
+                    <th th:if="${type=='pending' or type=='sent'}" class="table-col-type-large">상신자</th>
+                    <th th:if="${type=='approved' or type=='rejected'}" class="table-col-date-large">결재일</th>
+                    <th class="table-col-type-medium">상태</th>
+                    <th class="table-col-action-small">작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:each="approval : ${page.content}">
+                    <td th:text="${approval.approvalId}">A001</td>
+                    <td th:text="${approval.title}">점검 실적 결재</td>
+                    <td th:if="${type=='pending' or type=='sent'}" th:text="${approval.createdBy}">admin</td>
+                    <td th:if="${type=='approved' or type=='rejected'}" th:text="${approval.completedAt}">-</td>
+                    <td>
+                      <span class="badge" 
+                            th:text="${approval.status == 'SUBMIT' ? '상신됨' : approval.status == 'PROC' ? '진행중' : approval.status == 'APPROV' ? '완료' : '반려'}"
+                            th:classappend="${approval.status == 'APPROV' ? 'success' : approval.status == 'REJECT' ? 'danger' : approval.status == 'PROC' ? 'warn' : 'info'}">
+                        상신됨
+                      </span>
+                    </td>
+                    <td class="actions">
+                      <a class="btn xs" th:href="@{/approval/detail/{id}(id=${approval.approvalId})}">보기</a>
+                    </td>
+                  </tr>
+                  <tr th:if="${page.content.isEmpty()}">
+                    <td th:colspan="${type=='pending' or type=='sent' ? 6 : 6}" class="cell-center">
+                      <div class="empty-message">
+                        <span th:if="${type=='pending'}">미결재 문서가 없습니다.</span>
+                        <span th:if="${type=='approved'}">승인한 문서가 없습니다.</span>
+                        <span th:if="${type=='rejected'}">반려한 문서가 없습니다.</span>
+                        <span th:if="${type=='sent'}">상신한 문서가 없습니다.</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- 페이지네이션 -->
+              <div class="pagination" th:if="${page.totalPages > 0}">
+                <a th:if="${page.number > 0}" 
+                   th:href="@{/approval/inbox(type=${type}, page=${page.number - 1}, size=${page.size})}"
+                   class="btn">이전</a>
+                <span th:text="|${page.number + 1} / ${page.totalPages}|">1 / 10</span>
+                <a th:if="${page.number + 1 < page.totalPages}" 
+                   th:href="@{/approval/inbox(type=${type}, page=${page.number + 1}, size=${page.size})}"
+                   class="btn">다음</a>
+              </div>
+            </div>
+          </section>
+        </section>
+        </div>
+      </main>
+      <footer>
+        <div class="container">© 전자결재</div>
+      </footer>
+    </div>
+  </body>
+</html>
+

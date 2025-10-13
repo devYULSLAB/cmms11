@@ -467,6 +467,21 @@ footer .container {
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 버튼 disabled 클래스 (stage/status 기반 제어용) */
+.btn.disabled {
+  background-color: var(--color-gray-300);
+  color: var(--color-gray-500);
+  border-color: var(--color-gray-300);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn.disabled:hover {
+  background-color: var(--color-gray-300);
+  border-color: var(--color-gray-300);
 }
 
 /* 버튼 그룹 */

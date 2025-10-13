@@ -13,6 +13,7 @@ public record ApprovalStepResponse(
     Integer stepNo,
     String memberId,
     String decision,
+    String result,
     LocalDateTime decidedAt,
     String comment
 ) {
@@ -22,6 +23,7 @@ public record ApprovalStepResponse(
             stepNo,
             step.getMemberId(),
             step.getDecision(),
+            step.getResult(),
             step.getDecidedAt(),
             step.getComment()
         );

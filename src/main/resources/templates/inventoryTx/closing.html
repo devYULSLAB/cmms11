@@ -73,8 +73,12 @@
                 
                 <div class="section">
                   <div class="section-title">마감 수행</div>
-                  <form method="post" th:action="@{/inventoryTx/closing}" onsubmit="return confirmClosing()">
-                    <input type="hidden" name="_csrf" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                  <form data-form-manager
+                        data-action="/api/inventoryTx/closing"
+                        data-method="POST"
+                        data-redirect="/inventoryTx/closing"
+                        onsubmit="return confirm('마감을 진행하시겠습니까?')">
+                    
                     <input type="hidden" name="yyyymm" th:value="${yyyymm}" />
                     <input type="hidden" name="storageId" th:value="${storageId}" />
                     <input type="hidden" name="inventoryId" th:value="${inventoryId}" />

@@ -17,6 +17,7 @@ import org.springframework.data.repository.query.Param;
 public interface InspectionRepository extends JpaRepository<Inspection, InspectionId> {
 
     Page<Inspection> findByIdCompanyId(String companyId, Pageable pageable);
+    Page<Inspection> findByIdCompanyIdAndPlantId(String companyId, String plantId, Pageable pageable);
 
     @Query(
         "select i from Inspection i " +
@@ -33,7 +34,9 @@ public interface InspectionRepository extends JpaRepository<Inspection, Inspecti
         "where i.id.companyId = :companyId " +
         "and (:inspectionId is null or :inspectionId = '' or i.id.inspectionId like concat('%', :inspectionId, '%')) " +
         "and (:plantId is null or :plantId = '' or i.plantId like concat('%', :plantId, '%')) " +
+        "and (:name is null or :name = '' or i.name like concat('%', :name, '%')) " +
         "and (:status is null or :status = '' or i.status = :status) " +
+        "and (:stage is null or :stage = '' or i.stage = :stage) " +
         "and (:plannedDateFrom is null or i.plannedDate >= :plannedDateFrom) " +
         "and (:plannedDateTo is null or i.plannedDate <= :plannedDateTo)"
     )
@@ -41,7 +44,9 @@ public interface InspectionRepository extends JpaRepository<Inspection, Inspecti
         @Param("companyId") String companyId,
         @Param("inspectionId") String inspectionId,
         @Param("plantId") String plantId,
+        @Param("name") String name,
         @Param("status") String status,
+        @Param("stage") String stage,
         @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
         @Param("plannedDateTo") java.time.LocalDate plannedDateTo,
         Pageable pageable

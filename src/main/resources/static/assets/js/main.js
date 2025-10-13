@@ -56,21 +56,16 @@ function initialize() {
     initUI();
     console.log('  ✅ UI 모듈 초기화 완료');
     
-    // 4. 네비게이션 시스템 초기화
+    // 4. 네비게이션 시스템 초기화 (초기 콘텐츠 로드 포함)
     if (window.cmms?.navigation) {
       window.cmms.navigation.init();
-      console.log('  ✅ Navigation 초기화 완료');
+      console.log('  ✅ Navigation 초기화 완료 (초기 콘텐츠 로드 포함)');
     } else {
       console.warn('  ⚠️ Navigation 모듈을 찾을 수 없습니다');
     }
     
-    // 5. 초기 콘텐츠 로드
-    if (window.initialContent) {
-      console.log('  📄 초기 콘텐츠 로드:', window.initialContent);
-      window.cmms.navigation.loadContent(window.initialContent);
-    } else {
-      console.warn('  ⚠️ initialContent가 설정되지 않았습니다');
-    }
+    // 주석: 초기 콘텐츠 로드는 navigation.init() 내부에서 수행됨
+    // 중복 로딩 방지를 위해 제거됨 (issue_problems.md Phase 1-2 참조)
     
     // 6. 초기화 완료 플래그 및 성능 측정
     window.cmms.moduleSystem.initialized = true;

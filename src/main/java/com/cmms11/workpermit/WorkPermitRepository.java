@@ -17,7 +17,8 @@ import org.springframework.data.repository.query.Param;
 public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPermitId> {
 
     Page<WorkPermit> findByIdCompanyId(String companyId, Pageable pageable);
-
+    Page<WorkPermit> findByIdCompanyIdAndPlantId(String companyId, String plantId, Pageable pageable);
+    
     @Query(
         "select w from WorkPermit w " +
         "where w.id.companyId = :companyId and (w.id.permitId like :keyword or w.name like :keyword)"
@@ -35,6 +36,7 @@ public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPerm
         "and (:plantId is null or :plantId = '' or w.plantId like concat('%', :plantId, '%')) " +
         "and (:jobId is null or :jobId = '' or w.jobId = :jobId) " +
         "and (:status is null or :status = '' or w.status = :status) " +
+        "and (:stage is null or :stage = '' or w.stage = :stage) " +
         "and (:plannedDateFrom is null or w.plannedDate >= :plannedDateFrom)"
     )
     Page<WorkPermit> findByFilters(
@@ -43,6 +45,7 @@ public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPerm
         @Param("plantId") String plantId,
         @Param("jobId") String jobId,
         @Param("status") String status,
+        @Param("stage") String stage,
         @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
         Pageable pageable
     );

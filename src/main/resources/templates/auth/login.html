@@ -13,15 +13,33 @@
           <div class="card-title">로그인</div>
         </div>
         <div class="card-body">
-          <form data-validate action="/api/auth/login" method="post">
+          <form id="login-form" data-validate action="/api/auth/login" method="post">
+            <!-- 회사 선택 -->
             <div class="stack">
-              <label class="label" for="member_id">아이디</label>
-              <input id="member_id" name="member_id" class="input" required maxlength="5" autocomplete="username" />
+              <label class="label" for="company_id">회사</label>
+              <select id="company_id" class="input" required>
+                <option value="CHROK">초록에너지</option>
+                <option value="HPS" disabled>한국플랜트서비스 (준비중)</option>
+                <option value="KEPS" disabled>한국발전기술 (준비중)</option>
+                <option value="OES" disabled>옵티멀에너지서비스 (준비중)</option>
+              </select>
             </div>
+            
+            <!-- 아이디 -->
+            <div class="stack" style="margin-top:12px">
+              <label class="label" for="user_id">아이디</label>
+              <input id="user_id" class="input" required maxlength="10" autocomplete="username" placeholder="예: admin" />
+            </div>
+            
+            <!-- member_id hidden field (companyId:userId 형식으로 전송) -->
+            <input type="hidden" id="member_id" name="member_id" />
+            
+            <!-- 비밀번호 -->
             <div class="stack" style="margin-top:12px">
               <label class="label" for="password">비밀번호</label>
               <input id="password" name="password" class="input" type="password" required maxlength="100" autocomplete="current-password" />
             </div>
+            
             <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <div id="login_error" class="notice danger-text" style="display:none;margin-top:12px"></div>
             <div class="actions" style="margin-top:16px">
@@ -60,6 +78,28 @@
           errorEl.setAttribute('role', 'alert');
           errorEl.style.display = 'block';
           console.log('  ⚠️ 로그인 에러 메시지 표시:', errorEl.textContent);
+        }
+        
+        // 4. 로그인 폼 submit 시 companyId:userId 형식으로 조합
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+          loginForm.addEventListener('submit', function(e) {
+            const companyId = document.getElementById('company_id').value;
+            const userId = document.getElementById('user_id').value.trim();
+            const memberIdField = document.getElementById('member_id');
+            
+            // companyId:userId 형식으로 조합
+            if (companyId === 'CHROK') {
+              // 기본 회사는 userId만 (하위 호환성)
+              memberIdField.value = userId;
+            } else {
+              // 다른 회사는 companyId:userId 형식
+              memberIdField.value = companyId + ':' + userId;
+            }
+            
+            console.log('  📤 로그인 시도:', memberIdField.value);
+          });
+          console.log('  ✅ 로그인 폼 이벤트 등록 완료');
         }
         
         console.log('🎉 로그인 페이지 초기화 완료');

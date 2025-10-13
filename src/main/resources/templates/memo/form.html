@@ -38,14 +38,19 @@
                 <div class="card-title">게시/메모 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/memo/list}">목록</a>
+                  <button type="submit" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '저장'}">저장</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form data-validate method="post" th:action="@{/memo/save}" th:data-redirect="@{/memo/list}">
+                <form data-form-manager
+                      th:attr="data-action=${isNew ? '/api/memos' : '/api/memos/' + memo.memoId},
+                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/memo/list">
 
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                  <input type="hidden" name="isNew" th:value="${isNew}" />
-                  <input type="hidden" name="memoId" th:value="${memo.memoId}" />
+                  <!-- Hidden fields -->
+                  <input type="hidden" name="memoId" th:value="${memo?.memoId}" />
                   <!-- 기본정보 -->
                   <div class="section">
                     <div class="section-title">기본정보</div>

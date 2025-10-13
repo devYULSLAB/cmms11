@@ -23,6 +23,11 @@ public record InspectionResponse(
     LocalDate plannedDate,
     LocalDate actualDate,
     String status,
+    String stage,
+    String refEntity,
+    String refId,
+    String refStage,
+    String approvalId,
     String fileGroupId,
     String note,
     LocalDateTime createdAt,
@@ -56,6 +61,11 @@ public record InspectionResponse(
             inspection.getPlannedDate(),
             inspection.getActualDate(),
             inspection.getStatus(),
+            inspection.getStage(),
+            inspection.getRefEntity(),
+            inspection.getRefId(),
+            inspection.getRefStage(),
+            inspection.getApprovalId(),
             inspection.getFileGroupId(),
             inspection.getNote(),
             inspection.getCreatedAt(),
@@ -63,6 +73,37 @@ public record InspectionResponse(
             inspection.getUpdatedAt(),
             inspection.getUpdatedBy(),
             itemResponses
+        );
+    }
+
+    /**
+     * ID를 null로 설정한 새로운 인스턴스를 반환
+     * 계획 데이터를 복사하여 새로운 실적을 생성할 때 사용
+     */
+    public InspectionResponse withNullId() {
+        return new InspectionResponse(
+            null,  // inspectionId를 null로 설정
+            this.name,
+            this.plantId,
+            this.jobId,
+            this.siteId,
+            this.deptId,
+            this.memberId,
+            this.plannedDate,
+            this.actualDate,
+            this.status,
+            this.stage,
+            this.refEntity,
+            this.refId,
+            this.refStage,
+            this.approvalId,
+            this.fileGroupId,
+            this.note,
+            this.createdAt,
+            this.createdBy,
+            this.updatedAt,
+            this.updatedBy,
+            this.items
         );
     }
 }

@@ -12,13 +12,6 @@
   if (!window.cmms) window.cmms = {};
   if (!window.cmms.approval) window.cmms.approval = {};
 
-  // 초기화 상태 추적을 위한 플래그
-  window.cmms.approval.initialized = {
-    list: false,
-    detail: false,
-    form: false
-  };
-
   // 기존 객체를 보존하면서 메서드만 추가
   Object.assign(window.cmms.approval, {
     
@@ -26,12 +19,12 @@
     initList: function(root) {
       console.log('Approval list page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.approval.initialized.list) {
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.approvalListInit === 'true') {
         console.log('Approval list already initialized, skipping');
         return;
       }
-      window.cmms.approval.initialized.list = true;
+      root.dataset.approvalListInit = 'true';
       
       this.initPagination(root);
       this.initSearch(root);
@@ -42,12 +35,12 @@
     initDetail: function(root) {
       console.log('Approval detail page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.approval.initialized.detail) {
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.approvalDetailInit === 'true') {
         console.log('Approval detail already initialized, skipping');
         return;
       }
-      window.cmms.approval.initialized.detail = true;
+      root.dataset.approvalDetailInit = 'true';
       
       this.initApprovalActions(root);
       this.initPrintButton(root);
@@ -57,16 +50,15 @@
     initForm: function(root) {
       console.log('Approval form page initialized', root);
       
-      // 중복 초기화 방지
-      if (window.cmms.approval.initialized.form) {
+      // ⭐ DOM 기반 중복 초기화 방지
+      if (root.dataset.approvalFormInit === 'true') {
         console.log('Approval form already initialized, skipping');
         return;
       }
-      window.cmms.approval.initialized.form = true;
+      root.dataset.approvalFormInit = 'true';
       
       this.initEditor(root);
       this.initApproverManagement(root);
-      // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
     },
     
     // 페이지네이션 초기화 (공통 유틸 사용, root 기반)
@@ -131,7 +123,7 @@
       });
       
       // 폼 제출 시 에디터 내용을 hidden field에 동기화
-      const form = root.querySelector('form[data-form-manager]');
+      const form = root.querySelector('form');
       if (form) {
         form.addEventListener('submit', () => {
           contentField.value = editor.innerHTML;
@@ -177,10 +169,28 @@
       
       // 순서 재정렬
       const renumber = () => {
-        Array.from(approverItems.querySelectorAll('.approver-item')).forEach((item, idx) => {
+        const items = Array.from(approverItems.querySelectorAll('.approver-item'));
+        
+        items.forEach((item, idx) => {
+          // 1. 화면 번호 업데이트
           const orderElement = item.querySelector('.order');
           if (orderElement) orderElement.textContent = String(idx + 1);
+          
+          // 2. ⭐ hidden 필드 이름 재정렬
+          const hiddenInputs = item.querySelectorAll('input[type="hidden"]');
+          hiddenInputs.forEach(input => {
+            const name = input.name;
+            // steps[X].field → steps[idx].field
+            input.name = name.replace(/steps\[\d+\]/, `steps[${idx}]`);
+          });
+          
+          // 3. stepNo 값도 업데이트
+          const stepNoInput = item.querySelector('input[name*=".stepNo"]');
+          if (stepNoInput) stepNoInput.value = idx + 1;
         });
+        
+        // 4. ⭐ approverCount 재계산
+        approverCount = items.length;
       };
       
       // 빈 메시지 표시/숨김 관리
@@ -312,8 +322,8 @@
         });
       }
       
-      // 팝업에서 조직원 선택 시 호출되는 콜백
-      window.onMemberSelected = async function(member) {
+      // 팝업에서 조직원 선택 시 호출되는 콜백 (네임스페이스 사용)
+      window.cmms.approval.onMemberSelected = async function(member) {
         // 멤버 ID를 입력 필드에 설정
         memberIdInput.value = member.memberId;
         
@@ -371,97 +381,6 @@
       approverItems.dataset.initialized = 'true';
     },
     
-    // 폼 제출 초기화 (공통 FormManager 활용, root 기반)
-    // initFormSubmit: function(root) {
-    //   const form = root.querySelector('[data-form-manager]');
-    //   if (!form) return;
-    //   
-    //   // 중복 초기화 방지
-    //   if (form.dataset.initialized === 'true') {
-    //     console.log('Form submit already initialized');
-    //     return;
-    //   }
-    //   
-    //   // 공통 FormManager를 활용한 폼 제출 처리
-    //   if (window.cmms?.formManager) {
-    //     window.cmms.formManager.init(form, {
-    //       onSuccess: (result) => {
-    //         this.handleFormSuccess(result, root);
-    //       },
-    //       onError: (error) => {
-    //         this.handleFormError(error, root);
-    //       }
-    //     });
-    //   } else {
-    //     // FormManager가 없는 경우 직접 처리
-    //     form.addEventListener('submit', async (event) => {
-    //       event.preventDefault();
-    //       await this.handleDirectForm(form, root);
-    //     });
-    //   }
-    //   
-    //   form.dataset.initialized = 'true';
-    // },
-    
-    // 폼 성공 처리 (root 기반)
-    // handleFormSuccess: function(result, root) {
-    //   if (window.cmms?.notification) {
-    //     window.cmms.notification.success('결재 문서가 성공적으로 저장되었습니다.');
-    //   } else {
-    //     alert('결재 문서가 성공적으로 저장되었습니다.');
-    //   }
-    //   
-    //   // SPA 네비게이션으로 레이아웃 유지
-    //   setTimeout(() => {
-    //     window.cmms.navigation.navigate('/approval/list');
-    //   }, 1000);
-    // },
-    
-    // 폼 에러 처리 (root 기반)
-    // handleFormError: function(error, root) {
-    //   console.error('Form submit error:', error);
-    //   if (window.cmms?.notification) {
-    //     window.cmms.notification.error('저장 중 오류가 발생했습니다.');
-    //   } else {
-    //     alert('저장 중 오류가 발생했습니다.');
-    //   }
-    // },
-    
-    // 직접 폼 처리 (FormManager 없을 때)
-    // handleDirectForm: async function(form, root) {
-    //   try {
-    //     const formData = new FormData(form);
-    //     
-    //     const response = await fetch(form.action, {
-    //       method: 'POST',
-    //       body: formData,
-    //     });
-    //     
-    //     if (!response.ok) {
-    //       throw new Error('저장 실패');
-    //     }
-    //     
-    //     const result = await response.json();
-    //     this.handleFormSuccess(result, root);
-    //     
-    //   } catch (error) {
-    //     this.handleFormError(error, root);
-    //   }
-    // },
-    
-    // 초기화 상태 리셋 (페이지 전환 시 호출)
-    resetInitialization: function(pageType) {
-      if (pageType) {
-        window.cmms.approval.initialized[pageType] = false;
-      } else {
-        // 모든 초기화 상태 리셋
-        Object.keys(window.cmms.approval.initialized).forEach(key => {
-          window.cmms.approval.initialized[key] = false;
-        });
-      }
-      console.log('Approval initialization state reset:', pageType || 'all');
-    },
-    
     // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButton: function(root) {
       window.cmms.printUtils.initPrintButton(root);
@@ -480,5 +399,137 @@
   window.cmms.pages.register('approval-form', function(root) {
     window.cmms.approval.initForm(root);
   });
+  
+  // 참조 문서 팝업 함수 (네임스페이스)
+  window.cmms.approval.openRefDocPopup = function(module, id) {
+    // form.html에서 호출 시 파라미터 없이 호출될 수 있음
+    if (!module || !id) {
+      module = document.getElementById('refEntity')?.value;
+      id = document.getElementById('refId')?.value;
+    }
+    
+    if (!module || !id) {
+      alert('참조 모듈과 ID를 입력하세요.');
+      return;
+    }
+    
+    const urls = {
+      'INSP': `/inspection/detail/${id}?popup=true`,
+      'WORK': `/workorder/detail/${id}?popup=true`,
+      'WPER': `/workpermit/detail/${id}?popup=true`
+    };
+    
+    if (!urls[module]) {
+      alert('지원하지 않는 문서 타입입니다: ' + module);
+      return;
+    }
+    
+    const width = 1000;
+    const height = 800;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+    
+    window.open(
+      urls[module],
+      '원본문서',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+    );
+  };
+  
+  // 결재 승인 함수 (네임스페이스)
+  window.cmms.approval.approve = function(approvalId, comment) {
+    if (!approvalId) {
+      alert('결재 ID를 찾을 수 없습니다.');
+      return;
+    }
+    
+    if (!confirm('승인하시겠습니까?')) {
+      return;
+    }
+    
+    // CSRF 토큰
+    const csrfToken = document.querySelector('[name="_csrf"]')?.value;
+    
+    fetch(`/api/approvals/${approvalId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: JSON.stringify({ comment: comment })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('승인 처리 중 오류가 발생했습니다.');
+      }
+      return response.json();
+    })
+    .then(data => {
+      alert('승인되었습니다.');
+      window.location.href = '/approval/list';
+    })
+    .catch(error => {
+      console.error('승인 오류:', error);
+      alert(error.message || '승인 처리 중 오류가 발생했습니다.');
+    });
+  };
+  
+  // 결재 반려 함수 (네임스페이스)
+  window.cmms.approval.reject = function(approvalId, comment) {
+    if (!approvalId) {
+      alert('결재 ID를 찾을 수 없습니다.');
+      return;
+    }
+    
+    if (!comment) {
+      alert('반려 사유를 입력해주세요.');
+      const commentInput = document.getElementById('approval-comment');
+      commentInput?.focus();
+      return;
+    }
+    
+    if (!confirm('반려하시겠습니까?')) {
+      return;
+    }
+    
+    // CSRF 토큰
+    const csrfToken = document.querySelector('[name="_csrf"]')?.value;
+    
+    fetch(`/api/approvals/${approvalId}/reject`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: JSON.stringify({ comment: comment })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('반려 처리 중 오류가 발생했습니다.');
+      }
+      return response.json();
+    })
+    .then(data => {
+      alert('반려되었습니다.');
+      window.location.href = '/approval/list';
+    })
+    .catch(error => {
+      console.error('반려 오류:', error);
+      alert(error.message || '반려 처리 중 오류가 발생했습니다.');
+    });
+  };
+  
+  // ⭐ 하위 호환성을 위한 전역 함수 래퍼
+  window.openRefDocPopup = window.cmms.approval.openRefDocPopup;
+  window.approveWithComment = function() {
+    const approvalId = event?.target?.dataset?.approvalId;
+    const comment = document.getElementById('approval-comment')?.value?.trim() || '';
+    window.cmms.approval.approve(approvalId, comment);
+  };
+  window.rejectWithComment = function() {
+    const approvalId = event?.target?.dataset?.approvalId;
+    const comment = document.getElementById('approval-comment')?.value?.trim() || '';
+    window.cmms.approval.reject(approvalId, comment);
+  };
   
 })();

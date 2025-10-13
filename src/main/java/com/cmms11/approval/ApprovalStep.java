@@ -29,8 +29,11 @@ public class ApprovalStep {
     @Column(name = "member_id", length = 5)
     private String memberId;
 
-    @Column(length = 5)
-    private String decision;
+    @Column(length = 10)
+    private String decision;  // 결재 역할: APPROVAL, AGREE, INFORM
+
+    @Column(length = 10)
+    private String result;    // 결재 결과: APPROVE, REJECT, PENDING (NULL)
 
     @Column(name = "decided_at")
     private LocalDateTime decidedAt;

@@ -23,11 +23,26 @@ public class Memo {
     @Column
     private String content;
 
+    @Column(name = "plant_id", length = 10)
+    private String plantId;
+
+    @Column(name = "stage", length = 10)
+    private String stage;
+
+    @Column(name = "status", length = 10)
+    private String status;
+
+    @Column(name = "approval_id", length = 10)
+    private String approvalId;
+
     @Column(name = "ref_entity", length = 64)
     private String refEntity;
 
     @Column(name = "ref_id", length = 10)
     private String refId;
+
+    @Column(name = "ref_stage", length = 10)
+    private String refStage;
 
     @Column(name = "file_group_id", length = 10)
     private String fileGroupId;

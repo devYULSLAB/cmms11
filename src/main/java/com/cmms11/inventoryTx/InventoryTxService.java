@@ -42,14 +42,21 @@ public class InventoryTxService {
         validateTransaction(request);
         
         // 2. 거래 이력 생성
-        InventoryHistory history = createTransactionHistory(request);
-        historyRepository.save(history);
+        List<InventoryHistory> histories = createTransactionHistories(request);
+        for (InventoryHistory history : histories) {
+            historyRepository.save(history);
+        }
         
         // 3. 재고 업데이트
-        updateStock(request);
+        if ("MOVE".equals(request.txType())) {
+            // 이동은 출발/도착 창고 모두 처리
+            updateStockForMove(request);
+        } else {
+            updateStock(request);
+        }
         
-        // 4. 응답 생성
-        return createTransactionResponse(history);
+        // 4. 응답 생성 (첫 번째 이력 기준)
+        return createTransactionResponse(histories.get(0));
     }
 
     /**
@@ -202,16 +209,19 @@ public class InventoryTxService {
                 }
             }
             case "MOVE" -> {
-                if (request.inQty() == null || request.inQty().compareTo(BigDecimal.ZERO) <= 0) {
+                if (request.moveQty() == null || request.moveQty().compareTo(BigDecimal.ZERO) <= 0) {
                     throw new IllegalArgumentException("이동 수량은 0보다 커야 합니다.");
                 }
-                if (request.outQty() == null || request.outQty().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalArgumentException("이동 출고 수량은 0보다 커야 합니다.");
+                if (request.srcStorageId() == null || request.srcStorageId().isEmpty()) {
+                    throw new IllegalArgumentException("출발 창고는 필수입니다.");
+                }
+                if (request.dstStorageId() == null || request.dstStorageId().isEmpty()) {
+                    throw new IllegalArgumentException("도착 창고는 필수입니다.");
                 }
             }
             case "ADJ" -> {
-                if (request.inQty() == null && request.outQty() == null) {
-                    throw new IllegalArgumentException("조정 거래에서는 입고 또는 출고 수량이 필요합니다.");
+                if (request.adjQty() == null || request.adjQty().compareTo(BigDecimal.ZERO) == 0) {
+                    throw new IllegalArgumentException("조정 수량은 필수이며 0이 아니어야 합니다.");
                 }
             }
             default -> throw new IllegalArgumentException("지원하지 않는 거래유형입니다: " + request.txType());
@@ -240,9 +250,60 @@ public class InventoryTxService {
     }
 
     /**
-     * 거래 이력 생성
+     * 거래 이력 생성 (MOVE는 2건, 나머지는 1건)
      */
-    private InventoryHistory createTransactionHistory(InventoryTxRequest request) {
+    private List<InventoryHistory> createTransactionHistories(InventoryTxRequest request) {
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
+        List<InventoryHistory> histories = new java.util.ArrayList<>();
+        
+        if ("MOVE".equals(request.txType())) {
+            // 이동 거래는 2건의 이력 생성 (출고 + 입고)
+            String moveRefNo = autoNumberService.generateTxId(companyId, "MV", request.txDate());
+            
+            // 1. 출발 창고 출고
+            InventoryHistory outHistory = new InventoryHistory();
+            outHistory.setId(new InventoryHistoryId(companyId, 
+                autoNumberService.generateTxId(companyId, "H", request.txDate())));
+            outHistory.setInventoryId(request.inventoryId());
+            outHistory.setStorageId(request.srcStorageId());
+            outHistory.setTxType("MOVE");
+            outHistory.setRefNo(moveRefNo);
+            outHistory.setRefLine(1);
+            outHistory.setTxDate(request.txDate());
+            outHistory.setOutQty(request.moveQty());
+            outHistory.setNote("이동출고 → " + request.dstStorageId() + 
+                (request.note() != null && !request.note().isEmpty() ? " (" + request.note() + ")" : ""));
+            setAuditFields(outHistory);
+            histories.add(outHistory);
+            
+            // 2. 도착 창고 입고
+            InventoryHistory inHistory = new InventoryHistory();
+            inHistory.setId(new InventoryHistoryId(companyId, 
+                autoNumberService.generateTxId(companyId, "H", request.txDate())));
+            inHistory.setInventoryId(request.inventoryId());
+            inHistory.setStorageId(request.dstStorageId());
+            inHistory.setTxType("MOVE");
+            inHistory.setRefNo(moveRefNo);
+            inHistory.setRefLine(2);
+            inHistory.setTxDate(request.txDate());
+            inHistory.setInQty(request.moveQty());
+            inHistory.setNote("이동입고 ← " + request.srcStorageId() + 
+                (request.note() != null && !request.note().isEmpty() ? " (" + request.note() + ")" : ""));
+            setAuditFields(inHistory);
+            histories.add(inHistory);
+            
+        } else {
+            // 일반 거래는 1건
+            histories.add(createSingleHistory(request));
+        }
+        
+        return histories;
+    }
+    
+    /**
+     * 단일 거래 이력 생성
+     */
+    private InventoryHistory createSingleHistory(InventoryTxRequest request) {
         String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
         String historyId = autoNumberService.generateTxId(companyId, "H", request.txDate());
         
@@ -259,12 +320,20 @@ public class InventoryTxService {
         history.setUnitCost(request.unitCost());
         history.setAmount(request.amount());
         history.setNote(request.note());
-        history.setCreatedAt(LocalDateTime.now());
-        history.setCreatedBy("SYSTEM"); // TODO: 실제 사용자 ID로 변경
-        history.setUpdatedAt(LocalDateTime.now());
-        history.setUpdatedBy("SYSTEM");
+        setAuditFields(history);
         
         return history;
+    }
+    
+    /**
+     * 감사 필드 설정
+     */
+    private void setAuditFields(InventoryHistory history) {
+        LocalDateTime now = LocalDateTime.now();
+        history.setCreatedAt(now);
+        history.setCreatedBy("SYSTEM"); // TODO: 실제 사용자 ID로 변경
+        history.setUpdatedAt(now);
+        history.setUpdatedBy("SYSTEM");
     }
 
     /**
@@ -294,6 +363,10 @@ public class InventoryTxService {
         if (request.outQty() != null) {
             newQty = newQty.subtract(request.outQty());
         }
+        // 조정(ADJ) 수량 처리
+        if (request.adjQty() != null) {
+            newQty = newQty.add(request.adjQty());
+        }
         stock.setQty(newQty);
         
         // 금액 업데이트
@@ -301,12 +374,72 @@ public class InventoryTxService {
         if (request.amount() != null) {
             newAmount = newAmount.add(request.amount());
         }
+        // 조정(ADJ) 금액 처리
+        if (request.adjAmount() != null) {
+            newAmount = newAmount.add(request.adjAmount());
+        }
         stock.setAmount(newAmount);
         
         stock.setUpdatedAt(LocalDateTime.now());
         stock.setUpdatedBy("SYSTEM"); // TODO: 실제 사용자 ID로 변경
         
         stockRepository.save(stock);
+    }
+
+    /**
+     * 이동 거래 재고 업데이트 (출발/도착 창고 모두 처리)
+     */
+    private void updateStockForMove(InventoryTxRequest request) {
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
+        String inventoryId = request.inventoryId();
+        BigDecimal moveQty = request.moveQty();
+        
+        if (moveQty == null || moveQty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("이동 수량은 0보다 커야 합니다.");
+        }
+        
+        if (request.srcStorageId() == null || request.dstStorageId() == null) {
+            throw new IllegalArgumentException("출발 창고와 도착 창고는 필수입니다.");
+        }
+        
+        if (request.srcStorageId().equals(request.dstStorageId())) {
+            throw new IllegalArgumentException("출발 창고와 도착 창고가 같을 수 없습니다.");
+        }
+        
+        // 1. 출발 창고에서 차감
+        Optional<InventoryStock> srcStock = stockRepository.findByIdCompanyIdAndIdInventoryIdAndIdStorageId(
+                companyId, inventoryId, request.srcStorageId());
+        
+        if (!srcStock.isPresent()) {
+            throw new IllegalArgumentException("출발 창고에 재고가 없습니다.");
+        }
+        
+        InventoryStock src = srcStock.get();
+        if (src.getQty().compareTo(moveQty) < 0) {
+            throw new IllegalArgumentException(
+                    String.format("재고 부족: 현재 수량 %s, 이동 수량 %s", src.getQty(), moveQty));
+        }
+        
+        src.setQty(src.getQty().subtract(moveQty));
+        src.setUpdatedAt(LocalDateTime.now());
+        src.setUpdatedBy("SYSTEM");
+        stockRepository.save(src);
+        
+        // 2. 도착 창고에 추가
+        Optional<InventoryStock> dstStock = stockRepository.findByIdCompanyIdAndIdInventoryIdAndIdStorageId(
+                companyId, inventoryId, request.dstStorageId());
+        
+        InventoryStock dst = dstStock.orElse(new InventoryStock());
+        if (!dstStock.isPresent()) {
+            dst.setId(new InventoryStockId(companyId, request.dstStorageId(), inventoryId));
+            dst.setQty(BigDecimal.ZERO);
+            dst.setAmount(BigDecimal.ZERO);
+        }
+        
+        dst.setQty(dst.getQty().add(moveQty));
+        dst.setUpdatedAt(LocalDateTime.now());
+        dst.setUpdatedBy("SYSTEM");
+        stockRepository.save(dst);
     }
 
     /**
