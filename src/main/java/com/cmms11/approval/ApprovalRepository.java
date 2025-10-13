@@ -56,7 +56,7 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
         "WHERE a.id.companyId = :companyId " +
         "AND s.memberId = :memberId " +
         "AND s.decidedAt IS NULL " +
-        "AND a.status IN ('SUBMIT', 'PROC') " +
+        "AND a.status IN ('SUBMT', 'PROC') " +
         "ORDER BY a.createdAt DESC"
     )
     Page<Approval> findPendingByMemberId(
@@ -108,7 +108,7 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
         "SELECT a FROM Approval a " +
         "WHERE a.id.companyId = :companyId " +
         "AND a.createdBy = :memberId " +
-        "AND a.status IN ('SUBMIT', 'PROC', 'APPROV', 'REJECT') " +
+        "AND a.status IN ('SUBMT', 'PROC', 'APPRV', 'REJCT') " +
         "ORDER BY a.createdAt DESC"
     )
     Page<Approval> findSentByMemberId(
