@@ -90,39 +90,39 @@ public class CompanyController {
     }
 
     // API 엔드포인트 제공
-    @ResponseBody
-    @GetMapping("/api/domain/companies")
-    public Page<CompanyResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/companies")
+    // public Page<CompanyResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
+    //     return service.list(q, pageable);
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/domain/companies/{companyId}")
-    public ResponseEntity<CompanyResponse> get(@PathVariable String companyId) {
-        return ResponseEntity.ok(service.get(companyId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/companies/{companyId}")
+    // public ResponseEntity<CompanyResponse> get(@PathVariable String companyId) {
+    //     return ResponseEntity.ok(service.get(companyId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/companies")
-    public ResponseEntity<CompanyResponse> create(@Valid @RequestBody CompanyRequest request) {
-        CompanyResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/companies")
+    // public ResponseEntity<CompanyResponse> create(@Valid @RequestBody CompanyRequest request) {
+    //     CompanyResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/companies/{companyId}")
-    public ResponseEntity<CompanyResponse> update(
-        @PathVariable String companyId,
-        @Valid @RequestBody CompanyRequest request
-    ) {
-        CompanyResponse response = service.update(companyId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/companies/{companyId}")
+    // public ResponseEntity<CompanyResponse> update(
+    //     @PathVariable String companyId,
+    //     @Valid @RequestBody CompanyRequest request
+    // ) {
+    //     CompanyResponse response = service.update(companyId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/companies/{companyId}")
-    public ResponseEntity<Void> delete(@PathVariable String companyId) {
-        service.delete(companyId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/companies/{companyId}")
+    // public ResponseEntity<Void> delete(@PathVariable String companyId) {
+    //     service.delete(companyId);
+    //     return ResponseEntity.noContent().build();
+    // }
 }

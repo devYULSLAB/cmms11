@@ -10,27 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">작업관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">작업관리</a>
-          <span class="sep">/</span>
-          <a th:href="@{/workorder/list}">작업지시</a>
-          <span class="sep">/</span>
-          <span>생성/수정</span>
-        </div>
-      </nav>
-      
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="workorder-form" data-module="workorder-form"
                th:attr="data-mode=${mode},data-is-new=${isNew}">
@@ -53,6 +32,13 @@
                                data-method=${isNew ? 'POST' : 'PUT'}"
                       data-redirect="/workorder/detail/{id}">
 
+                  <!-- Hidden fields -->
+                  <input type="hidden" name="orderId" th:value="${workOrder?.orderId}" />
+                  <input type="hidden" name="status" th:value="${workOrder?.status}" />
+                  <input type="hidden" name="refEntity" th:value="${workOrder?.refEntity}" />
+                  <input type="hidden" name="refId" th:value="${workOrder?.refId}" />
+                  <input type="hidden" name="refStage" th:value="${workOrder?.refStage}" />
+
                   <!-- 기본 정보 섹션 -->
                   <div class="section">
                     <div class="section-title">기본 정보</div>
@@ -63,10 +49,20 @@
                           <input class="input" id="orderId" name="orderId" th:value="${workOrder.orderId}" readonly />
                         </div>
                       </div>
-                      <div class="col-span-9">
+                      <div class="col-span-6">
                         <div class="form-row">
                           <label class="label required" for="name">작업명</label>
                           <input class="input" id="name" name="name" th:value="${workOrder.name}" required maxlength="100" />
+                        </div>
+                      </div>
+                      <div class="col-span-3">
+                        <div class="form-row">
+                          <label class="label required" for="stage">계획/실적</label>
+                          <select id="stage" name="stage" required>
+                            <option value="">선택</option>
+                            <option value="PLN" th:selected="${workOrder.stage == 'PLN'}">계획</option>
+                            <option value="ACT" th:selected="${workOrder.stage == 'ACT'}">실적</option>
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -92,8 +88,8 @@
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
-                          <label class="label" for="siteId">Site</label>
-                          <select id="siteId" name="siteId">
+                          <label class="label required" for="siteId">Site</label>
+                          <select id="siteId" name="siteId" required>
                             <option value="">(선택)</option>
                             <option th:each="site : ${sites}"
                                     th:value="${site.siteId}"
@@ -105,8 +101,8 @@
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
-                          <label class="label" for="deptId">담당자</label>
-                          <select id="deptId" name="deptId">
+                          <label class="label required" for="deptId">관리부서</label>
+                          <select id="deptId" name="deptId" required>
                             <option value="">(선택)</option>
                             <option th:each="dept : ${depts}"
                                     th:value="${dept.deptId}"
@@ -123,32 +119,33 @@
                   <div class="section">
                     <div class="section-title">계획 정보</div>
                     <div class="grid cols-12">
-                      <div class="col-span-3">
-                        <div class="form-row">
-                          <label class="label" for="memberId">담당자</label>
-                          <input class="input" id="memberId" name="memberId" th:value="${workOrder.memberId}" maxlength="5" placeholder="M0001" 
-                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
-                        </div>
-                      </div>
+                      
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedDate">계획일</label>
                           <input class="input" id="plannedDate" name="plannedDate" type="date" th:value="${workOrder.plannedDate}"
-                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
+                                 th:readonly="${workOrder.stage != 'PLN' or workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedCost">계획비용</label>
                           <input class="input" id="plannedCost" name="plannedCost" type="number" step="0.01" min="0" th:value="${workOrder.plannedCost}"
-                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
+                                 th:readonly="${workOrder.stage != 'PLN' or workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="plannedLabor">계획공수</label>
                           <input class="input" id="plannedLabor" name="plannedLabor" type="number" step="0.01" min="0" th:value="${workOrder.plannedLabor}"
-                                 th:readonly="${workOrder.status != 'PLN_DRAFT'}" />
+                                 th:readonly="${workOrder.stage != 'PLN' or workOrder.status != 'DRAFT'}" />
+                        </div>
+                      </div>
+                      <div class="col-span-3">
+                        <div class="form-row">
+                          <label class="label" for="memberId">담당자</label>
+                          <input class="input" id="memberId" name="memberId" th:value="${workOrder.memberId}" maxlength="5" placeholder="M0001" 
+                                 th:readonly="${workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                     </div>
@@ -162,37 +159,21 @@
                         <div class="form-row">
                           <label class="label" for="actualDate">실적일</label>
                           <input class="input" id="actualDate" name="actualDate" type="date" th:value="${workOrder.actualDate}"
-                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
-                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
+                                 th:readonly="${workOrder.stage != 'ACT' or workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="actualCost">실적비용</label>
                           <input class="input" id="actualCost" name="actualCost" type="number" step="0.01" min="0" th:value="${workOrder.actualCost}"
-                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
-                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
+                                 th:readonly="${workOrder.stage != 'ACT' or workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                       <div class="col-span-3">
                         <div class="form-row">
                           <label class="label" for="actualLabor">실적공수</label>
                           <input class="input" id="actualLabor" name="actualLabor" type="number" step="0.01" min="0" th:value="${workOrder.actualLabor}"
-                                 th:readonly="${workOrder.status != 'ACT_DRAFT'}"
-                                 th:disabled="${workOrder.status != 'ACT_DRAFT'}" />
-                        </div>
-                      </div>
-                      <div class="col-span-3">
-                        <div class="form-row">
-                          <label class="label" for="status_display">상태</label>
-                          <input type="text" id="status_display" class="input" readonly
-                                 th:value="${workOrder.status == 'PLN_DRAFT' ? '계획 작성' : 
-                                          workOrder.status == 'PLN_SUBMIT' ? '계획 결재상신' : 
-                                          workOrder.status == 'PLN_APPROV' ? '계획 승인완료' : 
-                                          workOrder.status == 'ACT_DRAFT' ? '실적 작성' : 
-                                          workOrder.status == 'ACT_SUBMIT' ? '실적 결재상신' : 
-                                          workOrder.status == 'ACT_APPROV' ? '실적 승인완료' : workOrder.status}" />
-                          <input type="hidden" name="status" th:value="${workOrder.status}" />
+                                 th:readonly="${workOrder.stage != 'ACT' or workOrder.status != 'DRAFT'}" />
                         </div>
                       </div>
                     </div>
@@ -296,9 +277,7 @@
         </main>
       </section>
       
-      <footer>
-        <div class="container">© 작업관리</div>
-      </footer>
+      
     </div>
     
     <!-- JavaScript 로드는 defaultLayout에서 통합 관리됨 -->

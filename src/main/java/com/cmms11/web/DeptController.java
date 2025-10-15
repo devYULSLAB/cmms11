@@ -76,42 +76,42 @@ public class DeptController {
         return "redirect:/domain/dept/list";
     }
 
-    // API 엔드포인트 제공
+    // API 엔드포인트 제공 (조회만 - picker용)
     @ResponseBody
     @GetMapping("/api/domain/depts")
     public Page<DeptResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
         return service.list(q, pageable);
     }
 
-    @ResponseBody
-    @GetMapping("/api/domain/depts/{deptId}")
-    public ResponseEntity<DeptResponse> get(@PathVariable String deptId) {
-        return ResponseEntity.ok(service.get(deptId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/depts/{deptId}")
+    // public ResponseEntity<DeptResponse> get(@PathVariable String deptId) {
+    //     return ResponseEntity.ok(service.get(deptId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/depts")
-    public ResponseEntity<DeptResponse> create(@Valid @RequestBody DeptRequest request) {
-        DeptResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/depts")
+    // public ResponseEntity<DeptResponse> create(@Valid @RequestBody DeptRequest request) {
+    //     DeptResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/depts/{deptId}")
-    public ResponseEntity<DeptResponse> update(
-        @PathVariable String deptId,
-        @Valid @RequestBody DeptRequest request
-    ) {
-        DeptResponse response = service.update(deptId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/depts/{deptId}")
+    // public ResponseEntity<DeptResponse> update(
+    //     @PathVariable String deptId,
+    //     @Valid @RequestBody DeptRequest request
+    // ) {
+    //     DeptResponse response = service.update(deptId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/depts/{deptId}")
-    public ResponseEntity<Void> delete(@PathVariable String deptId) {
-        service.delete(deptId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/depts/{deptId}")
+    // public ResponseEntity<Void> delete(@PathVariable String deptId) {
+    //     service.delete(deptId);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     private DeptResponse emptyDept() {
         return new DeptResponse(

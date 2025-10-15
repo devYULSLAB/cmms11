@@ -47,12 +47,13 @@ public class WorkPermitPageController {
         @RequestParam(required = false) String status,
         @RequestParam(required = false) String stage,
         @RequestParam(required = false) String plannedDateFrom,
+        @RequestParam(required = false) String plannedDateTo,
         @RequestParam(required = false, defaultValue = "false") boolean _fragment,
         Pageable pageable,
         Model model
     ) {
         Page<WorkPermitResponse> page = service.list(
-            permitId, plantId, jobId, status, stage, plannedDateFrom, pageable
+            permitId, plantId, jobId, status, stage, plannedDateFrom, plannedDateTo, pageable
         );
         
         model.addAttribute("page", page);
@@ -62,6 +63,20 @@ public class WorkPermitPageController {
         model.addAttribute("status", status);
         model.addAttribute("stage", stage);
         model.addAttribute("plannedDateFrom", plannedDateFrom);
+        model.addAttribute("plannedDateTo", plannedDateTo);
+        
+        // 필터용 코드 데이터 추가
+        try {
+            model.addAttribute("permitTypes", codeService.listItems("PERMT", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("permitTypes", java.util.List.of());
+        }
+        
+        try {
+            model.addAttribute("statusList", codeService.listItems("APPRV", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("statusList", java.util.List.of());
+        }
         
         return _fragment ? "workpermit/list :: content" : "workpermit/list";
     }
@@ -78,15 +93,24 @@ public class WorkPermitPageController {
         return _fragment ? "workpermit/detail :: content" : "workpermit/detail";
     }
 
+    /**
+     * 작업허가 등록/수정 폼 페이지
+     * 
+     * 참고: WorkPermit은 PLN(계획) 단계만 존재하므로 copyForActual() 메서드는 포함되지 않음.
+     * refEntity, refId, refStage 파라미터는 향후 확장성을 위해 인터페이스에 포함하였으나 현재는 미사용.
+     */
     @GetMapping("/workpermit/form")
     public String form(
         @RequestParam(required = false) String id,
         @RequestParam(required = false) String stage,
+        @RequestParam(required = false) String refEntity,  // 향후 확장성 위해 유지 (현재 미사용)
+        @RequestParam(required = false) String refId,      // 향후 확장성 위해 유지 (현재 미사용)
+        @RequestParam(required = false) String refStage,   // 향후 확장성 위해 유지 (현재 미사용)
         @RequestParam(required = false, defaultValue = "false") boolean _fragment,
         Model model
     ) {
         boolean isNew = (id == null || id.isEmpty());
-        WorkPermitResponse workPermit = isNew ? null : service.get(id);
+        WorkPermitResponse workPermit = isNew ? createEmptyWorkPermit(stage) : service.get(id);
         
         model.addAttribute("workPermit", workPermit);
         model.addAttribute("isNew", isNew);
@@ -95,6 +119,40 @@ public class WorkPermitPageController {
         addReferenceData(model);
         
         return _fragment ? "workpermit/form :: content" : "workpermit/form";
+    }
+
+    /**
+     * 빈 WorkPermit 객체 생성 (신규 등록용)
+     */
+    private WorkPermitResponse createEmptyWorkPermit(String stage) {
+        return new WorkPermitResponse(
+            null,  // permitId
+            null,  // name
+            null,  // plantId
+            null,  // jobId
+            null,  // siteId
+            null,  // deptId
+            null,  // memberId
+            null,  // plannedDate
+            null,  // actualDate
+            null,  // workSummary
+            null,  // hazardFactor
+            null,  // safetyFactor
+            null,  // checksheetJson
+            "DRAFT",  // status - 기본값
+            stage != null ? stage : "PLN",  // stage - 기본값 "PLN"
+            null,  // refEntity
+            null,  // refId
+            null,  // refStage
+            null,  // approvalId
+            null,  // fileGroupId
+            null,  // note
+            null,  // createdAt
+            null,  // createdBy
+            null,  // updatedAt
+            null,  // updatedBy
+            java.util.List.of()  // items
+        );
     }
 
     private void addReferenceData(Model model) {

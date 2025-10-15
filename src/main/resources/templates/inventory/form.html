@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -10,25 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">자재/재고</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">자산정보</a>
-          <span class="sep">/</span>
-          <a th:href="@{/inventory/list}">자재/재고</a>
-          <span class="sep">/</span>
-          <span>등록/수정</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inventory-form" data-module="inventory-form">
         <main>
@@ -59,98 +40,80 @@
                         <input id="name" name="name" class="input" required maxlength="100" 
                               th:value="${inventory.name}" />
                       </div>
-                    </div>
-                    <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label required" for="asset_id">자산유형</label>
-                        <select id="asset_id" name="assetId" required>
-                          <option value="">선택</option>
-                          <option th:each="assetType : ${assetTypes}"
-                                  th:value="${assetType.code}"
-                                  th:text="${assetType.code + ' - ' + assetType.name}"
-                                  th:selected="${inventory.assetId == assetType.code}">
-                          </option>
-                        </select>
+                        <label class="label" for="unit">단위</label>
+                        <input id="unit" name="unit" class="input" maxlength="20" placeholder="EA, KG, M" 
+                              th:value="${inventory.unit}" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label required" for="dept_id">관리부서</label>
-                        <select id="dept_id" name="deptId" required>
-                          <option value="">선택</option>
-                          <option th:each="dept : ${depts}"
-                                  th:value="${dept.deptId}"
-                                  th:text="${dept.deptId + ' - ' + dept.name}"
-                                  th:selected="${inventory.deptId == dept.deptId}">
-                          </option>
-                        </select>
+                        <label class="label" for="unit_cost">단가</label>
+                        <input id="unit_cost" name="unitCost" class="input" type="number" step="0.01" 
+                              th:value="${inventory.unitCost}" />
                       </div>
-                      <div class="form-row col-span-6">
-                        <label class="label" for="note">비고</label>
-                        <input id="note" name="note" class="input" maxlength="500" placeholder="기타 메모(최대 500자)" 
-                              th:value="${inventory.note}" />
+                      <div class="form-row col-span-3">
+                        <label class="label" for="quantity">재고량</label>
+                        <input id="quantity" name="quantity" class="input" type="number" step="0.01" 
+                              th:value="${inventory.quantity}" />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label" for="storage_id">창고</label>
+                        <input id="storage_id" name="storageId" class="input" maxlength="10" placeholder="STR-001" 
+                              th:value="${inventory.storageId}" />
                       </div>
                     </div>
                   </div>
 
-                  <!-- 규격 / 모델 -->
+                  <!-- 제품정보 -->
                   <div class="section">
-                    <div class="section-title">규격 / 모델</div>
+                    <div class="section-title">제품정보</div>
                     <div class="grid cols-12">
-                      <div class="form-row col-span-4">
+                      <div class="form-row col-span-6">
                         <label class="label" for="maker_name">제조사</label>
                         <input id="maker_name" name="makerName" class="input" maxlength="100" 
                               th:value="${inventory.makerName}" />
                       </div>
-                      <div class="form-row col-span-4">
-                        <label class="label" for="model">모델</label>
+                      <div class="form-row col-span-6">
+                        <label class="label" for="spec">사양</label>
+                        <input id="spec" name="spec" class="input" maxlength="200" 
+                              th:value="${inventory.spec}" />
+                      </div>
+                      <div class="form-row col-span-6">
+                        <label class="label" for="model">모델명</label>
                         <input id="model" name="model" class="input" maxlength="100" 
                               th:value="${inventory.model}" />
                       </div>
-                      <div class="form-row col-span-4">
-                        <label class="label" for="serial">시리얼</label>
+                      <div class="form-row col-span-6">
+                        <label class="label" for="serial">시리얼 번호</label>
                         <input id="serial" name="serial" class="input" maxlength="100" 
                               th:value="${inventory.serial}" />
-                      </div>
-                      <div class="form-row col-span-12">
-                        <label class="label" for="spec">스펙</label>
-                        <input id="spec" name="spec" class="input" maxlength="100" 
-                              th:value="${inventory.spec}" />
                       </div>
                     </div>
                   </div>
 
-                  <!-- 첨부 -->
-                  <div class="section" data-file-upload>
-                    <div class="section-title">첨부</div>
-                    <input type="hidden" name="fileGroupId" th:value="${inventory.fileGroupId}" />
-                    <div class="attachments">
-                        <input id="attachments-input" class="visually-hidden" type="file" 
-                               multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.txt" />
-                        <button type="button" class="btn" data-attachments-add>
-                          파일 선택
-                          <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
-                        </button>
-                        <ul class="file-list" aria-live="polite" aria-label="첨부된 파일 목록">
-                          <li class="empty">첨부된 파일이 없습니다.</li>
-                        </ul>
+                  <!-- 비고 -->
+                  <div class="section">
+                    <div class="section-title">비고</div>
+                    <div class="grid cols-12">
+                      <div class="form-row col-span-12">
+                        <label class="label" for="note">비고</label>
+                        <textarea id="note" name="note" rows="3" th:text="${inventory.note}"></textarea>
                       </div>
+                    </div>
                   </div>
 
-                  <div class="actions" style="margin-top:16px">
+                  <div class="actions actions-top-medium">
                     <button class="btn primary" type="submit">
                       <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                     </button>
                   </div>
+
                 </form>
               </div>
             </section>
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 자재/재고</div>
-      </footer>
     </div>
     
   </body>
   </html>
-

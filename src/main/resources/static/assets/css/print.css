@@ -126,29 +126,31 @@
   height: 48px; 
 }
 
+/* 인쇄 미리보기 모드 */
 body.print-preview .print-form { 
   display: block; 
 }
 
-body.print-preview main .card { 
-  display: none; 
-}
-
+/* 실제 인쇄 시 스타일 */
 @media print {
+  /* 인쇄 시 UI 요소 숨김 (일부 페이지에는 여전히 존재) */
   header, 
   nav, 
   footer, 
   .toolbar, 
-  .card, 
   .appbar, 
   .breadcrumbs { 
     display: none !important; 
   }
   
+  /* .card는 숨기지 않음 - 프린트 폼(.print-form)이 .card 내부에 위치 */
+  
+  /* 프린트 폼 표시 */
   .print-form { 
     display: block !important; 
   }
   
+  /* 인쇄 시 문서 여백 조정 */
   .print-form .doc { 
     border: none; 
     padding: 6mm 8mm; 

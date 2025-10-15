@@ -10,25 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">문서/게시</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">문서/게시</a>
-          <span class="sep">/</span>
-          <a th:href="@{/memo/list}">게시/메모</a>
-          <span class="sep">/</span>
-          <span>등록/수정</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="memo-form" data-module="memo-form">
         <main>
@@ -63,8 +44,8 @@
                     </div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-3">
-                        <label class="label" for="ref_entity">참조 모듈</label>
-                        <select id="ref_entity" name="refEntity">
+                        <label class="label" for="refEntity">참조 모듈</label>
+                        <select id="refEntity" name="refEntity">
                           <option value="">(선택)</option>
                           <option th:each="module : ${refModules}"
                                   th:value="${module.code}"
@@ -74,8 +55,8 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="ref_id">참조 ID</label>
-                        <input id="ref_id" name="refId" class="input" maxlength="10" placeholder="예: O250101001" 
+                        <label class="label" for="refId">참조 ID</label>
+                        <input id="refId" name="refId" class="input" maxlength="10" placeholder="예: O250101001" 
                               th:value="${memo.refId}" />
                       </div>
                     </div>
@@ -131,9 +112,6 @@
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 문서/게시</div>
-      </footer>
     </div>
     
   </body>

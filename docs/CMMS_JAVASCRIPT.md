@@ -4,9 +4,16 @@
 
 본 문서는 CMMS 시스템의 JavaScript 개발 가이드입니다. SPA 내비게이션, 모듈 시스템, 파일 업로드, KPI 대시보드 등의 프론트엔드 구현을 다룹니다.
 
-## 📝 최근 업데이트 (2025-10-08)
+## 📝 최근 업데이트
 
-**ES 모듈 시스템으로 전환 완료**:
+### 2025-10-13: data-form-manager 안정성 개선 ✅
+- **CSRF 토큰 명시적 추가**: 쿠키 우선, meta 태그 대체 방식
+- **다중값 지원**: 체크박스 다중 선택, 배열 필드 자동 처리
+- **formDataToJSON()** 메서드 추가: 중복 key 감지 및 배열 변환
+- **getCSRFToken()** 메서드 개선: 통합 토큰 추출 로직
+- **에러 처리 강화**: 403 응답 자동 감지 및 CSRF 에러 변환
+
+### 2025-10-08: ES 모듈 시스템 전환
 - ~~`app.js`~~ → `main.js` + 분해된 모듈 (`core/`, `api/`, `ui/`)
 - ~~`common/`~~ 폴더 삭제 → `ui/` 폴더로 통합
 - 모듈 격리 및 명시적 의존성 관리 (import/export)
@@ -421,58 +428,64 @@ handleSPAForms: function handleSPAForms() {
         const method = form.getAttribute('data-method') || 'POST';
         const redirectTemplate = form.getAttribute('data-redirect');
         
+        if (!action) {
+          console.error('data-action is required for data-form-manager');
+          return;
+        }
+        
         // 2. 파일 업로드 (파일이 있으면)
-        const fileUploadContainer = form.querySelector('[data-file-upload]');
-        if (fileUploadContainer) {
-          const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
-          if (fileGroupId) {
-            const hiddenField = form.querySelector('input[name="fileGroupId"]');
-            if (hiddenField) {
-              hiddenField.value = fileGroupId;
+        if (window.cmms?.fileUpload) {
+          try {
+            const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+            if (fileGroupId) {
+              let fileGroupIdInput = form.querySelector('[name="fileGroupId"]');
+              if (!fileGroupIdInput) {
+                fileGroupIdInput = document.createElement('input');
+                fileGroupIdInput.type = 'hidden';
+                fileGroupIdInput.name = 'fileGroupId';
+                form.appendChild(fileGroupIdInput);
+              }
+              fileGroupIdInput.value = fileGroupId;
             }
+          } catch (uploadError) {
+            console.error('File upload failed:', uploadError);
+            if (window.cmms?.notification) {
+              window.cmms.notification.error('파일 업로드에 실패했습니다.');
+            }
+            return;
           }
         }
         
-        // 3. FormData → JSON 변환
+        // 3. FormData → JSON 변환 (다중값 지원)
         const formData = new FormData(form);
-        const jsonData = {};
+        const jsonData = this.formDataToJSON(formData);
         
-        for (let [key, value] of formData.entries()) {
-          // items 배열 처리 (예: items[0].name → jsonData.items[0].name)
-          if (key.includes('[')) {
-            const matches = key.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
-            if (matches) {
-              const [, arrayName, index, fieldName] = matches;
-              if (!jsonData[arrayName]) jsonData[arrayName] = [];
-              if (!jsonData[arrayName][index]) jsonData[arrayName][index] = {};
-              jsonData[arrayName][index][fieldName] = value;
-            } else {
-              jsonData[key] = value;
-            }
-          } else {
-            jsonData[key] = value;
-          }
-        }
+        // 4. CSRF 토큰 추출
+        const csrfToken = this.getCSRFToken();
         
-        // 4. API 호출
+        // 5. API 호출
         const response = await fetch(action, {
           method: method,
           headers: { 
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': this.getCSRFToken()
+            'X-CSRF-TOKEN': csrfToken
           },
           credentials: 'same-origin',
           body: JSON.stringify(jsonData)
         });
         
+        if (response.status === 403) {
+          throw window.cmms.csrf.toCsrfError(response);
+        }
+        
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
+          throw new Error(`API 요청 실패: ${response.status} - ${errorText}`);
         }
         
         const result = await response.json();
         
-        // 5. 리다이렉트 URL 생성 ({id} 치환)
+        // 6. 리다이렉트 URL 생성 ({id} 치환)
         if (redirectTemplate) {
           let redirectUrl = redirectTemplate;
           
@@ -493,7 +506,7 @@ handleSPAForms: function handleSPAForms() {
             });
           }
           
-          // 6. SPA 네비게이션
+          // 7. SPA 네비게이션
           this.navigate(redirectUrl);
         } else {
           if (window.cmms?.notification) {
@@ -503,25 +516,121 @@ handleSPAForms: function handleSPAForms() {
       } catch (err) {
         console.error('폼 제출 오류:', err);
         if (window.cmms?.notification) {
-          window.cmms.notification.error('저장 중 오류가 발생했습니다: ' + err.message);
+          window.cmms.notification.error('요청 처리 중 오류가 발생했습니다: ' + err.message);
         }
       }
     });
   });
 },
 
+/**
+ * FormData를 JSON으로 변환 (다중값 지원)
+ * @param {FormData} formData - 폼 데이터
+ * @returns {Object} JSON 객체
+ */
+formDataToJSON: function(formData) {
+  const jsonData = {};
+  const multiValueKeys = new Map(); // 같은 key가 여러 번 나오는 경우 추적
+  
+  // 1단계: 모든 값 수집 (다중값 감지)
+  for (let [key, value] of formData.entries()) {
+    if (!multiValueKeys.has(key)) {
+      multiValueKeys.set(key, []);
+    }
+    multiValueKeys.get(key).push(value);
+  }
+  
+  // 2단계: JSON 변환
+  for (let [key, values] of multiValueKeys.entries()) {
+    // items[0].name 형식 처리
+    if (key.includes('[') && key.includes('].')) {
+      const match = key.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
+      if (match) {
+        const [, arrayName, index, fieldName] = match;
+        if (!jsonData[arrayName]) jsonData[arrayName] = [];
+        if (!jsonData[arrayName][index]) jsonData[arrayName][index] = {};
+        jsonData[arrayName][index][fieldName] = values[0]; // 배열 필드는 단일값
+        continue;
+      }
+    }
+    
+    // 다중값: 배열로 저장
+    if (values.length > 1) {
+      jsonData[key] = values;
+    } else {
+      jsonData[key] = values[0];
+    }
+  }
+  
+  // items 배열 정리 (빈 요소 제거)
+  if (jsonData.items && Array.isArray(jsonData.items)) {
+    jsonData.items = jsonData.items.filter(item => item && Object.keys(item).length > 0);
+  }
+  
+  return jsonData;
+},
+
+/**
+ * CSRF 토큰 추출 (통합 방식)
+ * @returns {string} CSRF 토큰
+ */
 getCSRFToken: function() {
+  // 1. 쿠키에서 추출 시도 (Spring Security 기본 방식)
   const cookies = document.cookie.split('; ');
   for (const cookie of cookies) {
     if (cookie.startsWith('XSRF-TOKEN=')) {
       return decodeURIComponent(cookie.split('=')[1]);
     }
   }
+  
+  // 2. meta 태그에서 추출 시도 (Thymeleaf 템플릿)
+  const metaTag = document.querySelector('meta[name="_csrf"]');
+  if (metaTag) {
+    return metaTag.getAttribute('content') || '';
+  }
+  
+  console.warn('CSRF token not found');
   return '';
 }
 ```
 
-#### 2.5.3 HTML 사용 예시
+#### 2.5.3 다중값 지원
+
+**체크박스 다중 선택 예시**:
+```html
+<!-- 역할 다중 선택 -->
+<label><input type="checkbox" name="roles" value="ADMIN"> 관리자</label>
+<label><input type="checkbox" name="roles" value="USER"> 사용자</label>
+<label><input type="checkbox" name="roles" value="VIEWER"> 조회자</label>
+```
+
+**전송 결과**:
+```json
+{
+  "roles": ["ADMIN", "USER"]  // 선택된 항목이 배열로 전송됨
+}
+```
+
+**items 배열 예시**:
+```html
+<!-- 점검 항목 -->
+<input name="items[0].name" value="온도">
+<input name="items[0].result" value="정상">
+<input name="items[1].name" value="압력">
+<input name="items[1].result" value="정상">
+```
+
+**전송 결과**:
+```json
+{
+  "items": [
+    {"name": "온도", "result": "정상"},
+    {"name": "압력", "result": "정상"}
+  ]
+}
+```
+
+#### 2.5.4 HTML 사용 예시
 
 ```html
 <!-- Inspection form.html -->

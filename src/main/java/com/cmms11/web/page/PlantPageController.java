@@ -1,6 +1,5 @@
-package com.cmms11.web;
+package com.cmms11.web.page;
 
-import com.cmms11.common.upload.BulkUploadResult;
 import com.cmms11.plant.PlantRequest;
 import com.cmms11.plant.PlantResponse;
 import com.cmms11.plant.PlantService;
@@ -8,34 +7,39 @@ import com.cmms11.code.CodeService;
 import com.cmms11.domain.site.SiteService;
 import com.cmms11.domain.dept.DeptService;
 import com.cmms11.domain.func.FuncService;
-import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 이름: PlantController
+ * 이름: PlantPageController
  * 작성자: codex
- * 작성일: 2025-08-20
- * 수정일:
- * 프로그램 개요: 설비 웹 화면 및 API 엔드포인트를 제공하는 컨트롤러.
+ * 작성일: 2025-10-15
+ * 프로그램 개요: 설비 관리 페이지 컨트롤러 (HTML 반환)
  */
 @Controller
-public class PlantController {
+public class PlantPageController {
+    
     private final PlantService service;
     private final CodeService codeService;
     private final SiteService siteService;
     private final DeptService deptService;
     private final FuncService funcService;
 
-    public PlantController(PlantService service, CodeService codeService, SiteService siteService, DeptService deptService, FuncService funcService) {
+    public PlantPageController(
+        PlantService service,
+        CodeService codeService,
+        SiteService siteService,
+        DeptService deptService,
+        FuncService funcService
+    ) {
         this.service = service;
         this.codeService = codeService;
         this.siteService = siteService;
@@ -43,49 +47,45 @@ public class PlantController {
         this.funcService = funcService;
     }
 
-    // 웹 컨트롤러 화면 제공
+    /**
+     * 설비 목록 페이지
+     */
     @GetMapping("/plant/list")
-    public String listForm(@RequestParam(name = "plantId", required = false) String plantId,
-                          @RequestParam(name = "name", required = false) String name,
-                          @RequestParam(name = "makerName", required = false) String makerName,
-                          @RequestParam(name = "funcId", required = false) String funcId,
-                          Pageable pageable, Model model) {
+    public String list(
+        @RequestParam(name = "plantId", required = false) String plantId,
+        @RequestParam(name = "name", required = false) String name,
+        @RequestParam(name = "makerName", required = false) String makerName,
+        @RequestParam(name = "funcId", required = false) String funcId,
+        Pageable pageable,
+        Model model
+    ) {
         Page<PlantResponse> page = service.list(plantId, name, makerName, funcId, pageable);
         model.addAttribute("page", page);
         model.addAttribute("plantId", plantId);
         model.addAttribute("name", name);
         model.addAttribute("makerName", makerName);
         model.addAttribute("funcId", funcId);
-        // 부서 목록 추가 (필터용 - 현재는 사용하지 않음)
+        // 부서 목록 추가 (필터용)
         model.addAttribute("depts", deptService.list(null, Pageable.unpaged()).getContent());
         return "plant/list";
     }
 
+    /**
+     * 설비 등록 폼 페이지
+     */
     @GetMapping("/plant/form")
-    public String newForm(Model model) {
+    public String form(Model model) {
         model.addAttribute("plant", emptyPlant());
         model.addAttribute("isNew", true);
         addReferenceData(model);
         return "plant/form";
     }
 
-    // 업로드 폼 화면 제공 (미구현 - API 활용할 것)
-    @GetMapping("/plant/uploadForm")
-    public String uploadForm(Model model) {
-        return "plant/uploadForm";
-    }
-
-    @GetMapping("/plant/history")
-    public String historyForm(@RequestParam(name = "plantId", required = false) String plantId,
-                             @RequestParam(name = "plantName", required = false) String plantName,
-                             Model model) {
-        model.addAttribute("plantId", plantId);
-        model.addAttribute("plantName", plantName);
-        return "plant/history";
-    }
-
+    /**
+     * 설비 수정 폼 페이지
+     */
     @GetMapping("/plant/edit/{plantId}")
-    public String editForm(@PathVariable String plantId, Model model) {
+    public String edit(@PathVariable String plantId, Model model) {
         PlantResponse plant = service.get(plantId);
         model.addAttribute("plant", plant);
         model.addAttribute("isNew", false);
@@ -93,15 +93,46 @@ public class PlantController {
         return "plant/form";
     }
 
+    /**
+     * 설비 상세 페이지
+     */
     @GetMapping("/plant/detail/{plantId}")
-    public String detailForm(@PathVariable String plantId, Model model) {
+    public String detail(@PathVariable String plantId, Model model) {
         PlantResponse plant = service.get(plantId);
         model.addAttribute("plant", plant);
         return "plant/detail";
     }
 
+    /**
+     * 설비 업로드 폼 페이지
+     */
+    @GetMapping("/plant/uploadForm")
+    public String uploadForm(Model model) {
+        return "plant/uploadForm";
+    }
+
+    /**
+     * 설비 이력 페이지
+     */
+    @GetMapping("/plant/history")
+    public String history(
+        @RequestParam(name = "plantId", required = false) String plantId,
+        @RequestParam(name = "plantName", required = false) String plantName,
+        Model model
+    ) {
+        model.addAttribute("plantId", plantId);
+        model.addAttribute("plantName", plantName);
+        return "plant/history";
+    }
+
+    /**
+     * 설비 저장 처리 (POST 방식)
+     */
     @PostMapping("/plant/save")
-    public String saveForm(@ModelAttribute PlantRequest request, @RequestParam(required = false) String isNew) {
+    public String save(
+        @ModelAttribute PlantRequest request,
+        @RequestParam(required = false) String isNew
+    ) {
         if ("true".equals(isNew)) {
             service.create(request);
         } else {
@@ -110,57 +141,18 @@ public class PlantController {
         return "redirect:/plant/list";
     }
 
+    /**
+     * 설비 삭제 처리 (POST 방식)
+     */
     @PostMapping("/plant/delete/{plantId}")
-    public String deleteForm(@PathVariable String plantId) {
+    public String delete(@PathVariable String plantId) {
         service.delete(plantId);
         return "redirect:/plant/list";
     }
 
-    // API 엔드포인트 제공
-    @ResponseBody
-    @GetMapping("/api/plants")
-    public Page<PlantResponse> list(@RequestParam(name = "plantId", required = false) String plantId,
-                                    @RequestParam(name = "name", required = false) String name,
-                                    @RequestParam(name = "makerName", required = false) String makerName,
-                                    @RequestParam(name = "funcId", required = false) String funcId,
-                                    Pageable pageable) {
-        return service.list(plantId, name, makerName, funcId, pageable);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/plants/{plantId}")
-    public ResponseEntity<PlantResponse> get(@PathVariable String plantId) {
-        return ResponseEntity.ok(service.get(plantId));
-    }
-
-    @ResponseBody
-    @PostMapping("/api/plants")
-    public ResponseEntity<PlantResponse> create(@Valid @RequestBody PlantRequest request) {
-        PlantResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @ResponseBody
-    @PutMapping("/api/plants/{plantId}")
-    public ResponseEntity<PlantResponse> update(@PathVariable String plantId, @Valid @RequestBody PlantRequest request) {
-        PlantResponse response = service.update(plantId, request);
-        return ResponseEntity.ok(response);
-    }
-
-    @ResponseBody
-    @DeleteMapping("/api/plants/{plantId}")
-    public ResponseEntity<Void> delete(@PathVariable String plantId) {
-        service.delete(plantId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @ResponseBody
-    @PostMapping(value = "/api/plants/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BulkUploadResult> upload(@RequestParam("file") MultipartFile file) {
-        BulkUploadResult result = service.upload(file);
-        return ResponseEntity.ok(result);
-    }
-
+    /**
+     * 빈 Plant 객체 생성 (신규 등록용)
+     */
     private PlantResponse emptyPlant() {
         return new PlantResponse(
             null, // plantId
@@ -194,6 +186,9 @@ public class PlantController {
         );
     }
 
+    /**
+     * Select box용 참조 데이터 추가
+     */
     private void addReferenceData(Model model) {
         // 자산유형 (ASSET 코드 타입)
         try {
@@ -231,3 +226,4 @@ public class PlantController {
         }
     }
 }
+

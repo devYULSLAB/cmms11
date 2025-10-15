@@ -139,87 +139,87 @@ public class CodeController {
     }
 
     // API 엔드포인트 제공
-    @ResponseBody
-    @GetMapping("/api/codes/types")
-    public Page<CodeTypeResponse> listTypes(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.listTypes(q, pageable);
-    }
+    // @ResponseBody
+    // @GetMapping("/api/codes/types")
+    // public Page<CodeTypeResponse> listTypes(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
+    //     return service.listTypes(q, pageable);
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/codes/types/{codeType}")
-    public ResponseEntity<CodeTypeResponse> getType(@PathVariable String codeType) {
-        return ResponseEntity.ok(service.getType(codeType));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/codes/types/{codeType}")
+    // public ResponseEntity<CodeTypeResponse> getType(@PathVariable String codeType) {
+    //     return ResponseEntity.ok(service.getType(codeType));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/codes/types")
-    public ResponseEntity<CodeTypeResponse> createType(@Valid @RequestBody CodeTypeRequest request) {
-        CodeTypeResponse response = service.createType(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/codes/types")
+    // public ResponseEntity<CodeTypeResponse> createType(@Valid @RequestBody CodeTypeRequest request) {
+    //     CodeTypeResponse response = service.createType(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/codes/types/{codeType}")
-    public ResponseEntity<CodeTypeResponse> updateType(
-        @PathVariable String codeType,
-        @Valid @RequestBody CodeTypeRequest request
-    ) {
-        CodeTypeResponse response = service.updateType(codeType, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/codes/types/{codeType}")
+    // public ResponseEntity<CodeTypeResponse> updateType(
+    //     @PathVariable String codeType,
+    //     @Valid @RequestBody CodeTypeRequest request
+    // ) {
+    //     CodeTypeResponse response = service.updateType(codeType, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/codes/types/{codeType}")
-    public ResponseEntity<Void> deleteType(@PathVariable String codeType) {
-        service.deleteType(codeType);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/codes/types/{codeType}")
+    // public ResponseEntity<Void> deleteType(@PathVariable String codeType) {
+    //     service.deleteType(codeType);
+    //     return ResponseEntity.noContent().build();
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/codes/types/{codeType}/items")
-    public Page<CodeItemResponse> listItems(
-        @PathVariable String codeType,
-        @RequestParam(name = "q", required = false) String q,
-        Pageable pageable
-    ) {
-        return service.listItems(codeType, q, pageable);
-    }
+    // @ResponseBody
+    // @GetMapping("/api/codes/types/{codeType}/items")
+    // public Page<CodeItemResponse> listItems(
+    //     @PathVariable String codeType,
+    //     @RequestParam(name = "q", required = false) String q,
+    //     Pageable pageable
+    // ) {
+    //     return service.listItems(codeType, q, pageable);
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/codes/types/{codeType}/items/{code}")
-    public ResponseEntity<CodeItemResponse> getItem(@PathVariable String codeType, @PathVariable String code) {
-        return ResponseEntity.ok(service.getItem(codeType, code));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/codes/types/{codeType}/items/{code}")
+    // public ResponseEntity<CodeItemResponse> getItem(@PathVariable String codeType, @PathVariable String code) {
+    //     return ResponseEntity.ok(service.getItem(codeType, code));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/codes/types/{codeType}/items")
-    public ResponseEntity<CodeItemResponse> createItem(
-        @PathVariable String codeType,
-        @Valid @RequestBody CodeItemRequest request
-    ) {
-        CodeItemRequest payload = new CodeItemRequest(codeType, request.code(), request.name(), request.note());
-        CodeItemResponse response = service.createItem(payload);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/codes/types/{codeType}/items")
+    // public ResponseEntity<CodeItemResponse> createItem(
+    //     @PathVariable String codeType,
+    //     @Valid @RequestBody CodeItemRequest request
+    // ) {
+    //     CodeItemRequest payload = new CodeItemRequest(codeType, request.code(), request.name(), request.note());
+    //     CodeItemResponse response = service.createItem(payload);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/codes/types/{codeType}/items/{code}")
-    public ResponseEntity<CodeItemResponse> updateItem(
-        @PathVariable String codeType,
-        @PathVariable String code,
-        @Valid @RequestBody CodeItemRequest request
-    ) {
-        CodeItemRequest payload = new CodeItemRequest(codeType, code, request.name(), request.note());
-        CodeItemResponse response = service.updateItem(codeType, code, payload);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/codes/types/{codeType}/items/{code}")
+    // public ResponseEntity<CodeItemResponse> updateItem(
+    //     @PathVariable String codeType,
+    //     @PathVariable String code,
+    //     @Valid @RequestBody CodeItemRequest request
+    // ) {
+    //     CodeItemRequest payload = new CodeItemRequest(codeType, code, request.name(), request.note());
+    //     CodeItemResponse response = service.updateItem(codeType, code, payload);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/codes/types/{codeType}/items/{code}")
-    public ResponseEntity<Void> deleteItem(@PathVariable String codeType, @PathVariable String code) {
-        service.deleteItem(codeType, code);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/codes/types/{codeType}/items/{code}")
+    // public ResponseEntity<Void> deleteItem(@PathVariable String codeType, @PathVariable String code) {
+    //     service.deleteItem(codeType, code);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     public static class CodeForm {
         private String codeType;

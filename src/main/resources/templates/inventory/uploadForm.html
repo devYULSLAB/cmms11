@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -10,25 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">자재/재고</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">자산정보</a>
-          <span class="sep">/</span>
-          <a th:href="@{/inventory/list}">자재/재고</a>
-          <span class="sep">/</span>
-          <span>일괄 등록</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inventory-upload" data-module="inventory-upload">
         <main>
@@ -44,10 +25,10 @@
               <div class="section">
                 <div class="section-title">사용 방법</div>
                 <div class="section-desc">
-                  CSV에는 <code>inventory_id</code>(선택), <code>name</code>, <code>asset_id</code>, <code>dept_id</code>, <code>maker_name</code>, <code>spec</code>, <code>model</code>, <code>serial</code>, <code>file_group_id</code>, <code>note</code> 등의 컬럼을 포함할 수 있습니다. <code>name</code>, <code>asset_id</code>, <code>dept_id</code>는 필수이며, <code>inventory_id</code>를 비우면 자동 채번됩니다.
+                  CSV파일은 <code>inventory_id</code>(선택), <code>name</code>, <code>unit</code>, <code>unit_cost</code>, <code>quantity</code>, <code>storage_id</code>, <code>maker_name</code>, <code>spec</code>, <code>model</code>, <code>serial</code>, <code>file_group_id</code>, <code>note</code> 등의 컬럼을 포함해야 합니다. <code>name</code>은 필수이며, <code>inventory_id</code>를 비우면 자동 채번됩니다.
                 </div>
                 <div class="section-desc">
-                  샘플을 참고하세요:
+                  샘플 참고하세요:
                   <a class="btn sm" href="../../static/assets/samples/inventory-upload-sample.csv" download>샘플 CSV 다운로드</a>
                 </div>
               </div>
@@ -55,31 +36,25 @@
                 <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <div class="section">
                   <div class="section-title">CSV 파일 선택</div>
-                  <div class="grid cols-12">
-                    <div class="col-span-6">
-                      <input id="csvFile" class="input" type="file" name="file" accept=".csv,text/csv" required />
-                    </div>
-                    <div class="col-span-6" style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
-                      <button type="submit" class="btn primary">업로드</button>
-                    </div>
-                  </div>
+                  <input type="file" name="file" id="csvFile" accept=".csv" required />
+                </div>
+                <div class="actions actions-top-medium">
+                  <button class="btn primary" type="submit">업로드</button>
                 </div>
               </form>
-              <div class="section">
+
+              <div class="section" id="resultSection" style="display:none;">
                 <div class="section-title">업로드 결과</div>
-                <div id="uploadSummary" class="notice" hidden></div>
-              </div>
-              <div class="section" id="errorSection" hidden>
-                <div class="section-title">오류 내역</div>
-                <div class="section-desc">실패한 행이 있을 경우에만 표시됩니다.</div>
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:120px">행 번호</th>
-                      <th>오류 메시지</th>
+                      <th>자재 번호</th>
+                      <th>자재명</th>
+                      <th>상태</th>
                     </tr>
                   </thead>
-                  <tbody data-error-rows></tbody>
+                  <tbody id="resultTableBody">
+                  </tbody>
                 </table>
               </div>
             </div>
@@ -87,11 +62,7 @@
         </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 자재/재고</div>
-      </footer>
     </div>
     
-    <!-- 인라인 스크립트는 inventory.js로 이관됨 -->
   </body>
 </html>

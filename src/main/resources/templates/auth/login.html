@@ -14,21 +14,25 @@
         </div>
         <div class="card-body">
           <form id="login-form" data-validate action="/api/auth/login" method="post">
-            <!-- 회사 선택 -->
+            <!-- 회사 선택 (동적 로딩) -->
             <div class="stack">
               <label class="label" for="company_id">회사</label>
               <select id="company_id" class="input" required>
-                <option value="CHROK">초록에너지</option>
-                <option value="HPS" disabled>한국플랜트서비스 (준비중)</option>
-                <option value="KEPS" disabled>한국발전기술 (준비중)</option>
-                <option value="OES" disabled>옵티멀에너지서비스 (준비중)</option>
+                <option value="">회사를 선택하세요</option>
+                <option th:each="company : ${companies}" 
+                        th:value="${company.companyId}"
+                        th:text="${company.name + ' (' + company.companyId + ')'}"
+                        th:selected="${company.companyId == lastCompanyId}">
+                  초록에너지 (CHROK)
+                </option>
               </select>
             </div>
             
             <!-- 아이디 -->
             <div class="stack" style="margin-top:12px">
               <label class="label" for="user_id">아이디</label>
-              <input id="user_id" class="input" required maxlength="10" autocomplete="username" placeholder="예: admin" />
+              <input id="user_id" class="input" required maxlength="10" autocomplete="username" placeholder="예: admin" 
+                     th:value="${lastUsername}" />
             </div>
             
             <!-- member_id hidden field (companyId:userId 형식으로 전송) -->
@@ -38,6 +42,15 @@
             <div class="stack" style="margin-top:12px">
               <label class="label" for="password">비밀번호</label>
               <input id="password" name="password" class="input" type="password" required maxlength="100" autocomplete="current-password" />
+            </div>
+            
+            <!-- ✨ 로그인 정보 저장 체크박스 -->
+            <div class="stack" style="margin-top:12px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="remember_login" name="remember_login" value="true" 
+                       th:checked="${rememberLogin}" />
+                <span>로그인 정보 저장 (30일)</span>
+              </label>
             </div>
             
             <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -74,10 +87,11 @@
         const errorEl = document.getElementById('login_error');
         
         if (errorEl && hasError) {
-          errorEl.textContent = customMsg ? decodeURIComponent(customMsg) : '아이디 또는 비밀번호를 확인하세요.';
+          // ⭐ 보안: 모든 로그인 실패를 동일한 메시지로 표시 (계정 존재 유무 노출 방지)
+          errorEl.textContent = customMsg ? decodeURIComponent(customMsg) : '아이디 또는 비밀번호가 일치하지 않습니다.';
           errorEl.setAttribute('role', 'alert');
           errorEl.style.display = 'block';
-          console.log('  ⚠️ 로그인 에러 메시지 표시:', errorEl.textContent);
+          console.log('  ⚠️ 로그인 에러 메시지 표시');
         }
         
         // 4. 로그인 폼 submit 시 companyId:userId 형식으로 조합
@@ -87,10 +101,30 @@
             const companyId = document.getElementById('company_id').value;
             const userId = document.getElementById('user_id').value.trim();
             const memberIdField = document.getElementById('member_id');
+            const errorEl = document.getElementById('login_error');
             
-            // companyId:userId 형식으로 조합
+            // ⭐ 보안 검증: userId에 콜론(:) 포함 차단 (구분자 보호)
+            if (userId.includes(':')) {
+              e.preventDefault();
+              if (errorEl) {
+                errorEl.textContent = '아이디에 콜론(:)을 사용할 수 없습니다.';
+                errorEl.style.display = 'block';
+              }
+              return false;
+            }
+            
+            // ⭐ companyId:userId 형식으로 조합
+            if (!companyId) {
+              e.preventDefault();
+              if (errorEl) {
+                errorEl.textContent = '회사를 선택하세요.';
+                errorEl.style.display = 'block';
+              }
+              return false;
+            }
+            
+            // 기본 회사(CHROK)는 userId만 전송 (하위 호환성)
             if (companyId === 'CHROK') {
-              // 기본 회사는 userId만 (하위 호환성)
               memberIdField.value = userId;
             } else {
               // 다른 회사는 companyId:userId 형식

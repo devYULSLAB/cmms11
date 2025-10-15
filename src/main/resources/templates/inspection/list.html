@@ -10,23 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">점검 관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">점검</a>
-          <span class="sep">/</span>
-          <span>점검</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inspection-list" data-module="inspection-list">
         <main>
@@ -52,9 +35,11 @@
                       <div class="col-span-2">
                         <select class="input" name="status">
                           <option value="">상태(전체)</option>
-                          <option value="PLAN" th:selected="${status == 'PLAN'}">계획</option>
-                          <option value="PROC" th:selected="${status == 'PROC'}">진행</option>
-                          <option value="DONE" th:selected="${status == 'DONE'}">완료</option>
+                          <option th:each="statusItem : ${statusList}"
+                                  th:value="${statusItem.code}"
+                                  th:text="${statusItem.name}"
+                                  th:selected="${status == statusItem.code}">
+                          </option>
                         </select>
                       </div>
                       <div class="col-span-2">
@@ -78,8 +63,9 @@
                       <th>점검명</th>
                       <th class="col-140">설비 번호</th>
                       <th class="col-100">작업유형</th>
-                      <th class="col-140">계획일</th>
-                      <th class="col-140">실적일</th>
+                      <th class="col-120">계획일</th>
+                      <th class="col-120">실적일</th>
+                      <th class="col-100">계획/실적</th>
                       <th class="col-100">상태</th>
                       <th class="col-140">액션</th>
                     </tr>
@@ -92,9 +78,11 @@
                       <td th:text="${inspection.jobId}">-</td>
                       <td th:text="${inspection.plannedDate}">-</td>
                       <td th:text="${inspection.actualDate}">-</td>
+                      <td th:text="${inspection.stage == 'PLN' ? '계획' : inspection.stage == 'ACT' ? '실적' : inspection.stage}">-</td>
                       <td>
-                        <span class="badge" th:text="${inspection.status == 'PLAN' ? '계획' : inspection.status == 'PROC' ? '진행' : '완료'}" 
-                              th:classappend="${inspection.status == 'PLAN' ? 'badge' : inspection.status == 'PROC' ? 'badge warning' : 'badge success'}">-</span>
+                        <span class="badge" 
+                              th:text="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? '승인' : inspection.status == 'PROC' ? '진행중' : inspection.status == 'SUBMT' ? '상신' : inspection.status == 'DRAFT' ? '준비중' : '기타'}" 
+                              th:classappend="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? 'success' : inspection.status == 'PROC' ? 'info' : inspection.status == 'REJCT' ? 'danger' : ''}">-</span>
                       </td>
                       <td class="actions">
                         <a class="btn btn-sm" th:href="@{/inspection/edit/{id}(id=${inspection.inspectionId})}">수정</a>

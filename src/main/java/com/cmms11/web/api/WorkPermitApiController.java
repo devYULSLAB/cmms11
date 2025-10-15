@@ -1,6 +1,7 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
+import com.cmms11.workpermit.WorkPermitApprovalFacade;
 import com.cmms11.workpermit.WorkPermitRequest;
 import com.cmms11.workpermit.WorkPermitResponse;
 import com.cmms11.workpermit.WorkPermitService;
@@ -31,9 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkPermitApiController {
 
     private final WorkPermitService service;
+    private final WorkPermitApprovalFacade approvalFacade;
 
-    public WorkPermitApiController(WorkPermitService service) {
+    public WorkPermitApiController(WorkPermitService service, WorkPermitApprovalFacade approvalFacade) {
         this.service = service;
+        this.approvalFacade = approvalFacade;
     }
 
     @GetMapping
@@ -44,10 +47,11 @@ public class WorkPermitApiController {
         @RequestParam(required = false) String status,
         @RequestParam(required = false) String stage,
         @RequestParam(required = false) String plannedDateFrom,
+        @RequestParam(required = false) String plannedDateTo,
         Pageable pageable
     ) {
         Page<WorkPermitResponse> page = service.list(
-            permitId, plantId, jobId, status, stage, plannedDateFrom, pageable
+            permitId, plantId, jobId, status, stage, plannedDateFrom, plannedDateTo, pageable
         );
         return ResponseEntity.ok(page);
     }
@@ -81,7 +85,7 @@ public class WorkPermitApiController {
 
     @PostMapping("/{permitId}/submit-plan-approval")
     public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String permitId) {
-        ApprovalResponse approval = service.submitPlanApproval(permitId);
+        ApprovalResponse approval = approvalFacade.submitPlanApproval(permitId);
         return ResponseEntity.ok(approval);
     }
 

@@ -76,42 +76,42 @@ public class FuncController {
         return "redirect:/domain/func/list";
     }
 
-    // API 엔드포인트 제공
+    // API 엔드포인트 제공 (조회만 - picker용)
     @ResponseBody
     @GetMapping("/api/domain/funcs")
     public Page<FuncResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
         return service.list(q, pageable);
     }
 
-    @ResponseBody
-    @GetMapping("/api/domain/funcs/{funcId}")
-    public ResponseEntity<FuncResponse> get(@PathVariable String funcId) {
-        return ResponseEntity.ok(service.get(funcId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/funcs/{funcId}")
+    // public ResponseEntity<FuncResponse> get(@PathVariable String funcId) {
+    //     return ResponseEntity.ok(service.get(funcId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/funcs")
-    public ResponseEntity<FuncResponse> create(@Valid @RequestBody FuncRequest request) {
-        FuncResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/funcs")
+    // public ResponseEntity<FuncResponse> create(@Valid @RequestBody FuncRequest request) {
+    //     FuncResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/funcs/{funcId}")
-    public ResponseEntity<FuncResponse> update(
-        @PathVariable String funcId,
-        @Valid @RequestBody FuncRequest request
-    ) {
-        FuncResponse response = service.update(funcId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/funcs/{funcId}")
+    // public ResponseEntity<FuncResponse> update(
+    //     @PathVariable String funcId,
+    //     @Valid @RequestBody FuncRequest request
+    // ) {
+    //     FuncResponse response = service.update(funcId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/funcs/{funcId}")
-    public ResponseEntity<Void> delete(@PathVariable String funcId) {
-        service.delete(funcId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/funcs/{funcId}")
+    // public ResponseEntity<Void> delete(@PathVariable String funcId) {
+    //     service.delete(funcId);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     private FuncResponse emptyFunc() {
         return new FuncResponse(

@@ -97,8 +97,15 @@ main{flex:1}
 .btn:hover{background:var(--surface)}
 .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
 .btn.primary:hover{background:var(--primary-600)}
+.btn.success{background:#10b981;border-color:#10b981;color:#fff}
+.btn.success:hover{background:#059669}
+.btn.info{background:#3b82f6;border-color:#3b82f6;color:#fff}
+.btn.info:hover{background:#2563eb}
+.btn.warning{background:#f59e0b;border-color:#f59e0b;color:#fff}
+.btn.warning:hover{background:#d97706}
 .btn.danger{background:#fff;border-color:#fecaca;color:var(--danger)}
 .btn.danger:hover{background:#fff5f5}
+.btn.disabled{background:#f3f4f6;border-color:#e5e7eb;color:#9ca3af;cursor:not-allowed;opacity:0.6;pointer-events:none}
 .btn.sm{height:28px;padding:0 10px;font-size:13px}
 .btn.xs{height:24px;padding:0 8px;font-size:12px}
 
@@ -248,6 +255,9 @@ textarea{height:auto;min-height:100px;padding:8px 10px;resize:vertical}
 .hidden{display:none}
 .visible{display:block}
 
+/* 텍스트 색상 유틸리티 클래스 */
+.muted{color:var(--muted)}
+
 /* =============================================================================
  * CHECKLIST 관련 스타일 
  * =============================================================================
@@ -349,7 +359,7 @@ textarea{height:auto;min-height:100px;padding:8px 10px;resize:vertical}
  * =============================================================================
  * 인라인 스타일 대신 재사용 가능한 테이블 컬럼 너비 클래스
  * 기존 인라인 style="width:XXXpx" 사용을 이 클래스들로 표준화
- * 사용법: <th class="table-col-number">순번</th>
+ * 사용법: <th class="col-140">번호</th>
  */
 
  /* 테이블 스타일 */
@@ -375,7 +385,7 @@ table.table tbody td{
   font-size:14px;
   vertical-align:middle
 }
-/* 테이블 내 액션 스타일 별도로. 텍스트 셀 기준으로 xs 버튼 + 상하 7px */
+/* 테이블 내 액션 스타일 별도로. 텍스트 셀 기준으로 sm 버튼 + 상하 7px */
 table.table tbody td.actions{
   padding:7px 10px;
 }
@@ -383,100 +393,12 @@ table.table tbody tr:hover{background:#fafafa}
 .cell-right{text-align:right}
 .cell-center {text-align:center}
 
+/* 테이블 컬럼 너비 클래스 - 간소화된 버전 */
+.col-100{width:100px}  /* 상태, 유형 등 */
+.col-120{width:120px}  /* 날짜 등 */
+.col-140{width:140px}  /* 번호, 설비, 액션 등 */
+
 /* 페이지네이션 스타일 */
-
-/********** 테이블 필드 영역 **********/
-/* Number 계열 */
-.table-col-number{
-  width:44px;   /* 순번, 체크박스 */
-}
-/* ID 계열 */
-.table-col-id-small{
-  width:80px;   /* 짧은 ID (창고코드) */
-}
-.table-col-id-medium{
-  width:120px;  /* 중간 ID (부서코드) */
-}
-.table-col-id-large{
-  width:140px;  /* 긴 ID (문서번호, 메모번호) */
-}
-
-/* Code 계열 */
-.table-col-code-small{
-  width:60px;   /* 짧은 코드 (구분) */
-}
-.table-col-code-medium{
-  width:100px;  /* 중간 코드 (상태코드) */
-}
-.table-col-code-large{
-  width:120px;  /* 긴 코드 (유형코드) */
-}
-
-/* Date 계열 */
-.table-col-date-small{
-  width:120px;  /* 짧은 날짜 (YYYY-MM-DD) */
-}
-.table-col-date-medium{
-  width:140px;  /* 중간 날짜 (YYYY-MM-DD HH) */
-}
-.table-col-date-large{
-  width:160px;  /* 긴 날짜 (YYYY-MM-DD HH:mm) */
-}
-
-/* Type 계열 */
-.table-col-type-small{
-  width:60px;   /* 짧은 분류 (순서) */
-}
-.table-col-type-medium{
-  width:80px;   /* 중간 분류 (유형, 상태) */
-}
-.table-col-type-large{
-  width:120px;  /* 긴 분류 (작성자, 기안자) */
-}
-
-/* Name 계열 */
-.table-col-name-small{
-  width:100px;  /* 짧은 이름 */
-}
-.table-col-name-medium{
-  width:140px;  /* 중간 이름 (설비명) */
-}
-.table-col-name-large{
-  width:180px;  /* 긴 이름 (제품명) */
-}
-
-/* Amount 계열 */
-.table-col-amount-small{
-  width:100px;  /* 작은 금액 (입고, 출고) */
-}
-.table-col-amount-medium{
-  width:120px;  /* 중간 금액 (수량) */
-}
-.table-col-amount-large{
-  width:140px;  /* 큰 금액 (기초금액, 기말금액) */
-}
-
-/* Action 계열 */
-.table-col-action-small{
-  width:100px;  /* 짧은 액션 (보기) */
-}
-.table-col-action-medium{
-  width:140px;  /* 중간 액션 (수정/삭제) */
-}
-.table-col-action-large{
-  width:180px;  /* 긴 액션 (여러 버튼) */
-}
-
-/* Info 계열 */
-.table-col-info-small{
-  width:140px;  /* 짧은 정보 (비고) */
-}
-.table-col-info-medium{
-  width:200px;  /* 중간 정보 (설명) */
-}
-.table-col-info-large{
-  width:240px;  /* 긴 정보 (상세정보, 주소) */
-}
 
 /* =============================================================================
  * Approval(결재) 관련된 스타일 
@@ -560,6 +482,9 @@ table.table tbody tr:hover{background:#fafafa}
   background:#fff
 }
 .badge.success{color:#166534;border-color:#bbf7d0;background:#f0fdf4}
+.badge.info{color:#1e40af;border-color:#bfdbfe;background:#eff6ff}
+.badge.warning{color:#92400e;border-color:#fed7aa;background:#fffbeb}
+.badge.danger{color:#991b1b;border-color:#fecaca;background:#fef2f2}
 .badge.warn{color:#92400e;border-color:#fed7aa;background:#fffbeb}
 
 /* 페이지네이션 */

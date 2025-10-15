@@ -153,10 +153,16 @@ public class LayoutController {
                 model.addAttribute("currentMember", member);
                 model.addAttribute("deptId", member.getDeptId());
                 model.addAttribute("siteId", member.getSiteId());
+                
+                // ✨ 마지막 로그인 정보 추가
+                model.addAttribute("lastLoginAt", member.getLastLoginAt());
+                model.addAttribute("lastLoginIp", member.getLastLoginIp());
             } catch (Exception e) {
                 // 사용자 정보 조회 실패 시 기본값
                 model.addAttribute("deptId", "-");
                 model.addAttribute("siteId", "-");
+                model.addAttribute("lastLoginAt", null);
+                model.addAttribute("lastLoginIp", null);
             }
         } else {
             model.addAttribute("isAuthenticated", false);

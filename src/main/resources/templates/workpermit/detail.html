@@ -29,27 +29,9 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar" th:unless="${param.popup != null}">
-        <div class="appbar-inner">
-          <div class="brand">작업관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs" th:unless="${param.popup != null}">
-        <div class="container">
-          <a th:href="@{#}" href="#">작업관리</a>
-          <span class="sep">/</span>
-          <a th:href="@{/workpermit/list}">작업허가</a>
-          <span class="sep">/</span>
-          <span>상세</span>
-        </div>
-      </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content" data-page="workpermit-detail" data-module="workpermit-detail">
+      <section data-slot-root th:fragment="content" data-page="workpermit-detail" data-module="workpermit-detail"
+               th:attr="data-file-group-id=${workpermit.fileGroupId},data-permit-id=${workpermit.permitId},data-print-enabled=true">
         <main>
         <div class="container">
           <section class="card">
@@ -69,7 +51,7 @@
                     수정
                   </a>
                   
-                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
+                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) : 실제 작업허가는 PLN만 존재 -->
                   <button class="btn" 
                           th:classappend="${workpermit.status == 'DRAFT' ? 'primary' : 'disabled'}"
                           th:disabled="${workpermit.status != 'DRAFT'}"
@@ -80,29 +62,80 @@
               </div>
             </div>
             <div class="card-body">
+              
+              <!-- 알림 메시지 표시 -->
+              <div th:if="${message}" 
+                   class="alert alert-success"
+                   style="margin-bottom: 20px; padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"
+                   th:text="${message}">
+              </div>
+              <div th:if="${errorMessage}" 
+                   class="alert alert-error"
+                   style="margin-bottom: 20px; padding: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"
+                   th:text="${errorMessage}">
+              </div>
+              
+              <!-- 기본정보 -->
               <div class="section">
                 <div class="section-title">기본정보</div>
                 <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">허가 번호</div><div th:text="${workpermit.permitId}">P250101001</div></div>
-                  <div class="stack col-span-9"><div class="label">작업명</div><div th:text="${workpermit.name}">배관 용접 작업</div></div>
-                  <div class="stack col-span-3"><div class="label">설비 번호</div><div th:text="${workpermit.plantId}">EQP000123</div></div>
-                  <div class="stack col-span-3"><div class="label">허가유형</div><div th:text="${workpermit.jobId}">HOT</div></div>
-                  <div class="stack col-span-3"><div class="label">Site</div><div th:text="${workpermit.siteId}">SEOUL</div></div>
-                  <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${workpermit.deptId}">설비팀</div></div>
+                  <div class="stack col-span-3">
+                    <div class="label">허가 번호</div>
+                    <div th:text="${workpermit.permitId}">P250101001</div>
+                  </div>
+                  <div class="stack col-span-6">
+                    <div class="label">작업명</div>
+                    <div th:text="${workpermit.name}">배관 용접 작업</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">계획/실적</div>
+                    <div th:text="${workpermit.stage == 'PLN' ? '계획' : workpermit.stage == 'ACT' ? '실적' : workpermit.stage}">계획</div>
+                  </div>
+                </div>
+                <div class="grid cols-12">
+                  <div class="stack col-span-3">
+                    <div class="label">설비 번호</div>
+                    <div th:text="${workpermit.plantId}">EQP000123</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">허가유형</div>
+                    <div th:text="${workpermit.jobId}">HOT</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">Site</div>
+                    <div th:text="${workpermit.siteId}">SEOUL</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">관리부서</div>
+                    <div th:text="${workpermit.deptId}">설비팀</div>
+                  </div>
                 </div>
               </div>
 
+              <!-- 일정/담당 -->
               <div class="section">
                 <div class="section-title">일정 / 담당</div>
-                <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${workpermit.memberId}">M0001</div></div>
-                  <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${workpermit.plannedDate}">2025-01-12</div></div>
-                  <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${workpermit.actualDate}">2025-01-12</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div>
-                    <span class="badge" 
-                          th:text="${workpermit.status == 'PLAN' ? '계획' : workpermit.status == 'PROC' ? '진행' : workpermit.status == 'SUBMIT' ? '결재 중' : workpermit.status == 'COMPLETE' ? '완료' : workpermit.status == 'REJECT' ? '반려' : workpermit.status}" 
-                          th:classappend="${workpermit.status == 'PLAN' ? '' : workpermit.status == 'PROC' ? 'warning' : workpermit.status == 'SUBMIT' ? 'info' : workpermit.status == 'COMPLETE' ? 'success' : workpermit.status == 'REJECT' ? 'danger' : ''}">요청</span>
-                  </div></div>
+                  <div class="grid cols-12">                  
+                  <div class="stack col-span-3">
+                    <div class="label">계획일</div>
+                      <div th:text="${workpermit.plannedDate}">2025-01-12</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">실적일</div>
+                    <div th:text="${workpermit.actualDate}">2025-01-12</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">담당자</div>
+                    <div th:text="${workpermit.memberId}">M0001</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">상태</div>
+                    <div>
+                      <span class="badge" 
+                            th:text="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? '승인' : workpermit.status == 'PROC' ? '진행중' : workpermit.status == 'SUBMT' ? '상신' : workpermit.status == 'DRAFT' ? '준비중' : '기타'}" 
+                            th:classappend="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? 'success' : workpermit.status == 'PROC' ? 'info' : workpermit.status == 'REJCT' ? 'danger' : ''}">준비중</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -116,21 +149,7 @@
                       <a th:href="@{/approval/detail/{id}(id=${workpermit.approvalId})}" 
                          th:text="${workpermit.approvalId}">A250101001</a>
                     </div>
-                  </div>
-                  <div class="stack col-span-8">
-                    <div class="label">액션</div>
-                    <div>
-                      <a class="btn btn-sm" 
-                         th:href="@{/approval/edit/{id}(id=${workpermit.approvalId})}"
-                         th:if="${workpermit.status == 'SUBMIT'}">
-                        결재 수정
-                      </a>
-                      <a class="btn btn-sm" 
-                         th:href="@{/approval/detail/{id}(id=${workpermit.approvalId})}">
-                        결재 확인
-                      </a>
-                    </div>
-                  </div>
+                  </div>            
                 </div>
               </div>
 
@@ -168,46 +187,36 @@
                 </div>
               </div>
 
-              <!-- 출력 문서 형식 -->
+              <!-- 서명자 정보 -->
               <div class="section">
                 <div class="section-title">서명</div>
-                <div th:if="${items != null and !items.empty}">
-                  <div class="grid cols-12" th:each="it, iter : ${items}">
-                    <div class="stack col-span-3"><div class="label">순번</div><div th:text="${iter.index + 1}">1</div></div>
-                    <div class="stack col-span-3"><div class="label">이름</div><div th:text="${it.name}">홍길동</div></div>
-                    <div class="stack col-span-6">
-                      <div class="label">서명</div>
-                      <div>
-                        <img th:if="${it.signature}" th:src="${it.signature}" alt="서명" style="max-width:360px;max-height:120px;border:1px solid var(--border);background:#fff" />
-                        <span class="muted" th:if="${it.signature == null}">-</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="section" style="margin-top:8px">
-                    <div style="font-weight:700;margin-bottom:4px">서명</div>
-                    <table class="table">
-                      <thead>
-                        <tr>
-                          <th style="width:60px">#</th>
-                          <th style="width:200px">이름</th>
-                          <th>서명</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr th:each="it, iter : ${items}" th:if="${items != null and !items.empty}">
-                          <td th:text="${iter.index + 1}">1</td>
-                          <td th:text="${it.name}">-</td>
-                          <td>
-                            <img th:if="${it.signature}" th:src="${it.signature}" alt="서명" style="max-height:100px" />
-                            <span th:if="${it.signature == null}">-</span>
-                          </td>
-                        </tr>
-                        <tr th:if="${items == null or items.empty}"><td colspan="3" class="muted">서명 정보가 없습니다.</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div th:if="${items == null or items.empty}" class="notice">서명 정보가 없습니다.</div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th class="table-col-number">#</th>
+                      <th class="table-col-name-medium">이름</th>
+                      <th>서명</th>
+                      <th class="table-col-info-small">비고</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
+                      <td class="cell-center" th:text="${iter.index + 1}">1</td>
+                      <td th:text="${item.name ?: '-'}">홍길동</td>
+                      <td>
+                        <img th:if="${item.signature}" 
+                             th:src="${item.signature}" 
+                             alt="서명" 
+                             style="max-height:80px;border:1px solid var(--border);background:#fff;padding:4px;" />
+                        <span class="muted" th:unless="${item.signature}">서명 없음</span>
+                      </td>
+                      <td th:text="${item.note ?: '-'}">-</td>
+                    </tr>
+                    <tr th:if="${items == null or items.empty}">
+                      <td colspan="4" class="cell-center muted">서명 정보가 없습니다.</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               <section class="print-form" aria-hidden="true">
@@ -240,9 +249,9 @@
                         <th>상태</th>
                         <td colspan="3">
                           <span class="badge"
-                                th:classappend="${workpermit.status == 'PLN_APPROV' ? 'success' : workpermit.status == 'PLN_SUBMIT' ? 'info' : ''}"
-                                th:text="${workpermit.status == 'PLN_DRAFT' ? '계획 작성' : workpermit.status == 'PLN_SUBMIT' ? '계획 결재상신' : workpermit.status == 'PLN_APPROV' ? '계획 승인완료' : workpermit.status}">
-                            계획 작성
+                                th:classappend="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? 'success' : workpermit.status == 'PROC' ? 'info' : workpermit.status == 'REJCT' ? 'danger' : ''}"
+                                th:text="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? '승인' : workpermit.status == 'PROC' ? '진행중' : workpermit.status == 'SUBMT' ? '상신' : workpermit.status == 'DRAFT' ? '준비중' : '기타'}">
+                            준비중
                           </span>
                         </td>
                       </tr>
@@ -266,19 +275,24 @@
                           <th style="width: 50px;">#</th>
                           <th style="width: 150px;">이름</th>
                           <th>서명</th>
+                          <th style="width: 200px;">비고</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr th:each="it, iter : ${items}" th:if="${items != null and !items.empty}">
+                        <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
                           <td th:text="${iter.index + 1}">1</td>
-                          <td th:text="${it.name}">홍길동</td>
+                          <td th:text="${item.name ?: '-'}">홍길동</td>
                           <td>
-                            <img th:if="${it.signature}" th:src="${it.signature}" alt="서명" style="max-height: 80px; border: 1px solid #ddd;" />
-                            <span class="muted" th:if="${it.signature == null}">서명 없음</span>
+                            <img th:if="${item.signature}" 
+                                 th:src="${item.signature}" 
+                                 alt="서명" 
+                                 style="max-height: 80px; border: 1px solid #ddd; background: #fff; padding: 4px;" />
+                            <span class="muted" th:unless="${item.signature}">서명 없음</span>
                           </td>
+                          <td th:text="${item.note ?: '-'}">-</td>
                         </tr>
                         <tr th:if="${items == null or items.empty}">
-                          <td colspan="3" class="muted">서명 정보가 없습니다.</td>
+                          <td colspan="4" class="muted">서명 정보가 없습니다.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -290,12 +304,10 @@
         </div>
         </main>
       </section>
-      <footer th:unless="${param.popup != null}">
-        <div class="container">© 작업관리</div>
-      </footer>
+      
     </div>
     
-    <script>
+    <script th:inline="javascript">
       // 체크리스트 데이터 렌더링
       document.addEventListener('DOMContentLoaded', function() {
         const checklistData = /*[[${workpermit.checksheetJson}]]*/ null;

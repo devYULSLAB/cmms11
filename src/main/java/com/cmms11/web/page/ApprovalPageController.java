@@ -2,6 +2,7 @@ package com.cmms11.web.page;
 
 import com.cmms11.approval.ApprovalResponse;
 import com.cmms11.approval.ApprovalService;
+import com.cmms11.code.CodeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
@@ -20,14 +21,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class ApprovalPageController {
 
     private final ApprovalService service;
+    private final CodeService codeService;
 
-    public ApprovalPageController(ApprovalService service) {
+    public ApprovalPageController(ApprovalService service, CodeService codeService) {
         this.service = service;
+        this.codeService = codeService;
     }
 
     @GetMapping("/approval/list")
     public String list(
         @RequestParam(required = false) String status,
+        @RequestParam(required = false) String title,
+        @RequestParam(required = false) String createdBy,
         @RequestParam(required = false, defaultValue = "false") boolean _fragment,
         Pageable pageable,
         Model model
@@ -36,6 +41,15 @@ public class ApprovalPageController {
         
         model.addAttribute("page", page);
         model.addAttribute("status", status);
+        model.addAttribute("title", title);
+        model.addAttribute("createdBy", createdBy);
+        
+        // 상태 코드 목록 추가
+        try {
+            model.addAttribute("statusList", codeService.listItems("APPRV", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("statusList", java.util.List.of());
+        }
         
         return _fragment ? "approval/list :: content" : "approval/list";
     }
@@ -59,12 +73,23 @@ public class ApprovalPageController {
         Model model
     ) {
         boolean isNew = (id == null || id.isEmpty());
-        ApprovalResponse approval = isNew ? null : service.get(id);
+        ApprovalResponse approval = isNew ? createEmptyApproval() : service.get(id);
         
         model.addAttribute("approval", approval);
         model.addAttribute("isNew", isNew);
         
         return _fragment ? "approval/form :: content" : "approval/form";
+    }
+
+    /**
+     * 빈 Approval 객체 생성 (신규 등록용)
+     */
+    private ApprovalResponse createEmptyApproval() {
+        return new ApprovalResponse(
+            null, null, "DRAFT", null, null, null, null, null,
+            null, null, null, null, null, null,
+            java.util.List.of()  // steps
+        );
     }
 }
 

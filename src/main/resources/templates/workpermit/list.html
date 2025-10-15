@@ -10,23 +10,7 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">작업관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">작업관리</a>
-          <span class="sep">/</span>
-          <span>작업허가</span>
-        </div>
-      </nav>
+      
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="workpermit-list" data-module="workpermit-list">
         <main>
@@ -43,31 +27,37 @@
                   <div class="section-title">필터</div>
                   <form method="get" th:action="@{/workpermit/list}">
                     <div class="grid cols-12">
-                      <div class="col-span-3">
+                      <div class="col-span-2">
                         <input class="input" placeholder="허가 번호" name="permitId" th:value="${permitId}" />
                       </div>
-                      <div class="col-span-3">
+                      <div class="col-span-2">
                         <input class="input" placeholder="설비 번호" name="plantId" th:value="${plantId}" />
                       </div>
                       <div class="col-span-2">
-                        <select class="input" name="jobId">
-                          <option value="">허가유형(전체)</option>
-                          <option value="HOT" th:selected="${jobId == 'HOT'}">화기</option>
-                          <option value="CONF" th:selected="${jobId == 'CONF'}">밀폐공간</option>
-                          <option value="ELEC" th:selected="${jobId == 'ELEC'}">전기</option>
+                        <select class="input" name="jobId" required>
+                          <option value="">선택</option>
+                          <option th:each="permitType : ${permitTypes}"
+                                  th:value="${permitType.code}"
+                                  th:text="${permitType.code + ' - ' + permitType.name}"
+                                  th:selected="${workPermit.jobId == permitType.code}">
+                          </option>
                         </select>
                       </div>
                       <div class="col-span-2">
                         <select class="input" name="status">
                           <option value="">상태(전체)</option>
-                          <option value="REQ" th:selected="${status == 'REQ'}">요청</option>
-                          <option value="APRV" th:selected="${status == 'APRV'}">승인</option>
-                          <option value="REJT" th:selected="${status == 'REJT'}">반려</option>
-                          <option value="DONE" th:selected="${status == 'DONE'}">종료</option>
+                          <option th:each="statusItem : ${statusList}"
+                                  th:value="${statusItem.code}"
+                                  th:text="${statusItem.name}"
+                                  th:selected="${status == statusItem.code}">
+                          </option>
                         </select>
                       </div>
                       <div class="col-span-2">
                         <input class="input" type="date" name="plannedDateFrom" th:value="${plannedDateFrom}" title="계획일(From)" />
+                      </div>
+                      <div class="col-span-2">
+                        <input class="input" type="date" name="plannedDateTo" th:value="${plannedDateTo}" title="계획일(To)" />
                       </div>
                     </div>
                     <div class="row actions actions-top-small">
@@ -80,14 +70,15 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th style="width:140px">허가 번호</th>
+                      <th class="col-140">허가 번호</th>
                       <th>작업명</th>
-                      <th style="width:140px">설비 번호</th>
-                      <th style="width:100px">허가유형</th>
-                      <th style="width:120px">계획일</th>
-                      <th style="width:120px">실적일</th>
-                      <th style="width:100px">상태</th>
-                      <th style="width:140px">액션</th>
+                      <th class="col-140">설비 번호</th>
+                      <th class="col-100">허가유형</th>
+                      <th class="col-120">계획일</th>
+                      <th class="col-120">실적일</th>
+                      <th class="col-100">계획/실적</th>
+                      <th class="col-100">상태</th>
+                      <th class="col-140">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -98,9 +89,11 @@
                       <td th:text="${workpermit.jobId}">-</td>
                       <td th:text="${workpermit.plannedDate}">-</td>
                       <td th:text="${workpermit.actualDate}">-</td>
+                      <td th:text="${workpermit.stage == 'PLN' ? '계획' : workpermit.stage == 'ACT' ? '실적' : workpermit.stage}">-</td>
                       <td>
-                        <span class="badge" th:text="${workpermit.status == 'REQ' ? '요청' : workpermit.status == 'APRV' ? '승인' : workpermit.status == 'REJT' ? '반려' : '종료'}" 
-                              th:classappend="${workpermit.status == 'REQ' ? 'badge' : workpermit.status == 'APRV' ? 'badge success' : workpermit.status == 'REJT' ? 'badge danger' : 'badge success'}">-</span>
+                        <span class="badge" 
+                              th:text="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? '승인' : workpermit.status == 'PROC' ? '진행중' : workpermit.status == 'SUBMT' ? '상신' : workpermit.status == 'DRAFT' ? '준비중' : '기타'}" 
+                              th:classappend="${workpermit.status == 'APPRV' or workpermit.status == 'CMPLT' ? 'success' : workpermit.status == 'PROC' ? 'info' : workpermit.status == 'REJCT' ? 'danger' : ''}">-</span>
                       </td>
                       <td class="actions">
                         <a class="btn btn-sm" th:href="@{/workpermit/edit/{id}(id=${workpermit.permitId})}">수정</a>
@@ -117,11 +110,11 @@
                   <div class="spacer"></div>
                   <div class="pagination">
                     <button class="btn btn-sm" th:disabled="${page.first}" 
-                            th:data-url="@{/workpermit/list(page=${page.number - 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom})}"
+                            th:data-url="@{/workpermit/list(page=${page.number - 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
                             data-nav-btn>이전</button>
                     <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
                     <button class="btn btn-sm" th:disabled="${page.last}" 
-                            th:data-url="@{/workpermit/list(page=${page.number + 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom})}"
+                            th:data-url="@{/workpermit/list(page=${page.number + 1}, permitId=${permitId}, plantId=${plantId}, jobId=${jobId}, status=${status}, plannedDateFrom=${plannedDateFrom}, plannedDateTo=${plannedDateTo})}"
                             data-nav-btn>다음</button>
                   </div>
                 </div>
@@ -130,9 +123,7 @@
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 작업관리</div>
-      </footer>
+      
     </div>
     
   </body>

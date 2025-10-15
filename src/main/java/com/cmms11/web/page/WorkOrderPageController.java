@@ -66,6 +66,13 @@ public class WorkOrderPageController {
         model.addAttribute("plannedDateFrom", plannedDateFrom);
         model.addAttribute("plannedDateTo", plannedDateTo);
         
+        // 필터용 코드 데이터 추가
+        try {
+            model.addAttribute("statusList", codeService.listItems("APPRV", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("statusList", java.util.List.of());
+        }
+        
         return _fragment ? "workorder/list :: content" : "workorder/list";
     }
 
@@ -101,11 +108,13 @@ public class WorkOrderPageController {
         WorkOrderResponse workOrder;
         
         if (isNew) {
-            // 신규 등록 또는 참조 복사
+            // 신규 등록
+            workOrder = createEmptyWorkOrder(stage);
+            
+            // 참조 정보가 있으면 설정 (실적 입력 시 계획 복사)
             if (refId != null && !refId.isEmpty()) {
-                workOrder = service.get(refId);
-            } else {
-                workOrder = null;
+                WorkOrderResponse refWorkOrder = service.get(refId);
+                workOrder = copyForActual(refWorkOrder, refEntity, refId, refStage);  // ID, ref_* null 처리 됨.
             }
         } else {
             // 수정 모드
@@ -114,10 +123,7 @@ public class WorkOrderPageController {
         
         model.addAttribute("workOrder", workOrder);
         model.addAttribute("isNew", isNew);
-        model.addAttribute("stage", stage);
-        model.addAttribute("refEntity", refEntity);
-        model.addAttribute("refId", refId);
-        model.addAttribute("refStage", refStage);
+        model.addAttribute("stage", stage != null ? stage : workOrder.stage());
         
         // Select box용 참조 데이터 추가
         addReferenceData(model);
@@ -126,8 +132,84 @@ public class WorkOrderPageController {
     }
 
     /**
+     * 빈 WorkOrder 객체 생성 (신규 등록용)
+     */
+    private WorkOrderResponse createEmptyWorkOrder(String stage) {
+        return new WorkOrderResponse(
+            null,  // orderId
+            null,  // name
+            null,  // plantId
+            null,  // jobId
+            null,  // siteId
+            null,  // deptId
+            null,  // memberId
+            null,  // plannedDate
+            null,  // plannedCost
+            null,  // plannedLabor
+            null,  // actualDate
+            null,  // actualCost
+            null,  // actualLabor
+            "DRAFT",  // status - 기본값
+            stage != null ? stage : "PLN",  // stage - 기본값 (WorkOrder는 PLN부터 시작)
+            null,  // refEntity
+            null,  // refId
+            null,  // refStage
+            null,  // approvalId
+            null,  // fileGroupId
+            null,  // note
+            null,  // createdAt
+            null,  // createdBy
+            null,  // updatedAt
+            null,  // updatedBy
+            java.util.List.of()  // items
+        );
+    }
+
+    /**
+     * 계획 복사하여 실적 생성용 객체 생성 (ID는 null)
+     */
+    private WorkOrderResponse copyForActual(
+        WorkOrderResponse plan,
+        String refEntity,
+        String refId,
+        String refStage
+    ) {
+        // 실적 입력 시 계획 데이터 복사, Service에서 ID 재발급
+        // orderId를 null로 설정하여 autoNumberService가 새 ID를 생성하도록 함
+        return new WorkOrderResponse(
+            null,  // orderId는 null (autoNumberService가 생성)
+            plan.name(),
+            plan.plantId(),
+            plan.jobId(),
+            plan.siteId(),
+            plan.deptId(),
+            plan.memberId(),
+            plan.plannedDate(),
+            plan.plannedCost(),
+            plan.plannedLabor(),
+            plan.actualDate(),
+            plan.actualCost(),
+            plan.actualLabor(),
+            "DRAFT",  // status는 DRAFT (실적은 새로운 승인 프로세스)
+            "ACT",  // stage를 ACT로 변경
+            refEntity,  // 참조 엔티티 (WORD)
+            refId,      // 참조 ID (계획의 orderId)
+            refStage,   // 참조 단계 (PLN)
+            null,  // approvalId는 null (새로운 결재)
+            null,  // fileGroupId는 null (새로운 파일)
+            plan.note(),
+            null,  // createdAt는 null (서버에서 설정)
+            null,  // createdBy는 null (서버에서 설정)
+            null,  // updatedAt는 null (서버에서 설정)
+            null,  // updatedBy는 null (서버에서 설정)
+            plan.items()  // 항목들은 복사
+        );
+    }
+
+    /**
      * Select box용 참조 데이터 추가
      */
+
     private void addReferenceData(Model model) {
         try {
             model.addAttribute("jobTypes", codeService.listItems("JOBTP", null, Pageable.unpaged()).getContent());

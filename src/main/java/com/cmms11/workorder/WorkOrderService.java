@@ -1,14 +1,10 @@
 package com.cmms11.workorder;
 
-import com.cmms11.approval.ApprovalRequest;
-import com.cmms11.approval.ApprovalResponse;
-import com.cmms11.approval.ApprovalService;
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
 import com.cmms11.security.MemberUserDetailsService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,9 +32,6 @@ public class WorkOrderService {
     private final WorkOrderRepository repository;
     private final AutoNumberService autoNumberService;
     private final WorkOrderItemRepository itemRepository;
-
-    @Autowired
-    private ApprovalService approvalService;
 
     public WorkOrderService(WorkOrderRepository repository, AutoNumberService autoNumberService, WorkOrderItemRepository itemRepository) {
         this.repository = repository;
@@ -81,7 +74,12 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public WorkOrderResponse get(String orderId) {
-        return WorkOrderResponse.from(getExisting(orderId));
+        WorkOrder workOrder = getExisting(orderId);
+        List<WorkOrderItem> items = itemRepository.findByOrder(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            orderId
+        );
+        return WorkOrderResponse.from(workOrder, items);
     }
 
     public WorkOrderResponse create(WorkOrderRequest request) {
@@ -97,7 +95,13 @@ public class WorkOrderService {
         applyRequest(entity, request);  // 요청 데이터를 엔티티에 적용
         
         // ⭐ 신규 생성 시 초기 상태 설정
-        // entity.setStage("PLN") or entity.setStage("ACT")
+        // request에서 stage가 전달되면 우선 사용 (PLN 또는 ACT)
+        // 전달되지 않으면 기본값 "PLN" 사용
+        if (request.stage() != null && !request.stage().isBlank()) {
+            entity.setStage(request.stage());
+        } else {
+            entity.setStage("PLN");
+        }
         entity.setStatus("DRAFT");
 
         entity.setUpdatedAt(now);
@@ -123,6 +127,8 @@ public class WorkOrderService {
     }
 
     public void delete(String orderId) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        itemRepository.deleteByOrder(companyId, orderId);
         WorkOrder entity = getExisting(orderId);
         repository.delete(entity);
     }
@@ -216,89 +222,6 @@ public class WorkOrderService {
         }
         String name = authentication.getName();
         return name != null ? name : "system";
-    }
-
-    /**
-     * 계획 결재 요청
-     */
-    public ApprovalResponse submitPlanApproval(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        
-        // 상태 검증
-        if (!"PLN".equals(order.getStage()) || !"DRAFT".equals(order.getStatus())) {
-            throw new IllegalStateException("계획 작성 상태에서만 결재 요청 가능합니다. 현재 단계/상태: " + order.getStage() + "/" + order.getStatus());
-        }
-        
-        // 결재 본문 생성
-        String content = buildPlanApprovalContent(order);
-        
-        // Approval 생성
-        ApprovalRequest request = new ApprovalRequest(
-            null,
-            "작업지시 계획 결재: " + order.getName(),
-            "DRAFT",
-            "WORK",
-            workOrderId,
-            "PLN",  // refStage
-            content,
-            order.getFileGroupId(),
-            new ArrayList<>()
-        );
-        
-        ApprovalResponse approval = approvalService.create(request);
-        
-        // 상태 변경 및 approvalId 저장
-        order.setApprovalId(approval.approvalId());
-        order.setStatus("SUBMT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
-        
-        return approval;
-    }
-
-    /**
-     * 실적 결재 요청
-     */
-    public ApprovalResponse submitActualApproval(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        
-        // 상태 검증
-        if (!"ACT".equals(order.getStage()) || !"DRAFT".equals(order.getStatus())) {
-            throw new IllegalStateException("실적 작성 상태에서만 결재 요청 가능합니다. 현재 상태: " + order.getStatus());
-        }
-        
-        // 실적 필수값 검증
-        if (order.getActualDate() == null) {
-            throw new IllegalStateException("실적 정보를 모두 입력해주세요.");
-        }
-        
-        // 결재 본문 생성
-        String content = buildActualApprovalContent(order);
-        
-        // Approval 생성
-        ApprovalRequest request = new ApprovalRequest(
-            null,
-            "작업지시 실적 결재: " + order.getName(),
-            "DRAFT",
-            "WORK",
-            workOrderId,
-            "ACT",  // refStage ⭐ 수정: "ACTUAL" → "ACT"
-            content,
-            order.getFileGroupId(),
-            new ArrayList<>()
-        );
-        
-        ApprovalResponse approval = approvalService.create(request);
-        
-        // 상태 변경 및 approvalId 저장 (기존 계획 approvalId 덮어씀)
-        order.setApprovalId(approval.approvalId());
-        order.setStatus("SUBMT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
-        
-        return approval;
     }
 
     /**
@@ -397,75 +320,4 @@ public class WorkOrderService {
         repository.save(order);
     }
 
-    /**
-     * 계획 결재 본문 생성
-     */
-    private String buildPlanApprovalContent(WorkOrder order) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<h3>작업지시 계획 결재 요청</h3>");
-        sb.append("<table style='border-collapse:collapse; width:100%;'>");
-        sb.append("<tr><th style='border:1px solid #ddd; padding:8px; background:#f5f5f5;'>항목</th>");
-        sb.append("<th style='border:1px solid #ddd; padding:8px; background:#f5f5f5;'>내용</th></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>작업지시 번호</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getId().getOrderId()).append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>작업명</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getName() != null ? order.getName() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>설비</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getPlantId() != null ? order.getPlantId() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>담당자</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getMemberId() != null ? order.getMemberId() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>계획일</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getPlannedDate() != null ? order.getPlannedDate() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>계획비용</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getPlannedCost() != null ? order.getPlannedCost() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>계획공수</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getPlannedLabor() != null ? order.getPlannedLabor() : "-").append("</td></tr>");
-        sb.append("</table>");
-        return sb.toString();
-    }
-
-    /**
-     * 실적 입력 단계 준비 (PLN+APPRV → ACT+DRAFT)
-     */
-    public void prepareActualStage(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        
-        // 상태 검증
-        if (!"PLN".equals(order.getStage()) || !"APPRV".equals(order.getStatus())) {
-            throw new IllegalStateException(
-                "계획 결재가 완료되어야 실적을 입력할 수 있습니다. 현재 단계/상태: " + 
-                order.getStage() + "/" + order.getStatus()
-            );
-        }
-        
-        // 상태 전환
-        order.setStage("ACT");
-        order.setStatus("DRAFT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
-    }
-
-    /**
-     * 실적 결재 본문 생성
-     */
-    private String buildActualApprovalContent(WorkOrder order) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<h3>작업지시 실적 결재 요청</h3>");
-        sb.append("<table style='border-collapse:collapse; width:100%;'>");
-        sb.append("<tr><th style='border:1px solid #ddd; padding:8px; background:#f5f5f5;'>항목</th>");
-        sb.append("<th style='border:1px solid #ddd; padding:8px; background:#f5f5f5;'>내용</th></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>작업지시 번호</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getId().getOrderId()).append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>작업명</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getName() != null ? order.getName() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>실적일</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getActualDate() != null ? order.getActualDate() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>실적비용</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getActualCost() != null ? order.getActualCost() : "-").append("</td></tr>");
-        sb.append("<tr><td style='border:1px solid #ddd; padding:8px;'>실적공수</td>");
-        sb.append("<td style='border:1px solid #ddd; padding:8px;'>").append(order.getActualLabor() != null ? order.getActualLabor() : "-").append("</td></tr>");
-        sb.append("</table>");
-        return sb.toString();
-    }
 }

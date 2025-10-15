@@ -29,27 +29,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar" th:unless="${param.popup != null}">
-        <div class="appbar-inner">
-          <div class="brand">작업관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>사용자</span>
-          </div>
-        </div>
-      </header>
-      
-      <nav class="breadcrumbs" th:unless="${param.popup != null}">
-        <div class="container">
-          <a th:href="@{#}" href="#">작업관리</a>
-          <span class="sep">/</span>
-          <a th:href="@{/workorder/list}">작업지시</a>
-          <span class="sep">/</span>
-          <span>상세</span>
-        </div>
-      </nav>
-      
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="workorder-detail" data-module="workorder-detail"
                th:attr="data-file-group-id=${workorder.fileGroupId},data-order-id=${workorder.orderId},data-print-enabled=true">
@@ -57,35 +36,37 @@
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="card-title">작업지시 상세</div>
-                <div class="toolbar" th:unless="${param.popup != null}">
-                  <!-- 항상 활성화 -->
-                  <a class="btn" th:href="@{/workorder/list}">목록</a>
-                  <a class="btn" href="#" data-print-btn>인쇄</a>
-                  
-                  <!-- 수정: status=DRAFT일 때만 활성화 -->
-                  <a class="btn" 
-                     th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
-                     th:href="${workorder.status == 'DRAFT' ? '/workorder/form?id=' + workorder.orderId : '#'}"
-                     th:onclick="${workorder.status != 'DRAFT' ? 'return false;' : ''}">
-                    수정
-                  </a>
-                  
-                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
-                  <button class="btn" 
-                          th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
-                          th:disabled="${workorder.status != 'DRAFT'}"
-                          th:onclick="${workorder.status == 'DRAFT' ? 'submitApproval(\'' + workorder.orderId + '\', \'' + workorder.stage + '\', \'workorders\', \'workorder\')' : 'return false;'}">
-                    결재 상신
-                  </button>
-                  
-                  <!-- 실적 입력: stage=PLN AND status=APPRV일 때만 활성화 -->
-                  <a class="btn" 
-                     th:classappend="${workorder.stage == 'PLN' and workorder.status == 'APPRV' ? 'success' : 'disabled'}"
-                     th:href="${workorder.stage == 'PLN' and workorder.status == 'APPRV' ? '/workorder/form?stage=ACT&amp;refEntity=WORK&amp;refId=' + workorder.orderId + '&amp;refStage=PLN' : '#'}"
-                     th:onclick="${workorder.stage != 'PLN' or workorder.status != 'APPRV' ? 'return false;' : ''}">
-                    실적 입력
-                  </a>
+                <div class="row actions-space-between">
+                  <div class="card-title">작업지시 상세</div>
+                  <div class="toolbar" th:unless="${param.popup != null}">
+                    <!-- 항상 활성화 -->
+                    <a class="btn" th:href="@{/workorder/list}">목록</a>
+                    <a class="btn" href="#" data-print-btn>인쇄</a>
+                    
+                    <!-- 수정: status=DRAFT일 때만 활성화 -->
+                    <a class="btn" 
+                      th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                      th:href="${workorder.status == 'DRAFT' ? '/workorder/form?id=' + workorder.orderId : '#'}"
+                      th:onclick="${workorder.status != 'DRAFT' ? 'return false;' : ''}">
+                      수정
+                    </a>
+                    
+                    <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
+                    <button class="btn" 
+                            th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
+                            th:disabled="${workorder.status != 'DRAFT'}"
+                            th:onclick="${workorder.status == 'DRAFT' ? 'submitApproval(\'' + workorder.orderId + '\', \'' + workorder.stage + '\', \'workorders\', \'workorder\')' : 'return false;'}">
+                      결재 상신
+                    </button>
+                    
+                    <!-- 실적 입력: stage=PLN AND status=APPRV일 때만 활성화 -->
+                    <a class="btn" 
+                      th:classappend="${workorder.stage == 'PLN' and workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? 'success' : 'disabled'}"
+                      th:href="${workorder.stage == 'PLN' and workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? '/workorder/form?stage=ACT&amp;refEntity=WORK&amp;refId=' + workorder.orderId + '&amp;refStage=PLN' : '#'}"
+                      th:onclick="${workorder.stage != 'PLN' or workorder.status != 'APPRV' or workorder.status != 'CMPLT' ? 'return false;' : ''}">
+                      실적 입력
+                    </a>
+                  </div>
                 </div>
               </div>
               <div class="card-body">
@@ -105,78 +86,130 @@
                 <!-- 기본 정보 테이블 -->
                 <div class="section">
                   <div class="section-title">기본 정보</div>
-                  <table class="table table-details">
-                    <tbody>
-                      <tr>
-                        <th class="table-col-name-small">작업지시 번호</th>
-                        <td th:text="${workorder.orderId}">O250101001</td>
-                        <th class="table-col-name-small">작업명</th>
-                        <td th:text="${workorder.name}">구동부 정비</td>
-                      </tr>
-                      <tr>
-                        <th class="table-col-name-small">설비 번호</th>
-                        <td th:text="${workorder.plantId}">EQP000123</td>
-                        <th class="table-col-name-small">작업유형</th>
-                        <td th:text="${workorder.jobId}">PM-001</td>
-                      </tr>
-                      <tr>
-                        <th class="table-col-name-small">계획일</th>
-                        <td th:text="${workorder.plannedDate}">2025-01-12</td>
-                        <th class="table-col-name-small">실적일</th>
-                        <td th:text="${workorder.actualDate}">2025-01-15</td>
-                      </tr>
-                      <tr>
-                        <th class="table-col-name-small">상태</th>
-                        <td colspan="3">
-                          <span class="badge" 
-                                th:text="${workorder.status == 'PLN_DRAFT' ? '계획 작성' : 
-                                         workorder.status == 'PLN_SUBMIT' ? '계획 결재상신' : 
-                                         workorder.status == 'PLN_APPROV' ? '계획 승인완료' : 
-                                         workorder.status == 'ACT_DRAFT' ? '실적 작성' : 
-                                         workorder.status == 'ACT_SUBMIT' ? '실적 결재상신' : 
-                                         workorder.status == 'ACT_APPROV' ? '실적 승인완료' : workorder.status}" 
-                                th:classappend="${workorder.status == 'PLN_DRAFT' ? '' : 
-                                                workorder.status == 'PLN_SUBMIT' ? 'info' : 
-                                                workorder.status == 'PLN_APPROV' ? 'warning' : 
-                                                workorder.status == 'ACT_DRAFT' ? '' : 
-                                                workorder.status == 'ACT_SUBMIT' ? 'info' : 
-                                                workorder.status == 'ACT_APPROV' ? 'success' : ''}">
-                            계획 작성
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div class="grid cols-12">                    
+                    <div class="stack col-span-3">
+                      <div class="label">점검 번호</div>
+                      <div th:text="${workorder.orderId}">W250101001</div>
+                    </div>
+                    <div class="stack col-span-6">
+                      <div class="label">점검명</div>
+                      <div th:text="${workorder.name}">설비 A 정기점검</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">계획/실적</div>
+                      <div th:text="${workorder.stage == 'PLN' ? '계획' : workorder.stage == 'ACT' ? '실적' : workorder.stage}">계획</div>
+                    </div>
+                  </div>
+                  <div class="grid cols-12">
+                    <div class="stack col-span-3">
+                      <div class="label">설비 번호</div>
+                      <div th:text="${workorder.plantId ?: '-'}">EQP000123</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">작업 유형</div>
+                      <div th:text="${workorder.jobId ?: '-'}">INSP</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">Site</div>
+                      <div th:text="${workorder.siteId ?: '-'}">S0001</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">관리부서</div>
+                      <div th:text="${workorder.deptId ?: '-'}">D0001</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- 계획 정보 섹션 -->
+                <div class="section">
+                  <div class="section-title">계획 정보</div>
+                  <div class="grid cols-12">                    
+                    <div class="stack col-span-3">
+                      <div class="label">계획일</div>
+                      <div th:text="${workorder.plannedDate}">2025.10.01</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">계획비용</div>
+                      <div th:text="${workorder.plannedCost}">2,000</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">계획공수(M/D) </div>
+                      <div th:text="${workorder.plannedLabor}">100</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">담당자 </div>
+                      <div th:text="${workorder.memberId}">ID</div>
+                    </div>
+                    
+                  </div>
+                </div>
+
+                <!-- 실적 정보 섹션 -->
+                <div class="section">
+                  <div class="section-title">실적 정보</div>
+                  <div class="grid cols-12">                    
+                    <div class="stack col-span-3">
+                      <div class="label">실적일</div>
+                      <div th:text="${workorder.actualDate}">2025.10.01</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">실적비용</div>
+                      <div th:text="${workorder.actualCost}">2,000</div>
+                    </div>
+                    <div class="stack col-span-3">
+                      <div class="label">실적공수(M/D) </div>
+                      <div th:text="${workorder.actualLabor}">100</div>
+                    </div>      
+                    <div class="stack col-span-3">
+                      <div class="label">상태</div>
+                      <div>
+                        <span class="badge" 
+                              th:text="${workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? '승인' : workorder.status == 'PROC' ? '진행중' : workorder.status == 'SUBMT' ? '상신' : workorder.status == 'DRAFT' ? '준비중' : '기타'}" 
+                              th:classappend="${workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? 'success' : workorder.status == 'PROC' ? 'info' : workorder.status == 'REJCT' ? 'danger' : ''}">준비중</span>
+                      </div>
+                    </div>         
+                  </div>
+                </div>
+
+                <!-- 결재 정보 섹션 -->
+                <div class="section" th:if="${workorder.approvalId != null}">
+                  <div class="section-title">결재 정보</div>
+                  <div class="grid cols-12">
+                    <div class="stack col-span-4">
+                      <div class="label">결재 번호</div>
+                      <div>
+                        <a th:href="@{/approval/detail/{id}(id=${workorder.approvalId})}" 
+                           th:text="${workorder.approvalId}">A250101001</a>
+                      </div>
+                    </div>                  
+                  </div>
                 </div>
 
                 <!-- 작업 항목 테이블 -->
                 <div class="section">
                   <div class="section-title">작업 항목</div>
-                  <div class="data-table-container">
-                    <table class="table" data-table-readonly>
-                      <thead>
-                        <tr>
-                          <th class="table-col-number">#</th>
-                          <th>작업명</th>
-                          <th>작업방법</th>
-                          <th>결과</th>
-                          <th>메모</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
-                          <td class="cell-center" th:text="${iter.index + 1}">1</td>
-                          <td th:text="${item.name}">부품 교체</td>
-                          <td th:text="${item.method}">기준서 따라 교체</td>
-                          <td th:text="${item.result}">정상 교체 완료</td>
-                          <td th:text="${item.note}">특이사항 없음</td>
-                        </tr>
-                        <tr th:if="${items == null or items.empty}">
-                          <td colspan="5" class="cell-center muted">작업 항목이 없습니다.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <table class="table" data-table-readonly>
+                    <thead>
+                      <tr>
+                        <th class="table-col-number">#</th>
+                        <th>작업명</th>
+                        <th>작업방법</th>
+                        <th>결과</th>
+                        <th>메모</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr th:each="item, iter : ${items}" th:if="${items != null and !items.empty}">
+                        <td class="cell-center" th:text="${iter.index + 1}">1</td>
+                        <td th:text="${item.name}">부품 교체</td>
+                        <td th:text="${item.method}">기준서 따라 교체</td>
+                        <td th:text="${item.result}">정상 교체 완료</td>
+                        <td th:text="${item.note}">특이사항 없음</td>
+                      </tr>
+                      <tr th:if="${items == null or items.empty}">
+                        <td colspan="5" class="cell-center muted">작업 항목이 없습니다.</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
                 <!-- 첨부파일 섹션 -->
@@ -217,8 +250,12 @@
                         <tr>
                           <th>설비 번호</th><td th:text="${workorder.plantId}">EQP000123</td>
                           <th>상태</th>
-                          <td th:text="${workorder.status == 'PLN_DRAFT' ? '계획 작성' : workorder.status == 'PLN_SUBMIT' ? '계획 결재상신' : workorder.status == 'PLN_APPROV' ? '계획 승인완료' : workorder.status == 'ACT_DRAFT' ? '실적 작성' : workorder.status == 'ACT_SUBMIT' ? '실적 결재상신' : workorder.status == 'ACT_APPROV' ? '실적 승인완료' : workorder.status}">
-                            계획 작성
+                          <td>
+                            <span class="badge"
+                                  th:classappend="${workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? 'success' : workorder.status == 'PROC' ? 'info' : workorder.status == 'REJCT' ? 'danger' : ''}"
+                                  th:text="${workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? '승인' : workorder.status == 'PROC' ? '진행중' : workorder.status == 'SUBMT' ? '상신' : workorder.status == 'DRAFT' ? '준비중' : '기타'}">
+                              준비중
+                            </span>
                           </td>
                         </tr>
                         <tr>
@@ -263,9 +300,7 @@
         </main>
       </section>
       
-      <footer th:unless="${param.popup != null}">
-        <div class="container">© 작업관리</div>
-      </footer>
+      
     </div>
     
     <!-- JavaScript 로드는 defaultLayout에서 통합 관리됨 -->

@@ -10,25 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">점검 관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">점검</a>
-          <span class="sep">/</span>
-          <a th:href="@{/inspection/list}">점검</a>
-          <span class="sep">/</span>
-          <span>등록/수정</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inspection-form" data-module="inspection-form">
         <main>
@@ -52,8 +33,7 @@
 
                   <!-- Hidden fields -->
                   <input type="hidden" name="inspectionId" th:value="${inspection?.inspectionId}" />
-                  <input type="hidden" name="stage" th:value="${stage}" />
-                  <input type="hidden" name="status" value="DRAFT" />
+                  <input type="hidden" name="status" th:value="${inspection?.status}" />
                   <input type="hidden" name="refEntity" th:value="${inspection?.refEntity}" />
                   <input type="hidden" name="refId" th:value="${inspection?.refId}" />
                   <input type="hidden" name="refStage" th:value="${inspection?.refStage}" />
@@ -66,10 +46,18 @@
                         <input id="inspection_id" name="inspectionId" class="input" maxlength="10" placeholder="자동생성" 
                               th:value="${inspection.inspectionId}" readonly />
                       </div>
-                      <div class="form-row col-span-9">
+                      <div class="form-row col-span-6">
                         <label class="label required" for="name">점검명</label>
                         <input id="name" name="name" class="input" required maxlength="100" 
                               th:value="${inspection.name}" />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label required" for="stage">계획/실적</label>
+                        <select id="stage" name="stage" required>
+                          <option value="">선택</option>
+                          <option value="PLN" th:selected="${inspection.stage == 'PLN'}">계획</option>
+                          <option value="ACT" th:selected="${inspection.stage == 'ACT'}">실적</option>
+                        </select>
                       </div>
                     </div>
                     <div class="grid cols-12">
@@ -93,8 +81,8 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="site_id">Site</label>
-                        <select id="site_id" name="siteId">
+                        <label class="label required" for="site_id">Site</label>
+                        <select id="site_id" name="siteId" required>
                           <option value="">(선택)</option>
                           <option th:each="site : ${sites}"
                                   th:value="${site.siteId}"
@@ -103,9 +91,9 @@
                           </option>
                         </select>
                       </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="dept_id">부서</label>
-                        <select id="dept_id" name="deptId">
+                      <div class="form-row col-span-3" required>
+                        <label class="label required" for="dept_id">부서</label>
+                        <select id="dept_id" name="deptId" required>
                           <option value="">(선택)</option>
                           <option th:each="dept : ${depts}"
                                   th:value="${dept.deptId}"
@@ -121,31 +109,23 @@
                   <div class="section">
                     <div class="section-title">점검 일정 / 담당</div>
                     <div class="grid cols-12">
-                      <div class="form-row col-span-3">
-                        <label class="label" for="member_id">담당자</label>
-                        <input id="member_id" name="memberId" class="input" maxlength="5" placeholder="사원번호" 
-                              th:value="${inspection.memberId}" />
-                      </div>
+                      
                       <div class="form-row col-span-3">
                         <label class="label" for="planned_date">계획일</label>
                         <input id="planned_date" name="plannedDate" class="input" type="date" 
-                              th:value="${inspection.plannedDate}" />
+                              th:value="${inspection.plannedDate}"
+                              th:readonly="${inspection.stage != 'PLN' or inspection.status != 'DRAFT'}" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label" for="actual_date">실적일</label>
                         <input id="actual_date" name="actualDate" class="input" type="date" 
                               th:value="${inspection.actualDate}"
-                              th:readonly="${inspection.status != 'ACT_DRAFT'}"
-                              th:disabled="${inspection.status != 'ACT_DRAFT'}" />
+                              th:readonly="${inspection.stage != 'ACT' or inspection.status != 'DRAFT'}" />
                       </div>
                       <div class="form-row col-span-3">
-                        <label class="label" for="status_display">상태</label>
-                        <input type="text" id="status_display" class="input" readonly
-                               th:value="${inspection.status == 'PLN_APPROV' ? '계획 확정' : 
-                                        inspection.status == 'ACT_DRAFT' ? '실적 작성' : 
-                                        inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : 
-                                        inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}" />
-                        <input type="hidden" name="status" th:value="${inspection.status}" />
+                        <label class="label" for="member_id">담당자</label>
+                        <input id="member_id" name="memberId" class="input" maxlength="5" placeholder="사원번호" 
+                              th:value="${inspection.memberId}" />
                       </div>
                     </div>
                     <div class="form-row col-span-12">

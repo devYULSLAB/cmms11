@@ -1,11 +1,9 @@
 package com.cmms11.approval;
 
+import com.cmms11.approval.handler.ApprovalRefHandler;
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
-import com.cmms11.inspection.InspectionService;
 import com.cmms11.security.MemberUserDetailsService;
-import com.cmms11.workorder.WorkOrderService;
-import com.cmms11.workpermit.WorkPermitService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -60,26 +58,20 @@ public class ApprovalService {
     private final ApprovalStepRepository stepRepository;
     private final ApprovalInboxRepository inboxRepository;
     private final AutoNumberService autoNumberService;
-    
-    @Autowired
-    private InspectionService inspectionService;
-    
-    @Autowired
-    private WorkOrderService workOrderService;
-    
-    @Autowired
-    private WorkPermitService workPermitService;
+    private final List<ApprovalRefHandler> handlers;
 
     public ApprovalService(
         ApprovalRepository repository,
         ApprovalStepRepository stepRepository,
         ApprovalInboxRepository inboxRepository,
-        AutoNumberService autoNumberService
+        AutoNumberService autoNumberService,
+        List<ApprovalRefHandler> handlers
     ) {
         this.repository = repository;
         this.stepRepository = stepRepository;
         this.inboxRepository = inboxRepository;
         this.autoNumberService = autoNumberService;
+        this.handlers = handlers;
     }
 
     @Transactional(readOnly = true)
@@ -626,6 +618,10 @@ public class ApprovalService {
     /**
      * 원본 모듈에 상태 변경 통보
      */
+    /**
+     * 참조 모듈에 결재 상태 변경을 알립니다.
+     * 전략 패턴을 사용하여 적절한 핸들러를 찾아 처리합니다.
+     */
     private void notifyRefModule(Approval approval, String action) {
         if (approval.getRefEntity() == null || approval.getRefId() == null) {
             return;
@@ -636,85 +632,18 @@ public class ApprovalService {
             String refId = approval.getRefId();
             String refStage = approval.getRefStage();
             
-            switch (refEntity) {
-                case "INSP":
-                    // ⭐ Stage 분기 필수 (PLN/ACT)
-                    if (refStage == null) {
-                        log.warn("INSP 모듈 콜백 시 refStage가 NULL입니다: {}", refId);
-                        break;
-                    }
-                    
-                    if ("PLN".equals(refStage)) {
-                        if (STATUS_APPROVED.equals(action)) {
-                            inspectionService.onPlanApprovalApprove(refId);
-                        } else if (STATUS_REJECTED.equals(action)) {
-                            inspectionService.onPlanApprovalReject(refId);
-                        } else if ("DELETE".equals(action)) {
-                            inspectionService.onPlanApprovalDelete(refId);
-                        }
-                        log.info("Inspection 계획 결재 콜백 완료: {} - {}", refId, action);
-
-                    } else if ("ACT".equals(refStage)) {
-                        if (STATUS_APPROVED.equals(action)) {
-                            inspectionService.onActualApprovalApprove(refId);
-                        } else if (STATUS_REJECTED.equals(action)) {
-                            inspectionService.onActualApprovalReject(refId);
-                        } else if ("DELETE".equals(action)) {
-                            inspectionService.onActualApprovalDelete(refId);
-                        }
-                        log.info("Inspection 실적 결재 콜백 완료: {} - {}", refId, action);
-                        
-                    } else {
-                        log.warn("알 수 없는 INSP refStage: {} (refId={})", refStage, refId);
-                    }
-                    break;
-                    
-                case "WORK":
-                    // ⭐ Stage 분기 필수 (PLN/ACT)
-                    if (refStage == null) {
-                        log.warn("WORK 모듈 콜백 시 refStage가 NULL입니다: {}", refId);
-                        break;
-                    }
-                    
-                    if ("PLN".equals(refStage)) {
-                        if (STATUS_APPROVED.equals(action)) {
-                            workOrderService.onPlanApprovalApprove(refId);
-                        } else if (STATUS_REJECTED.equals(action)) {
-                            workOrderService.onPlanApprovalReject(refId);
-                        } else if ("DELETE".equals(action)) {
-                            workOrderService.onPlanApprovalDelete(refId);
-                        }
-                        log.info("WorkOrder 계획 결재 콜백 완료: {} - {}", refId, action);
-
-                    } else if ("ACT".equals(refStage)) {
-                        if (STATUS_APPROVED.equals(action)) {
-                            workOrderService.onActualApprovalApprove(refId);
-                        } else if (STATUS_REJECTED.equals(action)) {
-                            workOrderService.onActualApprovalReject(refId);
-                        } else if ("DELETE".equals(action)) {
-                            workOrderService.onActualApprovalDelete(refId);
-                        }
-                        log.info("WorkOrder 실적 결재 콜백 완료: {} - {}", refId, action);
-                        
-                    } else {
-                        log.warn("알 수 없는 WORK refStage: {} (refId={})", refStage, refId);
-                    }
-                    break;
-                    
-                case "WPER":
-                    // WorkPermit은 계획(PLN)만 있음
-                    if (STATUS_APPROVED.equals(action)) {
-                        workPermitService.onPlanApprovalApprove(refId);
-                    } else if (STATUS_REJECTED.equals(action)) {
-                        workPermitService.onPlanApprovalReject(refId);
-                    } else if ("DELETE".equals(action)) {
-                        workPermitService.onPlanApprovalDelete(refId);
-                    }
-                    log.info("WorkPermit 계획 결재 콜백 완료: {} - {}", refId, action);
-                    break;
-                    
-                default:
-                    log.warn("처리되지 않은 ref_entity: {}", refEntity);
+            // 핸들러 패턴: 적절한 핸들러를 찾아서 처리
+            ApprovalRefHandler handler = handlers.stream()
+                .filter(h -> h.supports(refEntity, refStage))
+                .findFirst()
+                .orElse(null);
+            
+            if (handler != null) {
+                handler.handle(action, refId, refStage);
+                log.info("결재 콜백 완료: refEntity={}, refStage={}, refId={}, action={}", 
+                    refEntity, refStage, refId, action);
+            } else {
+                log.warn("처리 가능한 핸들러가 없습니다: refEntity={}, refStage={}", refEntity, refStage);
             }
         } catch (Exception e) {
             log.error("원본 모듈 콜백 실패: refEntity={}, refId={}, refStage={}, action={}", 

@@ -12,24 +12,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">전자결재</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">상세</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">전자결재</a>
-          <span class="sep">/</span>
-          <a th:href="@{/approval/list}">결재</a>
-          <span class="sep">/</span>
-          <span>상세</span>
-        </div>
-      </nav>
       <main>
         <div class="container">
           <section data-slot-root th:fragment="content" data-page="approval-detail" data-module="approval-detail">
@@ -70,8 +52,9 @@
                   <div>문서번호: <span th:text="${approval.approvalId}">APR-2025-0001</span></div>
                   <div>기안자: <span th:text="${approval.createdBy}">admin</span></div>
                   <div>작성일: <span th:text="${approval.createdAt}">2025-09-01</span></div>
-                  <div>상태: <span class="badge" th:text="${approval.status == 'DRAFT' ? '임시저장' : approval.status == 'SUBMIT' ? '상신' : approval.status == 'PROC' ? '결재중' : approval.status == 'APPROV' ? '승인완료' : approval.status == 'REJECT' ? '반려' : approval.status}" 
-                            th:classappend="${approval.status == 'DRAFT' ? '' : approval.status == 'SUBMIT' ? 'info' : approval.status == 'PROC' ? 'warning' : approval.status == 'APPROV' ? 'success' : 'danger'}">결재중</span></div>
+                  <div>상태: <span class="badge"
+                            th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}"
+                            th:classappend="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? 'success' : approval.status == 'PROC' ? 'info' : approval.status == 'REJCT' ? 'danger' : ''}">처리중</span></div>
                 </div>
                 <div class="meta-row" th:if="${approval.refEntity != null && approval.refId != null}">
                   <div>참조: <span class="badge info" th:text="${approval.refEntity}">INSP</span></div>
@@ -164,7 +147,7 @@
                     <div class="row"><strong>결재 제목</strong><span class="spacer"></span><span th:text="${approval.title}">설비 구매 요청의 건</span></div>
                     <div class="row"><strong>기안자</strong><span class="spacer"></span><span th:text="${approval.createdBy}">admin</span></div>
                     <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${approval.createdAt}">2025-09-01</span></div>
-                    <div class="row"><strong>결재 상태</strong><span class="spacer"></span><span th:text="${approval.status == 'DRAFT' ? '임시저장' : approval.status == 'SUBMIT' ? '상신' : approval.status == 'PROC' ? '결재중' : approval.status == 'APPROV' ? '승인완료' : approval.status == 'REJECT' ? '반려' : approval.status}">결재중</span></div>
+                    <div class="row"><strong>결재 상태</strong><span class="spacer"></span><span th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}">처리중</span></div>
                   </div>
 
                   <!-- 결재선 정보 -->
@@ -221,9 +204,6 @@
           </section>
         </div>
       </main>
-      <footer>
-        <div class="container">© 전자결재</div>
-      </footer>
     </div>
   </body>
   </html>

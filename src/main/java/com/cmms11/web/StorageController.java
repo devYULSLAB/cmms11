@@ -77,41 +77,41 @@ public class StorageController {
     }
 
     // API 엔드포인트 제공
-    @ResponseBody
-    @GetMapping("/api/domain/storages")
-    public Page<StorageResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/storages")
+    // public Page<StorageResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
+    //     return service.list(q, pageable);
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/domain/storages/{storageId}")
-    public ResponseEntity<StorageResponse> get(@PathVariable String storageId) {
-        return ResponseEntity.ok(service.get(storageId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/storages/{storageId}")
+    // public ResponseEntity<StorageResponse> get(@PathVariable String storageId) {
+    //     return ResponseEntity.ok(service.get(storageId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/storages")
-    public ResponseEntity<StorageResponse> create(@Valid @RequestBody StorageRequest request) {
-        StorageResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/storages")
+    // public ResponseEntity<StorageResponse> create(@Valid @RequestBody StorageRequest request) {
+    //     StorageResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/storages/{storageId}")
-    public ResponseEntity<StorageResponse> update(
-        @PathVariable String storageId,
-        @Valid @RequestBody StorageRequest request
-    ) {
-        StorageResponse response = service.update(storageId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/storages/{storageId}")
+    // public ResponseEntity<StorageResponse> update(
+    //     @PathVariable String storageId,
+    //     @Valid @RequestBody StorageRequest request
+    // ) {
+    //     StorageResponse response = service.update(storageId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/storages/{storageId}")
-    public ResponseEntity<Void> delete(@PathVariable String storageId) {
-        service.delete(storageId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/storages/{storageId}")
+    // public ResponseEntity<Void> delete(@PathVariable String storageId) {
+    //     service.delete(storageId);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     private StorageResponse emptyStorage() {
         return new StorageResponse(

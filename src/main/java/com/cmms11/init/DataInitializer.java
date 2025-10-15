@@ -81,38 +81,54 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void seedAdmin(LocalDateTime now) {
-        MemberId adminId = new MemberId(DEFAULT_COMPANY, "admin");
-        if (memberRepository.existsById(adminId)) {
-            return;
-        }
-        Member admin = new Member();
-        admin.setId(adminId);
-        admin.setName("Administrator");
-        admin.setDeptId("ADMIN");
-        admin.setPasswordHash(passwordEncoder.encode("1234"));
-        admin.setDeleteMark("N");
-        admin.setCreatedAt(now);
-        admin.setCreatedBy(SYSTEM_USER);
-        admin.setUpdatedAt(now);
-        admin.setUpdatedBy(SYSTEM_USER);
-        memberRepository.save(admin);
+        // ⭐ 각 회사별 admin 계정 생성
+        List<String> companyIds = List.of("CHROK", "HPS", "KEPS");
+        
+        companyIds.forEach(companyId -> {
+            MemberId adminId = new MemberId(companyId, "admin");
+            if (memberRepository.existsById(adminId)) {
+                return;
+            }
+            
+            Member admin = new Member();
+            admin.setId(adminId);
+            admin.setName("Administrator");
+            admin.setDeptId("ADMIN");
+            admin.setPasswordHash(passwordEncoder.encode("1234qwer!"));
+            admin.setDeleteMark("N");
+            admin.setCreatedAt(now);
+            admin.setCreatedBy(SYSTEM_USER);
+            admin.setUpdatedAt(now);
+            admin.setUpdatedBy(SYSTEM_USER);
+            memberRepository.save(admin);
+        });
     }
 
     private void seedCompanyHierarchy(LocalDateTime now) {
-        Company company = companyRepository.findById(DEFAULT_COMPANY).orElseGet(Company::new);
-        if (company.getCompanyId() == null) {
-            company.setCompanyId(DEFAULT_COMPANY);
-            company.setCreatedAt(now);
-            company.setCreatedBy(SYSTEM_USER);
-        }
-        company.setName("Sample Company");
-        company.setBizNo("123-45-67890");
-        company.setEmail("sample@company.com");
-        company.setPhone("02-1234-5678");
-        company.setDeleteMark("N");
-        company.setUpdatedAt(now);
-        company.setUpdatedBy(SYSTEM_USER);
-        companyRepository.save(company);
+        // ⭐ 여러 회사 데이터 시드
+        List<SeedCompany> companies = List.of(
+            new SeedCompany("CHROK", "초록에너지", "123-45-67890", "admin@chorokenergy.co.kr", "02-1234-5678"),
+            new SeedCompany("HPS", "한국플랜트서비스", "234-56-78901", "admin@hps.co.kr", "02-1234-5678"),
+            new SeedCompany("KEPS", "한국발전기술", "345-67-89012", "admin@keps.r", "02-1234-5678"),
+            new SeedCompany("OES", "옵티멀에너지서비스", "345-67-89012", "admin@oes.kr", "02-1234-5678")
+        );
+        
+        companies.forEach(seed -> {
+            Company company = companyRepository.findById(seed.companyId()).orElseGet(Company::new);
+            if (company.getCompanyId() == null) {
+                company.setCompanyId(seed.companyId());
+                company.setCreatedAt(now);
+                company.setCreatedBy(SYSTEM_USER);
+            }
+            company.setName(seed.name());
+            company.setBizNo(seed.bizNo());
+            company.setEmail(seed.email());
+            company.setPhone(seed.phone());
+            company.setDeleteMark("N");
+            company.setUpdatedAt(now);
+            company.setUpdatedBy(SYSTEM_USER);
+            companyRepository.save(company);
+        });
 
         List<Site> sites = List.of(
             buildSite(now, "S0001", "Sample site1"),
@@ -241,7 +257,7 @@ public class DataInitializer implements ApplicationRunner {
         seedItems("ASSET", List.of(
             new SeedCodeItem("PLANT", "설비"),
             new SeedCodeItem("OFFIC", "사무용품"),
-            new SeedCodeItem("INVET", "재고자산"),
+            new SeedCodeItem("INVNT", "재고자산"),
             new SeedCodeItem("TOOL", "공기구"),
             new SeedCodeItem("BUILD", "건축물"),
             new SeedCodeItem("ETC", "기타")
@@ -269,7 +285,7 @@ public class DataInitializer implements ApplicationRunner {
 
         seedItems("MODUL", List.of(
             new SeedCodeItem("PLANT", "설비"),
-            new SeedCodeItem("INVET", "재고"),
+            new SeedCodeItem("INVNT", "재고"),
             new SeedCodeItem("INSP", "점검"),
             new SeedCodeItem("WORK", "작업지시"),
             new SeedCodeItem("WPER", "작업허가"),
@@ -308,6 +324,9 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private record SeedRole(String roleId, String name, String note) {
+    }
+    
+    private record SeedCompany(String companyId, String name, String bizNo, String email, String phone) {
     }
 }
 

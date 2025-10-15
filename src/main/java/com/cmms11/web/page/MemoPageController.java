@@ -2,6 +2,7 @@ package com.cmms11.web.page;
 
 import com.cmms11.memo.MemoResponse;
 import com.cmms11.memo.MemoService;
+import com.cmms11.code.CodeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class MemoPageController {
 
     private final MemoService service;
+    private final CodeService codeService;
 
-    public MemoPageController(MemoService service) {
+    public MemoPageController(MemoService service, CodeService codeService) {
         this.service = service;
+        this.codeService = codeService;
     }
 
     @GetMapping("/memo/list")
@@ -47,6 +50,13 @@ public class MemoPageController {
         model.addAttribute("status", status);
         model.addAttribute("stage", stage);
         
+        // 모듈 코드 목록 추가 (참조 모듈용)
+        try {
+            model.addAttribute("moduleList", codeService.listItems("MODUL", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("moduleList", java.util.List.of());
+        }
+        
         return _fragment ? "memo/list :: content" : "memo/list";
     }
 
@@ -69,12 +79,29 @@ public class MemoPageController {
         Model model
     ) {
         boolean isNew = (id == null || id.isEmpty());
-        MemoResponse memo = isNew ? null : service.get(id);
+        MemoResponse memo = isNew ? createEmptyMemo() : service.get(id);
         
         model.addAttribute("memo", memo);
         model.addAttribute("isNew", isNew);
         
+        // 참조 모듈 목록 추가
+        try {
+            model.addAttribute("refModules", codeService.listItems("MODUL", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("refModules", java.util.List.of());
+        }
+        
         return _fragment ? "memo/form :: content" : "memo/form";
+    }
+
+    /**
+     * 빈 Memo 객체 생성 (신규 등록용)
+     */
+    private MemoResponse createEmptyMemo() {
+        return new MemoResponse(
+            null, null, null, null, null, null,
+            null, null, null, null
+        );
     }
 }
 

@@ -389,35 +389,19 @@ export function initNavigation() {
               }
             }
             
-            // FormData를 JSON으로 변환
+            // FormData를 JSON으로 변환 (다중값 지원)
             const formData = new FormData(form);
-            const jsonData = {};
+            const jsonData = this.formDataToJSON(formData);
             
-            // items 배열 처리
-            const items = [];
-            formData.forEach((value, key) => {
-              if (key.startsWith('items[')) {
-                const match = key.match(/items\[(\d+)\]\.(\w+)/);
-                if (match) {
-                  const index = parseInt(match[1]);
-                  const field = match[2];
-                  if (!items[index]) items[index] = {};
-                  items[index][field] = value;
-                }
-              } else {
-                jsonData[key] = value;
-              }
-            });
-            
-            if (items.length > 0) {
-              jsonData.items = items.filter(item => item && Object.keys(item).length > 0);
-            }
+            // CSRF 토큰 추출
+            const csrfToken = this.getCSRFToken();
             
             // API 호출
             const response = await fetch(action, {
               method: method,
               headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
               },
               credentials: 'same-origin',
               body: JSON.stringify(jsonData)
@@ -434,7 +418,7 @@ export function initNavigation() {
             
             const result = await response.json();
             
-            // ⭐ {id} 치환 로직
+            // {id} 치환 로직
             if (redirectTemplate) {
               let redirectUrl = redirectTemplate;
               
@@ -459,6 +443,10 @@ export function initNavigation() {
             }
             
           } catch (err) {
+            if (err && err.name === 'CsrfForbiddenError') {
+              // CSRF 에러는 이미 csrf.js에서 처리 (새로고침/로그인 페이지 이동 등)
+              return;
+            }
             console.error('Form submission error:', err);
             if (window.cmms?.notification) {
               window.cmms.notification.error('요청 처리 중 오류가 발생했습니다: ' + err.message);
@@ -466,6 +454,76 @@ export function initNavigation() {
           }
         });
       });
+    },
+
+    /**
+     * FormData를 JSON으로 변환 (다중값 지원)
+     * @param {FormData} formData - 폼 데이터
+     * @returns {Object} JSON 객체
+     */
+    formDataToJSON: function(formData) {
+      const jsonData = {};
+      const multiValueKeys = new Map(); // 같은 key가 여러 번 나오는 경우 추적
+      
+      // 1단계: 모든 값 수집 (다중값 감지)
+      for (let [key, value] of formData.entries()) {
+        if (!multiValueKeys.has(key)) {
+          multiValueKeys.set(key, []);
+        }
+        multiValueKeys.get(key).push(value);
+      }
+      
+      // 2단계: JSON 변환
+      for (let [key, values] of multiValueKeys.entries()) {
+        // items[0].name 형식 처리
+        if (key.includes('[') && key.includes('].')) {
+          const match = key.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
+          if (match) {
+            const [, arrayName, index, fieldName] = match;
+            if (!jsonData[arrayName]) jsonData[arrayName] = [];
+            if (!jsonData[arrayName][index]) jsonData[arrayName][index] = {};
+            jsonData[arrayName][index][fieldName] = values[0]; // 배열 필드는 단일값
+            continue;
+          }
+        }
+        
+        // 다중값: 배열로 저장
+        if (values.length > 1) {
+          jsonData[key] = values;
+        } else {
+          jsonData[key] = values[0];
+        }
+      }
+      
+      // items 배열 정리 (빈 요소 제거)
+      if (jsonData.items && Array.isArray(jsonData.items)) {
+        jsonData.items = jsonData.items.filter(item => item && Object.keys(item).length > 0);
+      }
+      
+      return jsonData;
+    },
+
+    /**
+     * CSRF 토큰 추출 (통합 방식)
+     * @returns {string} CSRF 토큰
+     */
+    getCSRFToken: function() {
+      // 1. 쿠키에서 추출 시도 (Spring Security 기본 방식)
+      const cookies = document.cookie.split('; ');
+      for (const cookie of cookies) {
+        if (cookie.startsWith('XSRF-TOKEN=')) {
+          return decodeURIComponent(cookie.split('=')[1]);
+        }
+      }
+      
+      // 2. meta 태그에서 추출 시도 (Thymeleaf 템플릿)
+      const metaTag = document.querySelector('meta[name="_csrf"]');
+      if (metaTag) {
+        return metaTag.getAttribute('content') || '';
+      }
+      
+      console.warn('CSRF token not found');
+      return '';
     },
 
     /**

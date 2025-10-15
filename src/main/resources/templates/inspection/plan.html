@@ -10,25 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">점검 계획</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영자</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">점검</a>
-          <span class="sep">/</span>
-          <a th:href="@{/inspection/list}">목록</a>
-          <span class="sep">/</span>
-          <span>계획 수립</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inspection-plan" data-module="inspection-plan">
         <main>

@@ -78,39 +78,39 @@ public class RoleController {
         return "redirect:/domain/role/list";
     }
 
-    @ResponseBody
-    @GetMapping("/api/domain/roles")
-    public Page<RoleResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/roles")
+    // public Page<RoleResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
+    //     return service.list(q, pageable);
+    // }
 
-    @ResponseBody
-    @GetMapping("/api/domain/roles/{roleId}")
-    public ResponseEntity<RoleResponse> get(@PathVariable("roleId") String roleId) {
-        return ResponseEntity.ok(service.get(roleId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/roles/{roleId}")
+    // public ResponseEntity<RoleResponse> get(@PathVariable("roleId") String roleId) {
+    //     return ResponseEntity.ok(service.get(roleId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/roles")
-    public ResponseEntity<RoleResponse> create(@Valid @RequestBody RoleRequest request) {
-        RoleResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/roles")
+    // public ResponseEntity<RoleResponse> create(@Valid @RequestBody RoleRequest request) {
+    //     RoleResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/roles/{roleId}")
-    public ResponseEntity<RoleResponse> update(
-        @PathVariable("roleId") String roleId,
-        @Valid @RequestBody RoleRequest request
-    ) {
-        RoleResponse response = service.update(roleId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/roles/{roleId}")
+    // public ResponseEntity<RoleResponse> update(
+    //     @PathVariable("roleId") String roleId,
+    //     @Valid @RequestBody RoleRequest request
+    // ) {
+    //     RoleResponse response = service.update(roleId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/roles/{roleId}")
-    public ResponseEntity<Void> delete(@PathVariable("roleId") String roleId) {
-        service.delete(roleId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/roles/{roleId}")
+    // public ResponseEntity<Void> delete(@PathVariable("roleId") String roleId) {
+    //     service.delete(roleId);
+    //     return ResponseEntity.noContent().build();
+    // }
 }

@@ -8,6 +8,9 @@
 - 공통 길이: `name VARCHAR(100)`, `note VARCHAR(500)`.
 - 삭제 정책: domain/common/master는 소프트 삭제(`delete_mark`), transaction은 물리 삭제 허용.
 - 제약 원칙: PK 컬럼만 NOT NULL. 비PK 컬럼에는 NOT NULL을 두지 않습니다(애플리케이션에서 검증).
+- **코드값 참조**: `status`, `decision` 등의 코드값은 `DataInitializer.java`의 seed 데이터를 참조하세요.
+  - `code_type="APPRV"`: DRAFT, SUBMT, PROC, APPRV, REJCT, CMPLT
+  - `code_type="DECSN"`: APPRL(결재), AGREE(합의), INFO(참조)
 
 ## 도메인 테이블 (domain)
 요구 명칭으로 테이블을 구성합니다. 모든 비PK 컬럼은 NULL 허용입니다.
@@ -77,6 +80,8 @@ CREATE TABLE member (
   created_by CHAR(10),
   updated_at TIMESTAMP,
   updated_by CHAR(10),
+  last_login_at TIMESTAMP,  -- 마지막 로그인 시간 (2025-10-14 추가)
+  last_login_ip VARCHAR(45),  -- 마지막 로그인 IP 주소 (IPv6 지원, 2025-10-14 추가)
   CONSTRAINT pk_member PRIMARY KEY (company_id, member_id)
 );
 
@@ -135,7 +140,7 @@ CREATE TABLE permission (
   company_id CHAR(5),
   permission_id CHAR(10),  -- [모듈]_[CRUD] 형식 (예: PLANT_C, INSPECTION_R)
   name       VARCHAR(100), -- 허가명 (예: "설비등록", "점검조회")
-  module     VARCHAR(20),  -- 모듈명 (예: PLANT, INSPECTION, WORKORDER)
+  module     VARCHAR(20),  -- 모듈명 (Datainitializer 참조)
   action     CHAR(1),      -- CRUD 액션 (C=생성, R=조회, U=수정, D=삭제)
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
@@ -239,7 +244,6 @@ CREATE TABLE inventory (
   file_group_id CHAR(10),
   note       VARCHAR(500),
   delete_mark CHAR(1) DEFAULT 'N',
-  --status  VARCHAR(10) DEFAULT 'ACTIVE',
   created_at TIMESTAMP,
   created_by CHAR(10),
   updated_at TIMESTAMP,
@@ -265,8 +269,12 @@ CREATE TABLE inspection (
   planned_date  DATE,
   actual_date DATE,
 
-  status  VARCHAR(10),  -- PLN_APPROV(계획자동확정), ACT_DRAFT(실적작성), ACT_SUBMIT(실적결재상신), ACT_PROC(실적결재중), ACT_APPROV(실적승인완료)
-  approval_id CHAR(10), -- approval 테이블 연결 (ACT_SUBMIT 시 생성, refStage="ACT")
+  status  VARCHAR(10),  -- DRAFT, SUBMT, CMPLT, APPRV, REJCT
+  stage   VARCHAR(10),  -- PLN, ACT
+  ref_entity VARCHAR(10), -- 참조 엔티티
+  ref_id     CHAR(10),   -- 참조 ID
+  ref_stage  VARCHAR(10), -- 참조 단계
+  approval_id CHAR(10), -- approval 테이블 연결
   file_group_id CHAR(10),
   note          VARCHAR(500),
   created_at    TIMESTAMP,
@@ -310,8 +318,12 @@ CREATE TABLE work_order (
   actual_cost  DECIMAL(18,2),
   actual_labor DECIMAL(18,2),
 
-  status  VARCHAR(10),  -- PLN_DRAFT(계획작성), PLN_SUBMIT(계획결재상신), PLN_PROC(계획결재중), PLN_APPROV(계획승인), ACT_DRAFT(실적작성), ACT_SUBMIT(실적결재상신), ACT_PROC(실적결재중), ACT_APPROV(실적승인완료)
-  approval_id CHAR(10), -- 최근 approval 테이블 연결 (2단계 결재: 계획 refStage="PLN", 실적 refStage="ACT")
+  status  VARCHAR(10),  -- DRAFT, SUBMT, CMPLT, APPRV, REJCT
+  stage   VARCHAR(10),  -- PLN, ACT
+  ref_entity VARCHAR(10), -- 참조 엔티티
+  ref_id     CHAR(10),   -- 참조 ID
+  ref_stage  VARCHAR(10), -- 참조 단계
+  approval_id CHAR(10), -- approval 테이블 연결
   file_group_id CHAR(10),
   note        VARCHAR(500),
   created_at  TIMESTAMP,
@@ -353,8 +365,12 @@ CREATE TABLE work_permit (
   
   checksheet_json  LONGTEXT,  -- 안전작업 체크리스트 JSON
 
-  status  VARCHAR(10),  -- PLN_DRAFT(계획작성), PLN_SUBMIT(계획결재상신), PLN_PROC(계획결재중), PLN_APPROV(계획승인완료)
-  approval_id CHAR(10), -- approval 테이블 연결 (PLN_SUBMIT 시 생성, refStage=null)
+  status  VARCHAR(10),  -- DRAFT, SUBMT, CMPLT, APPRV, REJCT
+  stage   VARCHAR(10),  -- PLN, ACT
+  ref_entity VARCHAR(10), -- 참조 엔티티
+  ref_id     CHAR(10),   -- 참조 ID
+  ref_stage  VARCHAR(10), -- 참조 단계
+  approval_id CHAR(10), -- approval 테이블 연결
   file_group_id CHAR(10),
   note        VARCHAR(500),
   created_at  TIMESTAMP,
@@ -434,10 +450,13 @@ CREATE TABLE memo (
   memo_id    CHAR(10),
   title      VARCHAR(100),
   content    LONGTEXT,
-  ref_entity VARCHAR(64),
-  ref_id     CHAR(10),
+  plant_id   CHAR(10),     -- 설비 참조
   stage      VARCHAR(10),  -- PLN, ACT (선택적, 업무 모듈 연계 시 사용)
-  status     VARCHAR(10),  -- DRAFT, SUBMIT, PROC, APPROV (선택적, 업무 모듈 연계 시 사용)
+  status     VARCHAR(10),  -- DRAFT, SUBMT, CMPLT, APPRV, REJCT - code_type="APPRV"
+  approval_id CHAR(10),    -- 결재 연결
+  ref_entity VARCHAR(64),  -- 참조 엔티티 (연결된 모듈)
+  ref_id     CHAR(10),     -- 참조 ID
+  ref_stage  VARCHAR(10),  -- 참조 단계 (PLN/ACT)
   file_group_id CHAR(10),
   created_at TIMESTAMP,
   created_by CHAR(10),
@@ -450,10 +469,10 @@ CREATE TABLE approval (
   company_id  CHAR(5),
   approval_id CHAR(10),
   title       VARCHAR(100),
-  status  VARCHAR(10),  -- DRAFT(임시저장), SUBMIT(결재상신), PROC(결재진행중), APPROV(최종승인), REJECT(반려)
+  status  VARCHAR(10),  -- DRAFT, SUBMT, PROC, APPRV, REJCT
   ref_entity  VARCHAR(64), -- 원본 모듈 (INSP, WORK, WPER)
   ref_id      CHAR(10),    -- 원본 문서 ID
-  ref_stage   VARCHAR(10), -- 단계 (null=단일결재, PLAN=계획, ACT=실적) - WorkOrder 2단계 결재용
+  ref_stage   VARCHAR(10), -- 단계 (null=WorkPermit, PLN=계획, ACT=실적)
   content     LONGTEXT,    -- 결재 본문 (HTML)
   file_group_id CHAR(10),
   submitted_at TIMESTAMP,  -- 상신 일시
@@ -472,8 +491,8 @@ CREATE TABLE approval_step (
   approval_id CHAR(10),
   step_no     INTEGER,
   member_id   CHAR(5),
-  decision    VARCHAR(10),  -- 결재 역할: APPROVAL(결재), AGREE(합의), INFORM(통보)
-  result      VARCHAR(10),  -- 결재 결과: APPROVE(승인), REJECT(반려), PENDING(대기) 또는 NULL
+  decision    VARCHAR(10),  -- 결재 역할: APPRL(결재), AGREE(합의), INFO(참조) - code_type="DECSN"
+  result      VARCHAR(10),  -- 결재 결과: APPRV(승인), REJCT(반려), NULL(대기) - code_type="APPRV"
   decided_at  TIMESTAMP,    -- 결재 완료 일시
   comment     VARCHAR(500), -- 결재 의견
   CONSTRAINT pk_approval_step PRIMARY KEY (company_id, approval_id, step_no)
@@ -485,7 +504,7 @@ CREATE TABLE file_group (
   ref_entity    VARCHAR(64), 
   ref_id        CHAR(10),
   note          VARCHAR(500),
-  --delete_mark   CHAR(1) DEFAULT 'N',
+  delete_mark   CHAR(1) DEFAULT 'N',  -- 소프트 삭제 (물리 파일은 원위치 유지, 90일 후 배치 삭제)
   created_at    TIMESTAMP,
   created_by    CHAR(10),
   updated_at    TIMESTAMP,
@@ -507,7 +526,7 @@ CREATE TABLE file_item (
   checksum_sha256 CHAR(64),
   storage_path   VARCHAR(255),   
   note           VARCHAR(500),
-  --delete_mark    CHAR(1) DEFAULT 'N',
+  delete_mark    CHAR(1) DEFAULT 'N',  -- 소프트 삭제 (물리 파일은 원위치 유지, 90일 후 배치 삭제)
   created_at     TIMESTAMP,
   created_by     CHAR(10),
   updated_at     TIMESTAMP,
@@ -532,75 +551,133 @@ CREATE TABLE sequence (
 
 ## 상태값 표준화 요약
 
-### 상태 규칙
+### 기본 원칙
 
-**업무 모듈 상태**: `{PLN|ACT}_{DRAFT|SUBMIT|PROC|APPROV}`
-**결재 모듈 상태**: `{DRAFT|SUBMIT|PROC|APPROV|REJECT}`
+**업무 모듈 (Inspection, WorkOrder, WorkPermit)**은 `stage`와 `status` 필드를 **분리하여 관리**합니다.
+
+**필드 구조**:
+- `stage` VARCHAR(10): 업무 단계 (`PLN` = 계획, `ACT` = 실적)
+- `status` VARCHAR(10): 작업 상태 (`DRAFT`, `SUBMT`, `CMPLT`, `APPRV`, `REJCT`)
+
+**상태 조합 표기법**: 문서에서는 이해를 돕기 위해 `stage+status` 형식으로 표기합니다.
+- 예: `PLN+DRAFT` = `stage="PLN", status="DRAFT"`
+- 예: `ACT+APPRV` = `stage="ACT", status="APPRV"`
+
+---
 
 ### Approval 모듈
 
-| 상태 | 설명 |
-|------|------|
-| DRAFT | 임시저장 (결재선 미입력, 수정/삭제 가능) |
-| SUBMIT | 결재 상신 ⭐ (approval/form.html에서 결재선 입력 후 전환) |
-| PROC | 다단계 결재 진행 중 (향후 확장용) |
-| APPROV | 최종 승인 완료 |
-| REJECT | 반려 (원본 모듈 *_DRAFT로 복원) |
+**필드**: `status` (stage 없음)
 
-**ref_stage 값**:
-- `null`: 단일 결재 (Inspection, WorkPermit)
-- `"PLN"`: 계획 단계 결재 (WorkOrder)
-- `"ACT"`: 실적 단계 결재 (WorkOrder)
+| status | 설명 |
+|--------|------|
+| DRAFT | 임시저장 (결재선 미입력, 수정/삭제 가능) |
+| SUBMT | 결재 상신 ⭐ (approval/form.html에서 결재선 입력 후 전환) |
+| PROC | 다단계 결재 진행 중 (향후 확장용) |
+| APPRV | 최종 승인 완료 |
+| REJCT | 반려 (원본 모듈 status를 DRAFT로 복원) |
+
+**ref_stage 값** (Approval 테이블):
+- `null`: 단일 결재 (WorkPermit만 해당)
+- `"PLN"`: 계획 단계 결재 (Inspection 계획, WorkOrder 계획)
+- `"ACT"`: 실적 단계 결재 (Inspection 실적, WorkOrder 실적)
+
+---
 
 ### Inspection 모듈
 
-| 상태 | 설명 |
-|------|------|
-| PLN_APPROV | 계획 자동 확정 (결재 없음) |
-| ACT_DRAFT | 실적 작성 중 (수정 가능) |
-| ACT_SUBMIT | 실적 결재 상신 (수정 차단) |
-| ACT_PROC | 실적 결재 진행 중 (향후 확장용) |
-| ACT_APPROV | 실적 승인 완료 (최종 완료) |
+**필드**: `stage` + `status`
 
-**결재 흐름**: 
-- 계획: PLN_APPROV (자동 확정)
-- 실적: PLN_APPROV → **[실적 입력 버튼]** → ACT_DRAFT → ACT_SUBMIT → ACT_APPROV
+#### 계획 단계 (`stage="PLN"`)
+
+| stage+status | 설명 |
+|--------------|------|
+| PLN+DRAFT | 계획 작성 중 (수정 가능) |
+| PLN+SUBMT | 계획 결재 상신 (수정 차단) |
+| PLN+CMPLT | 계획 자체 확정 (결재 없이 확정) |
+| PLN+APPRV | 계획 결재 승인 완료 |
+
+**계획 흐름**:
+1. **결재 방식**: PLN+DRAFT → PLN+SUBMT → (결재) → PLN+APPRV
+2. **자체 확정**: PLN+DRAFT → (자체 확정) → PLN+CMPLT
+
+#### 실적 단계 (`stage="ACT"`)
+
+| stage+status | 설명 |
+|--------------|------|
+| ACT+DRAFT | 실적 작성 중 (수정 가능) |
+| ACT+SUBMT | 실적 결재 상신 (수정 차단) |
+| ACT+CMPLT | 실적 자체 확정 (결재 없이 확정, 최종 완료) |
+| ACT+APPRV | 실적 결재 승인 완료 (최종 완료) |
+
+**실적 흐름**:
+1. **계획 완료 후** → **[실적 입력 버튼]** → ACT+DRAFT (단계 전환)
+2. **결재 방식**: ACT+DRAFT → ACT+SUBMT → (결재) → ACT+APPRV
+3. **자체 확정**: ACT+DRAFT → (자체 확정) → ACT+CMPLT
+
+**실적 입력 버튼**: `POST /inspection/{id}/ready-actual` 호출 → stage="ACT", status="DRAFT"
+
+---
 
 ### WorkOrder 모듈 (2단계 결재)
 
-| 상태 | 설명 |
-|------|------|
-| PLN_DRAFT | 계획 작성 중 (수정 가능) |
-| PLN_SUBMIT | 계획 결재 상신 (수정 차단, ref_stage="PLN") |
-| PLN_PROC | 계획 결재 진행 중 (향후 확장용) |
-| PLN_APPROV | 계획 승인 완료 (실적 입력 가능) |
-| ACT_DRAFT | 실적 작성 중 (수정 가능) |
-| ACT_SUBMIT | 실적 결재 상신 (수정 차단, ref_stage="ACT") |
-| ACT_PROC | 실적 결재 진행 중 (향후 확장용) |
-| ACT_APPROV | 실적 승인 완료 (최종 완료) |
+**필드**: `stage` + `status`
 
-**결재 흐름**: 
-- 계획: PLN_DRAFT → PLN_SUBMIT → PLN_APPROV
-- 실적: PLN_APPROV → **[실적 입력 버튼]** → ACT_DRAFT → ACT_SUBMIT → ACT_APPROV
+#### 계획 단계 (`stage="PLN"`)
 
-**실적 입력 버튼**: detail.html에서 `POST /workorder/{id}/ready-actual` 호출 → PLN_APPROV → ACT_DRAFT 전환 → form으로 리다이렉트
+| stage+status | 설명 |
+|--------------|------|
+| PLN+DRAFT | 계획 작성 중 (수정 가능) |
+| PLN+SUBMT | 계획 결재 상신 (수정 차단) |
+| PLN+CMPLT | 계획 자체 확정 (결재 없이 확정) |
+| PLN+APPRV | 계획 결재 승인 완료 |
+
+**계획 흐름**:
+1. **결재 방식**: PLN+DRAFT → PLN+SUBMT → (결재) → PLN+APPRV
+2. **자체 확정**: PLN+DRAFT → (자체 확정) → PLN+CMPLT
+
+#### 실적 단계 (`stage="ACT"`)
+
+| stage+status | 설명 |
+|--------------|------|
+| ACT+DRAFT | 실적 작성 중 (수정 가능) |
+| ACT+SUBMT | 실적 결재 상신 (수정 차단) |
+| ACT+CMPLT | 실적 자체 확정 (결재 없이 확정, 최종 완료) |
+| ACT+APPRV | 실적 결재 승인 완료 (최종 완료) |
+
+**실적 흐름**:
+1. **계획 완료 후** → **[실적 입력 버튼]** → ACT+DRAFT (단계 전환)
+2. **결재 방식**: ACT+DRAFT → ACT+SUBMT → (결재) → ACT+APPRV
+3. **자체 확정**: ACT+DRAFT → (자체 확정) → ACT+CMPLT
+
+**실적 입력 버튼**: `POST /workorder/{id}/ready-actual` 호출 → stage="ACT", status="DRAFT"
+
+---
 
 ### WorkPermit 모듈
 
-| 상태 | 설명 |
-|------|------|
-| PLN_DRAFT | 계획 작성 중 (수정 가능) |
-| PLN_SUBMIT | 계획 결재 상신 (수정 차단, ref_stage=null) |
-| PLN_PROC | 계획 결재 진행 중 (향후 확장용) |
-| PLN_APPROV | 계획 승인 완료 (최종 완료) |
+**필드**: `stage` + `status` (단일 단계: `stage="PLN"` 고정)
 
-**결재 흐름**: PLN_DRAFT → PLN_SUBMIT → PLN_APPROV
+| stage+status | 설명 |
+|--------------|------|
+| PLN+DRAFT | 계획 작성 중 (수정 가능) |
+| PLN+SUBMT | 계획 결재 상신 (수정 차단) |
+| PLN+CMPLT | 계획 자체 확정 (결재 없이 확정, 최종 완료) |
+| PLN+APPRV | 계획 결재 승인 완료 (최종 완료) |
+
+**흐름**:
+1. **결재 방식**: PLN+DRAFT → PLN+SUBMT → (결재) → PLN+APPRV
+2. **자체 확정**: PLN+DRAFT → (자체 확정) → PLN+CMPLT
+
+---
 
 ### 반려 시 상태 복원
 
-Approval.status가 REJECT로 전환되면 원본 모듈 상태를 DRAFT로 복원하여 수정 후 재상신 가능하게 합니다.
+Approval.status가 `REJCT`로 전환되면 원본 모듈의 **status만 `DRAFT`로 복원**합니다 (stage는 유지).
 
 | 원본 모듈 상태 | 반려 후 복원 상태 |
-|-------------|----------------|
-| *_SUBMIT | *_DRAFT |
-| *_PROC | *_DRAFT |
+|---------------|-----------------|
+| stage=PLN, status=SUBMT | stage=PLN, status=DRAFT |
+| stage=ACT, status=SUBMT | stage=ACT, status=DRAFT |
+
+**결과**: 사용자는 수정 후 재상신 가능

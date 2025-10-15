@@ -37,7 +37,8 @@ public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPerm
         "and (:jobId is null or :jobId = '' or w.jobId = :jobId) " +
         "and (:status is null or :status = '' or w.status = :status) " +
         "and (:stage is null or :stage = '' or w.stage = :stage) " +
-        "and (:plannedDateFrom is null or w.plannedDate >= :plannedDateFrom)"
+        "and (:plannedDateFrom is null or w.plannedDate >= :plannedDateFrom) " +
+        "and (:plannedDateTo is null or w.plannedDate <= :plannedDateTo)"
     )
     Page<WorkPermit> findByFilters(
         @Param("companyId") String companyId,
@@ -47,6 +48,7 @@ public interface WorkPermitRepository extends JpaRepository<WorkPermit, WorkPerm
         @Param("status") String status,
         @Param("stage") String stage,
         @Param("plannedDateFrom") java.time.LocalDate plannedDateFrom,
+        @Param("plannedDateTo") java.time.LocalDate plannedDateTo,
         Pageable pageable
     );
 

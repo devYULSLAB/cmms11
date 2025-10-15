@@ -29,27 +29,9 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar" th:unless="${param.popup != null}">
-        <div class="appbar-inner">
-          <div class="brand">점검 관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs" th:unless="${param.popup != null}">
-        <div class="container">
-          <a th:href="@{#}" href="#">점검</a>
-          <span class="sep">/</span>
-          <a th:href="@{/inspection/list}">점검</a>
-          <span class="sep">/</span>
-          <span>상세</span>
-        </div>
-      </nav>
       <!-- Main Content -->
-      <section data-slot-root th:fragment="content" data-page="inspection-detail" data-module="inspection-detail">
+      <section data-slot-root th:fragment="content" data-page="inspection-detail" data-module="inspection-detail"
+               th:attr="data-file-group-id=${inspection.fileGroupId},data-inspection-id=${inspection.inspectionId},data-print-enabled=true">
         <main>
         <div class="container">
           <section class="card">
@@ -61,14 +43,13 @@
                   <a class="btn" th:href="@{/inspection/list}">목록</a>
                   <a class="btn" href="#" data-print-btn>인쇄</a>
                   
-                  <!-- 수정: status=DRAFT일 때만 활성화 -->
+                  <!-- 수정: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
                   <a class="btn" 
                      th:classappend="${inspection.status == 'DRAFT' ? 'primary' : 'disabled'}"
                      th:href="${inspection.status == 'DRAFT' ? '/inspection/form?id=' + inspection.inspectionId : '#'}"
                      th:onclick="${inspection.status != 'DRAFT' ? 'return false;' : ''}">
                     수정
-                  </a>
-                  
+                  </a>                  
                   <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
                   <button class="btn" 
                           th:classappend="${inspection.status == 'DRAFT' ? 'primary' : 'disabled'}"
@@ -77,9 +58,9 @@
                     결재 상신
                   </button>
                   
-                  <!-- 실적 입력: stage=PLN AND status=APPRV일 때만 활성화 -->
+                  <!-- 실적 입력: stage=PLN AND status=APPRV/CMPLT일 때만 활성화 -->
                   <a class="btn" 
-                     th:classappend="${inspection.stage == 'PLN' and inspection.status == 'APPRV' ? 'success' : 'disabled'}"
+                     th:classappend="${inspection.stage == 'PLN' and inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? 'success' : 'disabled'}"
                      th:href="${inspection.stage == 'PLN' and inspection.status == 'APPRV' ? '/inspection/form?stage=ACT&amp;refEntity=INSP&amp;refId=' + inspection.inspectionId + '&amp;refStage=PLN' : '#'}"
                      th:onclick="${inspection.stage != 'PLN' or inspection.status != 'APPRV' ? 'return false;' : ''}">
                     실적 입력
@@ -100,30 +81,56 @@
                    style="margin-bottom: 20px; padding: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"
                    th:text="${errorMessage}">
               </div>
-              
+              <!-- 기본정보 -->
               <div class="section">
                 <div class="section-title">기본정보</div>
                 <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">점검 번호</div><div th:text="${inspection.inspectionId}">I250101001</div></div>
-                  <div class="stack col-span-9"><div class="label">점검명</div><div th:text="${inspection.name}">설비 A 정기점검</div></div>
-                  <div class="stack col-span-3"><div class="label">설비 번호</div><div th:text="${inspection.plantId ?: '-'}">EQP000123</div></div>
-                  <div class="stack col-span-3"><div class="label">작업 유형</div><div th:text="${inspection.jobId ?: '-'}">INSP</div></div>
-                  <div class="stack col-span-3"><div class="label">Site</div><div th:text="${inspection.siteId ?: '-'}">SEOUL</div></div>
-                  <div class="stack col-span-3"><div class="label">관리부서</div><div th:text="${inspection.deptId ?: '-'}">설비팀</div></div>
+                  <div class="stack col-span-3">
+                    <div class="label">점검 번호</div>
+                    <div th:text="${inspection.inspectionId}">I250101001</div>
+                  </div>
+                  <div class="stack col-span-6">
+                    <div class="label">점검명</div>
+                    <div th:text="${inspection.name}">설비 A 정기점검</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">계획/실적</div>
+                    <div th:text="${inspection.stage == 'PLN' ? '계획' : inspection.stage == 'ACT' ? '실적' : inspection.stage}">계획</div>
+                  </div>
+                
+                  <div class="stack col-span-3">
+                    <div class="label">설비 번호</div>
+                    <div th:text="${inspection.plantId ?: '-'}">EQP000123</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">작업 유형</div>
+                    <div th:text="${inspection.jobId ?: '-'}">INSP</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">Site</div>
+                    <div th:text="${inspection.siteId ?: '-'}">S0001</div>
+                  </div>
+                  <div class="stack col-span-3">
+                    <div class="label">관리부서</div>
+                    <div th:text="${inspection.deptId ?: '-'}">D0001</div>
+                  </div>
                 </div>
               </div>
 
               <div class="section">
                 <div class="section-title">일정 / 담당</div>
-                <div class="grid cols-12">
-                  <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${inspection.memberId ?: '-'}">M0001</div></div>
+                <div class="grid cols-12">                  
                   <div class="stack col-span-3"><div class="label">계획일</div><div th:text="${inspection.plannedDate ?: '-'}">2025-01-10</div></div>
-                  <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${inspection.actualDate ?: '-'}">2025-01-10</div></div>
-                  <div class="stack col-span-3"><div class="label">상태</div><div>
-                    <span class="badge" 
-                          th:text="${inspection.status == 'PLN_APPROV' ? '계획 확정' : inspection.status == 'ACT_DRAFT' ? '실적 작성' : inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}" 
-                          th:classappend="${inspection.status == 'ACT_APPROV' ? 'success' : inspection.status == 'ACT_SUBMIT' ? 'info' : inspection.status == 'PLN_APPROV' ? 'warning' : ''}">계획 확정</span>
-                  </div></div>
+                  <div class="stack col-span-3"><div class="label">실적일</div><div th:text="${inspection.actualDate ?: '-'}">2025-01-10</div></div>  
+                  <div class="stack col-span-3"><div class="label">담당자</div><div th:text="${inspection.memberId ?: '-'}">M0001</div></div>
+                  <div class="stack col-span-3">
+                    <div class="label">상태</div>
+                    <div>
+                      <span class="badge" 
+                            th:text="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? '승인' : inspection.status == 'PROC' ? '진행중' : inspection.status == 'SUBMT' ? '상신' : inspection.status == 'DRAFT' ? '준비중' : '기타'}" 
+                            th:classappend="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? 'success' : inspection.status == 'PROC' ? 'info' : inspection.status == 'REJCT' ? 'danger' : ''}">준비중</span>
+                    </div>
+                  </div>
                   <div class="stack col-span-12"><div class="label">비고</div><div class="muted" th:text="${inspection.note ?: '-'}">-</div></div>
                 </div>
               </div>
@@ -138,21 +145,7 @@
                       <a th:href="@{/approval/detail/{id}(id=${inspection.approvalId})}" 
                          th:text="${inspection.approvalId}">A250101001</a>
                     </div>
-                  </div>
-                  <div class="stack col-span-8">
-                    <div class="label">액션</div>
-                    <div>
-                      <a class="btn btn-sm" 
-                         th:href="@{/approval/edit/{id}(id=${inspection.approvalId})}"
-                         th:if="${inspection.status == 'SUBMIT'}">
-                        결재 수정
-                      </a>
-                      <a class="btn btn-sm" 
-                         th:href="@{/approval/detail/{id}(id=${inspection.approvalId})}">
-                        결재 확인
-                      </a>
-                    </div>
-                  </div>
+                  </div>                  
                 </div>
               </div>
 
@@ -226,9 +219,9 @@
                         <th>상태</th>
                         <td>
                           <span class="badge"
-                                th:classappend="${inspection.status == 'ACT_APPROV' ? 'success' : inspection.status == 'ACT_SUBMIT' ? 'info' : inspection.status == 'PLN_APPROV' ? 'warning' : ''}"
-                                th:text="${inspection.status == 'PLN_APPROV' ? '계획 확정' : inspection.status == 'ACT_DRAFT' ? '실적 작성' : inspection.status == 'ACT_SUBMIT' ? '실적 결재상신' : inspection.status == 'ACT_APPROV' ? '실적 승인완료' : inspection.status}">
-                            계획 확정
+                                th:classappend="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? 'success' : inspection.status == 'PROC' ? 'info' : inspection.status == 'REJCT' ? 'danger' : ''}"
+                                th:text="${inspection.status == 'APPRV' or inspection.status == 'CMPLT' ? '승인' : inspection.status == 'PROC' ? '진행중' : inspection.status == 'SUBMT' ? '상신' : inspection.status == 'DRAFT' ? '준비중' : '기타'}">
+                            준비중
                           </span>
                         </td>
                       </tr>

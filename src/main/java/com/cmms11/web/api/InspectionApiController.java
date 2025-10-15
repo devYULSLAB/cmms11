@@ -1,6 +1,7 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
+import com.cmms11.inspection.InspectionApprovalFacade;
 import com.cmms11.inspection.InspectionItem;
 import com.cmms11.inspection.InspectionRequest;
 import com.cmms11.inspection.InspectionResponse;
@@ -32,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class InspectionApiController {
 
     private final InspectionService service;
+    private final InspectionApprovalFacade approvalFacade;
 
-    public InspectionApiController(InspectionService service) {
+    public InspectionApiController(InspectionService service, InspectionApprovalFacade approvalFacade) {
         this.service = service;
+        this.approvalFacade = approvalFacade;
     }
 
     /**
@@ -110,7 +113,7 @@ public class InspectionApiController {
      */
     @PostMapping("/{inspectionId}/submit-plan-approval")
     public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String inspectionId) {
-        ApprovalResponse approval = service.submitPlanApproval(inspectionId);
+        ApprovalResponse approval = approvalFacade.submitPlanApproval(inspectionId);
         return ResponseEntity.ok(approval);
     }
 
@@ -128,7 +131,7 @@ public class InspectionApiController {
      */
     @PostMapping("/{inspectionId}/prepare-actual")
     public ResponseEntity<InspectionResponse> prepareActual(@PathVariable String inspectionId) {
-        service.prepareActualStage(inspectionId);
+        approvalFacade.prepareActualStage(inspectionId);
         InspectionResponse response = service.get(inspectionId);
         return ResponseEntity.ok(response);
     }
@@ -138,7 +141,7 @@ public class InspectionApiController {
      */
     @PostMapping("/{inspectionId}/submit-actual-approval")
     public ResponseEntity<ApprovalResponse> submitActualApproval(@PathVariable String inspectionId) {
-        ApprovalResponse approval = service.submitActualApproval(inspectionId);
+        ApprovalResponse approval = approvalFacade.submitActualApproval(inspectionId);
         return ResponseEntity.ok(approval);
     }
 }

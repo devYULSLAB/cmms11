@@ -11,22 +11,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">시스템관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">작성</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">시스템관리</a>
-          <span class="sep">/</span>
-          <span>결재 작성</span>
-        </div>
-      </nav>
       <main>
         <div class="container">
           <section data-slot-root th:fragment="content" data-page="approval-form" data-module="approval-form">
@@ -190,9 +174,6 @@
           </form>
         </div>
       </main>
-      <footer>
-        <div class="container">© 전자결재</div>
-      </footer>
     </div>
     
     <!-- 인라인 스크립트 제거됨 - approval.js로 이관 -->

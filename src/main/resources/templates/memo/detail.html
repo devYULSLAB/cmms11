@@ -11,25 +11,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">문서/게시</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영팀</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">문서/게시</a>
-          <span class="sep">/</span>
-          <a th:href="@{/memo/list}">게시/메모</a>
-          <span class="sep">/</span>
-          <span>상세</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="memo-detail" data-module="memo-detail">
         <main>
@@ -91,37 +72,52 @@
                   <div class="doc">
                     <header class="doc-header">
                       <div class="doc-title">게시/메모</div>
-                      <div class="doc-meta">
+                      <div class="meta">
                         <div class="meta-row">출력일시: <span id="print-date">-</span></div>
                         <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                       </div>
                     </header>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                      <tr>
-                        <th style="width: 15%; padding: 8px; border: 1px solid #999; background: #f4f4f4;">제목</th>
-                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.title}">설비 점검 주기 변경 안내</td>
-                      </tr>
-                      <tr th:if="${memo.refEntity}">
-                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">참조</th>
-                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.refEntity} + ' / ' + ${memo.refId}">work_order / O250101001</td>
-                      </tr>
-                      <tr>
-                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">작성자</th>
-                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.createdBy}">관리자</td>
-                      </tr>
-                      <tr>
-                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4;">작성일</th>
-                        <td style="padding: 8px; border: 1px solid #999;" th:text="${memo.createdAt}">2025-01-05</td>
-                      </tr>
-                      <tr>
-                        <th style="padding: 8px; border: 1px solid #999; background: #f4f4f4; vertical-align: top;">내용</th>
-                        <td style="padding: 12px; border: 1px solid #999;">
-                          <div class="content-body" th:utext="${memo.content}" style="min-height: 100px; line-height: 1.6;">
-                            <p>설비 점검 주기가 월 1회에서 2주 1회로 변경됩니다.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
+                    
+                    <div class="doc-body">
+                      <div class="section">
+                        <div class="section-title">기본 정보</div>
+                        <table>
+                          <tr>
+                            <th>제목</th>
+                            <td colspan="3" th:text="${memo.title}">설비 점검 주기 변경 안내</td>
+                          </tr>
+                          <tr th:if="${memo.refEntity}">
+                            <th>참조</th>
+                            <td th:text="${memo.refEntity}">WORK</td>
+                            <th>참조 ID</th>
+                            <td th:text="${memo.refId}">O250101001</td>
+                          </tr>
+                          <tr>
+                            <th>작성자</th>
+                            <td th:text="${memo.createdBy}">관리자</td>
+                            <th>작성일</th>
+                            <td th:text="${memo.createdAt}">2025-01-05</td>
+                          </tr>
+                        </table>
+                      </div>
+
+                      <div class="section">
+                        <div class="section-title">내용</div>
+                        <div class="content-body" th:utext="${memo.content}">
+                          <p>설비 점검 주기가 월 1회에서 2주 1회로 변경됩니다.</p>
+                        </div>
+                      </div>
+
+                      <div class="section">
+                        <div class="section-title">첨부 파일</div>
+                        <div th:if="${memo.fileGroupId}" class="notice">
+                          첨부 파일 있음 (파일 그룹 ID: <span th:text="${memo.fileGroupId}">-</span>)
+                        </div>
+                        <div th:unless="${memo.fileGroupId}" class="notice">
+                          첨부된 파일이 없습니다.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -129,9 +125,6 @@
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 문서/게시</div>
-      </footer>
     </div>
     
     <!-- 인라인 스크립트 제거됨 - memo.js로 이관 -->

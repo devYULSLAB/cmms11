@@ -25,16 +25,34 @@ public class MemberUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // ⭐ 입력값 기본 검증
+        if (username == null || username.trim().isEmpty()) {
+            throw new UsernameNotFoundException("Invalid credentials");
+        }
+        
         String companyId = DEFAULT_COMPANY;
         String memberId = username;
-        if (username != null && username.contains(":")) {
+        
+        if (username.contains(":")) {
             String[] parts = username.split(":", 2);
-            companyId = parts[0];
-            memberId = parts[1];
+            
+            // ⭐ 검증: 정확히 2개 부분이어야 하고 비어있지 않아야 함
+            if (parts.length != 2 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
+                throw new UsernameNotFoundException("Invalid credentials");
+            }
+            
+            companyId = parts[0].trim();
+            memberId = parts[1].trim();
+            
+            // ⭐ 검증: memberId에 추가 콜론 차단 (다중 : 우회 방지)
+            if (memberId.contains(":")) {
+                throw new UsernameNotFoundException("Invalid credentials");
+            }
         }
 
+        // DB 조회 (통일된 에러 메시지)
         Member m = memberRepository.findByIdCompanyIdAndIdMemberId(companyId, memberId)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
 
         boolean enabled = (m.getDeleteMark() == null || !"Y".equalsIgnoreCase(m.getDeleteMark()));
         List<GrantedAuthority> auths = new ArrayList<>();

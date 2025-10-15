@@ -10,23 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">기본정보</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영중</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">기본정보</a>
-          <span class="sep">/</span>
-          <span>사이트</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="domain-site-list" data-module="domain-site-list">
         <main>
@@ -75,11 +58,11 @@
                       <td th:text="${site.companyId}">-</td>
                       <td th:text="${site.address}">-</td>
                       <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/domain/site/edit/{id}(id=${site.siteId})}">수정</a>
-                        <button class="btn btn-sm danger" 
-                                th:data-delete-url="@{/domain/site/delete/{id}(id=${site.siteId})}"
-                                th:data-redirect="@{/domain/site/list}"
-                                data-confirm="정말로 삭제하시겠습니까?">삭제</button>
+                        <a class="btn btn-xs" th:href="@{/domain/site/form(id=${site.siteId})}">수정</a>
+                        <form th:action="@{/domain/site/delete/{id}(id=${site.siteId})}" method="post" style="display:inline;">
+                          <button type="submit" class="btn btn-xs danger" 
+                                  onclick="return confirm('정말로 삭제하시겠습니까?')">삭제</button>
+                        </form>
                       </td>
                     </tr>
                   </tbody>
@@ -97,9 +80,6 @@
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 기본정보</div>
-      </footer>
     </div>
     
   </body>

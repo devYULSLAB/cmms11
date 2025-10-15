@@ -10,23 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">재고 마감</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영자</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{#}" href="#">재고거래</a>
-          <span class="sep">/</span>
-          <span>마감</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="inventoryTx-closing" data-module="inventoryTx-closing">
         <main>
@@ -126,9 +109,6 @@
         
         <!-- 인라인 스크립트는 inventoryTx.js로 이관됨 -->
       </section>
-      <footer>
-        <div class="container">© 재고 마감</div>
-      </footer>
     </div>
     
   </body>

@@ -1,4 +1,4 @@
-package com.cmms11.web;
+package com.cmms11.web.api;
 
 import com.cmms11.domain.member.MemberAuthResponse;
 import com.cmms11.domain.member.MemberAuthService;
@@ -13,21 +13,33 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
 
+/**
+ * 이름: AuthApiController
+ * 작성자: codex
+ * 작성일: 2025-10-13
+ * 프로그램 개요: 인증 관련 REST API 제공
+ */
 @RestController
 @RequestMapping("/api/auth")
-public class AuthController {
+public class AuthApiController {
 
     private final MemberAuthService memberAuthService;
 
-    public AuthController(MemberAuthService memberAuthService) {
+    public AuthApiController(MemberAuthService memberAuthService) {
         this.memberAuthService = memberAuthService;
     }
 
+    /**
+     * 현재 인증된 사용자 정보 조회
+     */
     @GetMapping("/me")
     public MemberAuthResponse me(Authentication authentication) {
         return memberAuthService.getAuthenticatedMember(authentication);
     }
 
+    /**
+     * 로그아웃 처리
+     */
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(
         Authentication authentication,
@@ -59,6 +71,9 @@ public class AuthController {
         }
     }
     
+    /**
+     * 클라이언트 IP 주소 추출 (프록시 고려)
+     */
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {

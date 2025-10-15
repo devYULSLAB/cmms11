@@ -2,7 +2,7 @@
 
 **Controller 분리 · SPA Form · 결재/권한 · 회사선택 로그인 · 번호규칙 · 파일 API · 초기데이터 통합 표준**
 
-**Final++++++++ Revision 2025-10-13**
+**Final++++++++ Revision 2025-10-15**
 
 ---
 
@@ -30,8 +30,10 @@
 
 ## 1. 개요
 
-- **Page / API Controller 분리**
-- **업무모듈** → SPA(data-form-manager), **마스터** → POST
+- **Page / API Controller 완전 분리**
+- **업무모듈 + 마스터 데이터** → PageController + ApiController 구조
+- **도메인(외부 참조)** → 단일 Controller + 선택적 GET API
+- **도메인(내부 관리)** → 단일 Controller + POST만
 - **회사 선택 로그인**(companyId:username)
 - **결재 Stage/Status 표준화**
 - **파일 업로드 REST API 통합**
@@ -46,19 +48,97 @@ cmms11/
 ├─ web/page, web/api
 ├─ domain, plant, inventory
 ├─ inspection, workorder, workpermit
-├─ approval, memo, file
+│   ├─ *ApprovalHandler (결재 콜백 핸들러)
+│   └─ *ApprovalFacade (결재 상신 Facade)
+├─ approval
+│   └─ handler/ApprovalRefHandler (인터페이스)
+├─ memo, file
 ```
 
 - 모든 테이블에 `company_id CHAR(5)` 선행.
+- **순환 참조 제거**: Handler 패턴 + Facade 패턴 적용 (2025-10-13)
 
 ---
 
 ## 3. 로그인 및 인증
 
+### 기본 흐름
+
 - 로그인 폼에서 **회사 선택** + ID/PW 입력
 - `username = C0001:admin` 형식
 - `MemberUserDetailsService`가 분리(split(':')) → DB 조회
 - 성공 시 `sessionInfo` 생성 (companyId, memberId 등)
+
+### 회사 목록 동적 로딩
+
+**LoginController** (`LoginController.java`):
+- `GET /auth/login.html` 요청 시 활성 회사 목록 조회
+- `Company` 테이블에서 `delete_mark='N'` 조건으로 필터링
+- companyId 오름차순 정렬하여 모델에 추가
+
+**login.html** (Thymeleaf 동적 렌더링):
+```html
+<select id="company_id" class="input" required>
+  <option value="">회사를 선택하세요</option>
+  <option th:each="company : ${companies}" 
+          th:value="${company.companyId}"
+          th:text="${company.name + ' (' + company.companyId + ')'}">
+  </option>
+</select>
+```
+
+**DataInitializer** (초기 데이터):
+- 3개 회사 자동 생성: `CHROK`, `HPS`, `KEPS`
+- 각 회사별 admin 계정 생성 (비밀번호: `1234`)
+- 로그인: `CHROK → admin`, `HPS → HPS:admin`, `KEPS → KEPS:admin`
+
+### 보안 검증 (2025-10-13 강화)
+
+**프론트엔드** (`login.html`):
+1. `:` 문자 입력 차단 (구분자 보호)
+2. 회사 선택 필수 검증
+3. 클라이언트 측 에러 메시지 표시
+
+**백엔드** (`MemberUserDetailsService`):
+1. 입력값 null/empty 검증
+2. `:` 구분자 파싱 후 양쪽 공백 제거 및 검증
+3. 다중 `:` 차단 (우회 방지)
+4. **통일된 에러 메시지**: 모든 실패 시 "Invalid credentials" (계정 존재 유무 노출 방지)
+
+**실패 처리** (`SecurityConfig`):
+- 모든 로그인 실패를 동일한 URL로 리다이렉트
+- 사용자에게 표시: "아이디 또는 비밀번호가 일치하지 않습니다."
+- 서버 로그에만 실패 원인 기록 (감사 목적)
+
+**입력 허용 범위**:
+- ✅ 한글: `홍길동`, `관리자`
+- ✅ 이메일 형식: `admin@company`
+- ✅ 특수문자: `admin-01`, `user.test`
+- ❌ 콜론만 차단: `admin:test` (구분자 충돌)
+
+### 로그인 정보 저장 및 추적 (2025-10-14 추가)
+
+**로그인 정보 저장 (쿠키)**:
+- 사용자가 "로그인 정보 저장" 체크박스를 선택하면 30일 유지 쿠키 생성
+- 쿠키: `cmms_company_id`, `cmms_username`, `cmms_remember`
+- 다음 로그인 시 LoginController가 쿠키를 읽어서 폼 자동 완성
+- 체크박스 상태도 복원됨 (Thymeleaf `th:checked`)
+
+**마지막 로그인 추적**:
+- Member 테이블에 `last_login_at`, `last_login_ip` 필드 추가
+- 로그인 성공 시 SecurityConfig.successHandler에서 자동 업데이트
+- IP 주소는 프록시 헤더 고려 (X-Forwarded-For, X-Real-IP 등)
+- LayoutController에서 사용자 정보 조회 시 마지막 로그인 정보를 모델에 추가
+- defaultLayout.html 헤더에 "이전 로그인: 2025-10-14 09:30 (192.168.1.100)" 형식으로 표시
+
+**세션 타임아웃**:
+- 기본값: 1시간 (`application.yml`: `server.servlet.session.timeout: 1h`)
+- 세션 쿠키: HttpOnly=true, Secure=false (dev), Secure=true (prod)
+- 자동 연장: 사용자가 페이지 이동, 검색, API 호출 등 모든 HTTP 요청 시 마지막 접근 시간부터 다시 1시간 자동 연장됨 (Spring Security 기본 동작)
+
+**로그아웃 시 쿠키 처리**:
+- 로그아웃 시 JSESSIONID 삭제
+- "로그인 정보 저장" 쿠키는 유지 (30일 만료 또는 명시적 체크 해제 시 삭제)
 
 ---
 
@@ -78,20 +158,110 @@ assets/js/
 
 ## 5. Controller 분리
 
-| 유형 | 모듈 | 구조 |
-|------|------|------|
-| 업무 | Inspection, WorkOrder, WorkPermit, Memo, Approval | Page + API |
-| 마스터 | Company, Dept, Plant, Inventory, Code | 단일(POST) |
-| 시스템 | Auth, Layout, Health | 단일 |
+### 5-1. 전체 구조 (2025-10-15 최신)
+
+| 계층 | 모듈 | 구조 | PageController | ApiController |
+|------|------|------|---------------|---------------|
+| **업무** | Inspection, WorkOrder, WorkPermit<br>Memo, Approval, InventoryTx | **Page + API 완전 분리** | 화면 렌더링<br>POST 처리 | GET/POST/PUT/DELETE<br>전체 CRUD API |
+| **마스터 데이터** | **Plant, Inventory** | **Page + API 완전 분리** | 화면 렌더링<br>POST 처리 | GET/POST/PUT/DELETE<br>+ upload API |
+| **도메인(외부 참조)** | **Dept, Func, Member** | **단일 + 선택적 API** | 화면 렌더링<br>POST 처리 | **GET만** (picker용) |
+| **도메인(내부 관리)** | Company, Site, Role, Storage | 단일(POST 전용) | 화면 렌더링<br>POST 처리 | ❌ 없음 |
+| **코드** | Code | 단일(POST 전용) | 화면 렌더링<br>POST 처리 | ❌ 없음 |
+| **시스템** | Login, Layout, Health | 단일 | 화면 렌더링 | – |
+| **시스템 API** | Auth | REST API 전용 | – | 인증 API |
+
+### 5-2. 상세 설명
+
+#### 업무 모듈 (PageController + ApiController)
+```
+web/page/InspectionPageController.java    → 화면 전용
+web/api/InspectionApiController.java      → REST API 전용
+```
+
+**PageController 역할**:
+- `@GetMapping("/inspection/list")` - 목록 화면
+- `@GetMapping("/inspection/form")` - 등록/수정 폼
+- `@GetMapping("/inspection/detail/{id}")` - 상세 화면
+- `emptyObject()` - 빈 객체 생성
+- `addReferenceData()` - Select box용 참조 데이터
+
+**ApiController 역할**:
+- `@GetMapping` - 조회
+- `@PostMapping` - 생성
+- `@PutMapping` - 수정
+- `@DeleteMapping` - 삭제
+
+#### 마스터 데이터 (PageController + ApiController)
+```
+web/page/PlantPageController.java         → 화면 전용
+web/api/PlantApiController.java           → REST API 전용
+```
+
+**특징**: 업무 모듈과 **완전히 동일한 구조**
+- 화면: POST 방식으로 CRUD
+- API: 전체 REST API 제공 (picker, 대량 업로드 포함)
+
+#### 도메인(외부 참조) - 선택적 GET API
+```
+web/DeptController.java                   → 단일 Controller
+```
+
+**특징**: 
+- 화면: POST 방식으로 CRUD
+- API: **조회(GET)만 제공** (picker, 참조 데이터용)
+- POST/PUT/DELETE API는 제공하지 않음
+
+**API 제공 이유**:
+- `Dept` → org-picker.html에서 사용
+- `Func` → plant-picker.html에서 사용
+- `Member` → org-picker.html, approval.js에서 사용
+
+#### 도메인(내부 관리) - POST만
+```
+web/CompanyController.java                → 단일 Controller (POST 전용)
+```
+
+**특징**: 
+- 화면: POST 방식으로 CRUD
+- API: 제공하지 않음 (내부 관리만, 외부 참조 없음)
 
 ---
 
 ## 6. Form 처리
 
-| 구분 | 방식 | 설명 |
-|------|------|------|
-| 도메인·마스터 | HTML POST | 서버 검증 후 redirect |
-| 업무모듈 | SPA(fetch JSON) | 비동기 저장 후 redirect |
+### 6-1. 모듈별 Form 처리 방식
+
+| 계층 | 모듈 | 화면 저장 방식 | API 사용 |
+|------|------|---------------|---------|
+| 업무 | Inspection, WorkOrder, WorkPermit, Memo, Approval, InventoryTx | **SPA(fetch JSON)** | ✅ ApiController |
+| 마스터 | Plant, Inventory | **HTML POST** | ✅ ApiController (picker, upload) |
+| 도메인(외부) | Dept, Func, Member | **HTML POST** | ✅ GET만 (picker) |
+| 도메인(내부) | Company, Site, Role, Storage | **HTML POST** | ❌ 없음 |
+| 코드 | Code | **HTML POST** | ❌ 없음 |
+
+### 6-2. 상세 설명
+
+#### 업무 모듈 - SPA 방식
+화면에서 직접 API 호출:
+```html
+<form data-form-manager 
+      data-action="/api/workorders" 
+      data-method="POST" 
+      data-redirect="/workorder/detail/{id}">
+</form>
+```
+
+#### 마스터/도메인 - POST 방식
+화면에서 POST로 서버 전송:
+```html
+<form method="post" th:action="@{/plant/save}">
+  <!-- CSRF 토큰 -->
+  <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+  <!-- 신규/수정 구분 -->
+  <input type="hidden" name="isNew" th:value="${isNew}" />
+  <!-- 폼 필드 -->
+</form>
+```
 
 ### 예시
 
@@ -101,6 +271,122 @@ assets/js/
       data-method="POST" 
       data-redirect="/workorder/detail/{id}">
 </form>
+```
+
+### 신규 Form 객체 생성 규칙 (2025-10-13)
+
+**문제**: Thymeleaf 템플릿에서 `${object.field}` 참조 시 object가 null이면 `SpelEvaluationException` 발생
+
+**해결**: PageController의 `/form` 엔드포인트에서 신규 생성 시 **반드시 빈 객체 생성**
+
+**마스터 모듈** (PlantPageController):
+```java
+@GetMapping("/plant/form")
+public String form(Model model) {
+    model.addAttribute("plant", emptyPlant());  // ✅ 빈 객체 생성
+    model.addAttribute("isNew", true);
+    addReferenceData(model);  // Select box용 참조 데이터
+    return "plant/form";
+}
+
+private PlantResponse emptyPlant() {
+    return new PlantResponse(null, null, ..., "N", ...);
+}
+```
+
+**도메인 모듈** (DeptController):
+```java
+@GetMapping("/domain/dept/form")
+public String newForm(Model model) {
+    model.addAttribute("dept", emptyDept());  // ✅ 빈 객체 생성
+    model.addAttribute("isNew", true);
+    return "domain/dept/form";
+}
+
+private DeptResponse emptyDept() {
+    return new DeptResponse(null, null, null, "N", ...);
+}
+```
+
+**업무 모듈** (2025-10-13 수정):
+```java
+@GetMapping("/inspection/form")
+public String form(@RequestParam(required = false) String id, Model model) {
+    InspectionResponse inspection = isNew 
+        ? createEmptyInspection(stage)  // ✅ 빈 객체 생성
+        : service.get(id);
+    model.addAttribute("inspection", inspection);
+}
+
+private InspectionResponse createEmptyInspection(String stage) {
+    return new InspectionResponse(
+        null, ..., 
+        "DRAFT",  // status 기본값
+        stage != null ? stage : "ACT",  // stage 기본값
+        ..., 
+        List.of()  // 빈 items
+    );
+}
+```
+
+**적용 모듈**:
+- ✅ InspectionPageController (업무)
+- ✅ WorkOrderPageController (업무, `stage="PLN"` 기본값)
+- ✅ WorkPermitPageController (업무, `stage="PLN"` 고정, Form에서 readonly 처리)
+- ✅ MemoPageController (업무)
+- ✅ ApprovalPageController (업무)
+- ✅ InventoryTxPageController (업무)
+- ✅ PlantPageController (마스터, 신규)
+- ✅ InventoryPageController (마스터, 신규)
+
+### Form readonly 조건 (2025-10-13)
+
+**원칙**: stage와 status를 조합하여 필드별 수정 가능 여부 제어
+
+**Thymeleaf 표현식** (WorkOrder, Inspection):
+```html
+<!-- 계획 필드 (plannedDate, plannedCost, plannedLabor) -->
+th:readonly="${workOrder.stage != 'PLN' or workOrder.status != 'DRAFT'}"
+<!-- → PLN+DRAFT일 때만 수정 가능 -->
+
+<!-- 실적 필드 (actualDate, actualCost, actualLabor) -->
+th:readonly="${workOrder.stage != 'ACT' or workOrder.status != 'DRAFT'}"
+<!-- → ACT+DRAFT일 때만 수정 가능 -->
+
+<!-- 공통 필드 (name, plantId, memberId 등) -->
+th:readonly="${workOrder.status != 'DRAFT'}"
+<!-- → status=DRAFT일 때만 수정 가능 (stage 무관) -->
+```
+
+**WorkPermit Stage 고정** (2025-10-15):
+```html
+<!-- Stage 필드는 읽기 전용 (PLN 고정) -->
+<input id="stage" name="stage" class="input" value="PLN" readonly />
+<small class="help">작업허가는 계획(PLN) 단계만 존재합니다</small>
+```
+- WorkPermit은 ACT 단계가 없으므로 Form에서 readonly로 고정
+- Service는 request.stage를 수용하되 기본값은 PLN (Inspection/WorkOrder와 일관된 구조)
+- Form이 readonly이므로 실제로는 항상 PLN만 전송됨
+
+**적용 예시**:
+
+| 상태 | 계획 필드 | 실적 필드 | 공통 필드 |
+|------|----------|----------|----------|
+| PLN+DRAFT | ✅ 수정 가능 | 🔒 readonly | ✅ 수정 가능 |
+| PLN+SUBMT | 🔒 readonly | 🔒 readonly | 🔒 readonly |
+| ACT+DRAFT | 🔒 readonly | ✅ 수정 가능 | ✅ 수정 가능 |
+| ACT+SUBMT | 🔒 readonly | 🔒 readonly | 🔒 readonly |
+
+**상태 표시 필드**:
+```html
+<input type="text" readonly
+  th:value="${(workOrder.stage == 'PLN' and workOrder.status == 'DRAFT') ? '계획 작성' : 
+           (workOrder.stage == 'PLN' and workOrder.status == 'SUBMT') ? '계획 결재상신' : 
+           (workOrder.stage == 'PLN' and workOrder.status == 'APPRV') ? '계획 승인완료' : 
+           (workOrder.stage == 'ACT' and workOrder.status == 'DRAFT') ? '실적 작성' : 
+           (workOrder.stage == 'ACT' and workOrder.status == 'SUBMT') ? '실적 결재상신' : 
+           (workOrder.stage == 'ACT' and workOrder.status == 'APPRV') ? '실적 승인완료' : 
+           (workOrder.stage ?: '-') + '+' + (workOrder.status ?: '-')}" />
 ```
 
 ---
@@ -135,26 +421,139 @@ public Member getExisting(String c, String m) {
 | REJCT | 반려 (REJECT) |
 | CMPLT | 결재 없이 확정 (COMPLETE) |
 
+**신규 생성 시 초기값** (Service.create):
+
+| 모듈 | 기본 stage | 기본 status | 비고 |
+|------|-----------|-------------|------|
+| **Inspection** | `ACT` | `DRAFT` | request.stage가 전달되면 우선 사용 (PLN/ACT 모두 가능) |
+| **WorkOrder** | `PLN` | `DRAFT` | request.stage가 전달되면 우선 사용 |
+| **WorkPermit** | `PLN` | `DRAFT` | **PLN 단계만 존재 (ACT 없음, Form은 readonly로 PLN 고정)** |
+
+**로직 예시**:
+```java
+// InspectionService.create()
+if (request.stage() != null && !request.stage().isBlank()) {
+    entity.setStage(request.stage());  // 폼에서 "PLN" 전달 시
+} else {
+    entity.setStage("ACT");  // 기본값
+}
+entity.setStatus("DRAFT");
+
+// WorkPermitService.create()
+if (request.stage() != null && !request.stage().isBlank()) {
+    entity.setStage(request.stage());  // 요청 수용 (확장성)
+} else {
+    entity.setStage("PLN");  // 기본값 (Form에서 PLN만 전송)
+}
+entity.setStatus("DRAFT");
+```
+
 ### 8-2. ApprovalStep 필드
 
 - **decision**: 결재 역할 (`APPRL`, `AGREE`, `INFO`)
-- **result**: 결재 결과 (`APPROVE`, `REJECT`, `NULL`)
+- **result**: 결재 결과 (`APPRV`, `REJCT`, `NULL`)
 - **ref_entity**: `INSP` / `WORK` / `WPER`
 - **ref_id**: 원문서 ID
 - **ref_stage**: `PLN` / `ACT`
 
-### 8-3. 결재 흐름
+### 8-3. 결재 아키텍처 (순환 참조 제거)
 
-결재 요청 → Approval 생성 → 승인/반려 시 원 모듈 Service 콜백 → status 자동 변경  
+**문제**: 기존 ApprovalService ↔ InspectionService/WorkOrderService/WorkPermitService 간 양방향 순환 참조
+
+**해결**: **전략 패턴 (Handler Pattern)** + **Facade 패턴** 적용
+
+#### 8-3-1. ApprovalRefHandler 인터페이스
+
+```java
+// approval/handler/ApprovalRefHandler.java
+public interface ApprovalRefHandler {
+    boolean supports(String refEntity, String refStage);
+    void handle(String action, String refId, String refStage);
+}
+```
+
+**구현체**:
+- `InspectionApprovalHandler` (refEntity="INSP")
+- `WorkOrderApprovalHandler` (refEntity="WORK")
+- `WorkPermitApprovalHandler` (refEntity="WPER")
+
+#### 8-3-2. ApprovalService 핸들러 패턴
+
+```java
+@Service
+public class ApprovalService {
+    private final List<ApprovalRefHandler> handlers;
+    
+    private void notifyRefModule(Approval approval, String action) {
+        ApprovalRefHandler handler = handlers.stream()
+            .filter(h -> h.supports(approval.getRefEntity(), approval.getRefStage()))
+            .findFirst()
+            .orElse(null);
+        
+        if (handler != null) {
+            handler.handle(action, approval.getRefId(), approval.getRefStage());
+        }
+    }
+}
+```
+
+**장점**:
+- ✅ 순환 참조 완전 제거
+- ✅ 새 모듈 추가 시 Handler만 구현하면 됨
+- ✅ 단일 책임 원칙 준수
+- ✅ 테스트 용이성 증가
+
+#### 8-3-3. Facade 서비스 (결재 상신)
+
+결재 상신 로직을 별도 Facade로 분리:
+
+| Facade | 역할 | 주입 |
+|--------|------|------|
+| `InspectionApprovalFacade` | 예방점검 결재 상신 | InspectionService + ApprovalService |
+| `WorkOrderApprovalFacade` | 작업지시 결재 상신 | WorkOrderService + ApprovalService |
+| `WorkPermitApprovalFacade` | 작업허가 결재 상신 | WorkPermitService + ApprovalService |
+
+**메서드**:
+- `submitPlanApproval(id)`: 계획 결재 상신
+- `submitActualApproval(id)`: 실적 결재 상신
+- `prepareActualStage(id)`: 실적 단계 준비
+
+**Controller 사용 예시**:
+```java
+@RestController
+public class InspectionApiController {
+    private final InspectionService service;
+    private final InspectionApprovalFacade approvalFacade;
+    
+    @PostMapping("/{id}/submit-plan-approval")
+    public ApprovalResponse submitPlanApproval(@PathVariable String id) {
+        return approvalFacade.submitPlanApproval(id);
+    }
+}
+```
+
+### 8-4. 결재 흐름
+
+결재 요청 → Approval 생성 → 승인/반려 시 핸들러 호출 → 도메인 Service 콜백 → status 자동 변경  
 (모든 처리 `@Transactional`)
 
-### 8-4. 모듈별 결재 메서드 표준
+### 8-5. 모듈별 결재 메서드 표준
 
-| 모듈 | 계획단계 | 실적단계 |
+#### Service 메서드 (콜백 전용)
+
+| 모듈 | 계획 콜백 | 실적 콜백 |
 |------|----------|----------|
-| **Inspection** | `submitPlanApproval`<br>`onPlanApprovalApprove/Reject/Delete/Complete`<br>`buildPlanApprovalContent`<br>`prepareActualStage` | `submitActualApproval`<br>`onActualApprovalApprove/Reject/Delete/Complete`<br>`buildActualApprovalContent` |
-| **WorkOrder** | `submitPlanApproval`<br>`onPlanApprovalApprove/Reject/Delete/Complete`<br>`buildPlanApprovalContent`<br>`prepareActualStage` | `submitActualApproval`<br>`onActualApprovalApprove/Reject/Delete/Complete`<br>`buildActualApprovalContent` |
-| **WorkPermit** | `submitPlanApproval`<br>`onPlanApprovalApprove/Reject/Delete/Complete`<br>`buildPlanApprovalContent` | – |
+| **InspectionService** | `onPlanApprovalApprove/Reject/Delete/Complete` | `onActualApprovalApprove/Reject/Delete/Complete` |
+| **WorkOrderService** | `onPlanApprovalApprove/Reject/Delete/Complete` | `onActualApprovalApprove/Reject/Delete/Complete` |
+| **WorkPermitService** | `onPlanApprovalApprove/Reject/Delete/Complete` | – |
+
+#### Facade 메서드 (결재 상신)
+
+| Facade | 메서드 |
+|--------|--------|
+| **InspectionApprovalFacade** | `submitPlanApproval`, `submitActualApproval`, `prepareActualStage` |
+| **WorkOrderApprovalFacade** | `submitPlanApproval`, `submitActualApproval`, `prepareActualStage` |
+| **WorkPermitApprovalFacade** | `submitPlanApproval` |
 
 ---
 
@@ -166,11 +565,22 @@ public Member getExisting(String c, String m) {
 // 기본 CRUD
 list(), get(), create(), update(), delete()
 
-// 결재 관련
-submitPlanApproval(), onPlanApprovalApprove(), prepareActualStage()
+// 결재 콜백 (ApprovalRefHandler에서 호출)
+onPlanApprovalApprove(), onPlanApprovalReject(), onPlanApprovalDelete(), onPlanApprovalComplete()
+onActualApprovalApprove(), onActualApprovalReject(), onActualApprovalDelete(), onActualApprovalComplete()
 
 // 유틸리티
 applyRequest(), resolveId(), currentMemberId()
+```
+
+### Facade 메서드 (순환 참조 제거)
+
+```java
+// 결재 상신 (Service 대신 Facade 사용)
+submitPlanApproval(), submitActualApproval()
+
+// 단계 전환
+prepareActualStage()
 ```
 
 ### Repository 메서드
@@ -234,7 +644,7 @@ Optional<T> findByCompanyIdAndId(String c, String id);
 ```java
 seedItems("MODUL", List.of(
     new SeedCodeItem("PLANT", "설비"),
-    new SeedCodeItem("INVET", "재고"),
+    new SeedCodeItem("INVNT", "재고"),
     new SeedCodeItem("INSP", "점검"),
     new SeedCodeItem("WORK", "작업지시"),
     new SeedCodeItem("WPER", "작업허가"),
@@ -282,6 +692,34 @@ seedItems("DECSN", List.of(
 - `file_group`, `file_item` 테이블
 - 각 엔드포인트는 `FileController`에서 REST 기반으로 제공됨.
 
+### 파일 삭제 정책 (Soft Delete)
+
+**원칙**: 소프트 삭제 (`delete_mark = 'Y'`) + 물리적 파일 원위치 유지
+
+**동작**:
+1. **삭제 요청 시**:
+   - DB: `file_group.delete_mark = 'Y'`, `file_item.delete_mark = 'Y'` 설정
+   - 물리적 파일: `storage/uploads/{companyId}/{fileGroupId}/` 위치에 그대로 유지
+
+2. **조회/다운로드**:
+   - `delete_mark = 'N'` 조건으로 필터링하여 활성 파일만 반환
+
+3. **복원**:
+   - DB 업데이트만으로 즉시 복원 가능 (`delete_mark = 'N'`)
+
+4. **물리적 삭제** (배치 작업):
+   - 월 1회 배치 실행 (매월 1일 새벽 2시)
+   - `delete_mark = 'Y'` && `updated_at < 90일 이전` 조건
+   - 물리적 파일 삭제 후 DB 레코드도 완전 삭제
+
+**장점**:
+- ✅ 실수 복원 가능 (90일 유예 기간)
+- ✅ 감사 이력 유지
+- ✅ 구현 단순, 안정성 높음
+- ✅ 파일 이동 오류 없음
+
+**저장 경로**: `storage/uploads/{companyId}/{fileGroupId}/{fileId}.{ext}`
+
 ---
 
 ## 14. 초기 데이터 (DataInitializer)
@@ -303,15 +741,39 @@ seedItems("DECSN", List.of(
 
 ## 16. 개발 규칙
 
-| 항목 | 규칙 |
-|------|------|
-| Controller | `<Module>PageController`, `<Module>ApiController` |
-| Service | `<Module>Service` |
-| Repository | `<Module>Repository` |
-| Entity | PascalCase |
-| JS | kebab-case |
-| CSS | hyphen-case |
-| Package | 기능별 colocation |
+| 항목 | 규칙 | 예시 |
+|------|------|------|
+| **PageController** | `<Module>PageController` | InspectionPageController, PlantPageController |
+| **ApiController** | `<Module>ApiController` | InspectionApiController, PlantApiController |
+| **단일 Controller** | `<Module>Controller` | DeptController, CodeController |
+| Service | `<Module>Service` | InspectionService, PlantService |
+| Facade | `<Module>ApprovalFacade` (결재 상신 전용) | InspectionApprovalFacade |
+| Handler | `<Module>ApprovalHandler` (결재 콜백 전용) | InspectionApprovalHandler |
+| Repository | `<Module>Repository` | InspectionRepository, PlantRepository |
+| Entity | PascalCase | Inspection, Plant, Dept |
+| JS | kebab-case | inspection.js, plant.js |
+| CSS | hyphen-case | base.css, print.css |
+| Package | 기능별 colocation | com.cmms11.inspection, com.cmms11.plant |
+
+### Controller 구조 결정 기준
+
+1. **Page + API 분리** (업무 + 마스터):
+   - ✅ 복잡한 CRUD 로직
+   - ✅ SPA 기능 필요
+   - ✅ 외부 API 제공 필요
+   - ✅ 파일 크기가 큼 (200줄 이상)
+
+2. **단일 Controller + 선택적 GET API** (도메인 외부 참조):
+   - ✅ 단순한 CRUD
+   - ✅ Picker/참조용 조회 API만 필요
+   - ✅ 화면은 POST 방식
+   - ✅ 외부 모듈에서 참조함
+
+3. **단일 Controller + POST만** (도메인 내부 관리):
+   - ✅ 단순한 CRUD
+   - ✅ 내부 관리만, 외부 참조 없음
+   - ✅ 화면은 POST 방식
+   - ✅ API 불필요
 
 ---
 
@@ -321,20 +783,6 @@ seedItems("DECSN", List.of(
 - NAS → S3 전환
 - KPI Dashboard 및 PIMS 연계
 - 모바일 UI (2026 상반기)
-
----
-
-## ✅ 최종 상태
-
-| 항목 | 완료 |
-|------|------|
-| Controller 분리 | ✅ |
-| Form 구조 | ✅ |
-| 로그인 구조 | ✅ |
-| Approval 콜백 | ✅ |
-| RBAC | ✅ |
-| ID/Code 규칙 | ✅ |
-| Build | ✅ SUCCESS (2025-10-13) |
 
 ---
 

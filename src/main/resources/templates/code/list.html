@@ -10,23 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">공통코드</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">memberId</span>
-            <span>운영자</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">공통코드</a>
-          <span class="sep">/</span>
-          <span>목록</span>
-        </div>
-      </nav>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="code-list" data-module="code-list">
         <main>
@@ -59,11 +42,11 @@
                       <td th:text="${codeType.name}">-</td>
                       <td th:text="${codeType.note}" class="muted">-</td>
                       <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/code/edit/{id}(id=${codeType.codeType})}">수정</a>
-                        <button class="btn btn-sm danger" 
-                                th:data-delete-url="@{/code/delete/{id}(id=${codeType.codeType})}"
-                                th:data-redirect="@{/code/list}"
-                                data-confirm="정말로 삭제하시겠습니까?">삭제</button>
+                        <a class="btn btn-xs" th:href="@{/code/form(id=${codeType.codeType})}">수정</a>
+                        <form th:action="@{/code/delete/{id}(id=${codeType.codeType})}" method="post" style="display:inline;">
+                          <button type="submit" class="btn btn-xs danger" 
+                                  onclick="return confirm('정말로 삭제하시겠습니까?')">삭제</button>
+                        </form>
                       </td>
                     </tr>
                   </tbody>
@@ -81,9 +64,6 @@
           </div>
         </main>
       </section>
-      <footer>
-        <div class="container">© 공통코드</div>
-      </footer>
     </div>
     
   </body>

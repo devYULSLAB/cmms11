@@ -114,6 +114,7 @@ public class FileService {
             item.setSize(file.getSize());
             item.setChecksumSha256(checksum);
             item.setStoragePath(storageRoot.relativize(target).toString().replace('\\', '/'));
+            item.setDeleteMark("N");
             item.setCreatedAt(now);
             item.setCreatedBy(memberId);
             item.setUpdatedAt(now);
@@ -172,36 +173,26 @@ public class FileService {
 
     public void delete(String groupId, String fileId) {
         FileItem item = requireActiveFile(groupId, fileId);
-        Path filePath = storageRoot.resolve(item.getStoragePath()).normalize();
         
-        // 기존 경로 호환성: 새 경로에 파일이 없으면 구 경로(groupId만) 확인
-        if (!filePath.startsWith(storageRoot) || !Files.exists(filePath)) {
-            // Fallback: storage/uploads/{groupId}/{storedName} 경로 시도
-            Path legacyPath = storageRoot.resolve(groupId).resolve(item.getStoredName()).normalize();
-            if (legacyPath.startsWith(storageRoot) && Files.exists(legacyPath)) {
-                filePath = legacyPath;
-            }
-        }
-        
-        // 물리적 파일 삭제
-        try {
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            throw new IllegalStateException("파일을 삭제할 수 없습니다: " + fileId, e);
-        }
-
-        // DB에서 레코드 삭제
-        itemRepository.delete(item);
-
-        // 그룹 업데이트
+        // ⭐ 소프트 삭제: 물리 파일은 유지, DB에 deleteMark = 'Y' 설정
         LocalDateTime now = LocalDateTime.now();
         String memberId = currentMemberId();
+        
+        item.setDeleteMark("Y");
+        item.setUpdatedAt(now);
+        item.setUpdatedBy(memberId);
+        itemRepository.save(item);
+
+        // 그룹 업데이트
         FileGroup group = groupRepository
             .findByIdCompanyIdAndIdFileGroupId(MemberUserDetailsService.DEFAULT_COMPANY, groupId)
             .orElseThrow(() -> new NotFoundException("파일 그룹을 찾을 수 없습니다: " + groupId));
         group.setUpdatedAt(now);
         group.setUpdatedBy(memberId);
         groupRepository.save(group);
+        
+        // ⚠️ 물리 파일은 90일 후 별도 배치 작업으로 삭제
+        // TODO: 스케줄러 작업 추가 필요 (예: FileCleanupScheduler)
     }
 
     private FileGroup resolveGroup(
@@ -229,6 +220,7 @@ public class FileService {
         group.setId(new FileGroupId(companyId, newGroupId));
         group.setRefEntity(refEntity);
         group.setRefId(refId);
+        group.setDeleteMark("N");
         group.setCreatedAt(now);
         group.setCreatedBy(memberId);
         return group;
@@ -236,7 +228,7 @@ public class FileService {
 
     private List<FileItemResponse> activeItems(String companyId, String groupId) {
         return itemRepository
-            .findByIdCompanyIdAndIdFileGroupId(companyId, groupId)
+            .findByIdCompanyIdAndIdFileGroupIdAndDeleteMark(companyId, groupId, "N")
             .stream()
             .sorted(Comparator.comparing(FileItem::getLineNo))
             .map(FileItemResponse::from)
@@ -255,10 +247,11 @@ public class FileService {
             throw new IllegalArgumentException("fileId 는 필수입니다.");
         }
         return itemRepository
-            .findByIdCompanyIdAndIdFileGroupIdAndIdFileId(
+            .findByIdCompanyIdAndIdFileGroupIdAndIdFileIdAndDeleteMark(
                 MemberUserDetailsService.DEFAULT_COMPANY,
                 groupId,
-                fileId
+                fileId,
+                "N"
             )
             .orElseThrow(() -> new NotFoundException("파일을 찾을 수 없습니다: " + fileId));
     }

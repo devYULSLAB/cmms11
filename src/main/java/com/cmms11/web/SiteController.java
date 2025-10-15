@@ -84,42 +84,43 @@ public class SiteController {
         return "redirect:/domain/site/list";
     }
 
-    @ResponseBody
-    @GetMapping("/api/domain/sites")
-    public Page<SiteResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
-        return service.list(q, pageable);
-    }
+    // API 엔드포인트 제공 (불필요 - 서버사이드에서만 참조)
+    // @ResponseBody
+    // @GetMapping("/api/domain/sites")
+    // public Page<SiteResponse> list(@RequestParam(name = "q", required = false) String q, Pageable pageable) {
+    //     return service.list(q, pageable);
+    // }
 
     // API 엔드포인트 제공
-    @ResponseBody
-    @GetMapping("/api/domain/sites/{siteId}")
-    public ResponseEntity<SiteResponse> get(@PathVariable String siteId) {
-        return ResponseEntity.ok(service.get(siteId));
-    }
+    // @ResponseBody
+    // @GetMapping("/api/domain/sites/{siteId}")
+    // public ResponseEntity<SiteResponse> get(@PathVariable String siteId) {
+    //     return ResponseEntity.ok(service.get(siteId));
+    // }
 
-    @ResponseBody
-    @PostMapping("/api/domain/sites")
-    public ResponseEntity<SiteResponse> create(@Valid @RequestBody SiteRequest request) {
-        SiteResponse response = service.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // @ResponseBody
+    // @PostMapping("/api/domain/sites")
+    // public ResponseEntity<SiteResponse> create(@Valid @RequestBody SiteRequest request) {
+    //     SiteResponse response = service.create(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    // }
 
-    @ResponseBody
-    @PutMapping("/api/domain/sites/{siteId}")
-    public ResponseEntity<SiteResponse> update(
-        @PathVariable String siteId,
-        @Valid @RequestBody SiteRequest request
-    ) {
-        SiteResponse response = service.update(siteId, request);
-        return ResponseEntity.ok(response);
-    }
+    // @ResponseBody
+    // @PutMapping("/api/domain/sites/{siteId}")
+    // public ResponseEntity<SiteResponse> update(
+    //     @PathVariable String siteId,
+    //     @Valid @RequestBody SiteRequest request
+    // ) {
+    //     SiteResponse response = service.update(siteId, request);
+    //     return ResponseEntity.ok(response);
+    // }
 
-    @ResponseBody
-    @DeleteMapping("/api/domain/sites/{siteId}")
-    public ResponseEntity<Void> delete(@PathVariable String siteId) {
-        service.delete(siteId);
-        return ResponseEntity.noContent().build();
-    }
+    // @ResponseBody
+    // @DeleteMapping("/api/domain/sites/{siteId}")
+    // public ResponseEntity<Void> delete(@PathVariable String siteId) {
+    //     service.delete(siteId);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     private SiteResponse emptySite() {
         return new SiteResponse(

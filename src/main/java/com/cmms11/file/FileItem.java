@@ -57,4 +57,7 @@ public class FileItem {
 
     @Column(name = "updated_by", length = 10)
     private String updatedBy;
+
+    @Column(name = "delete_mark", length = 1)
+    private String deleteMark = "N";
 }

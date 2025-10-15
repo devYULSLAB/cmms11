@@ -13,4 +13,14 @@ public interface FileItemRepository extends JpaRepository<FileItem, FileItemId> 
         String fileGroupId,
         String fileId
     );
+
+    // 소프트 삭제 지원: deleteMark = 'N'인 파일만 조회
+    List<FileItem> findByIdCompanyIdAndIdFileGroupIdAndDeleteMark(String companyId, String fileGroupId, String deleteMark);
+
+    Optional<FileItem> findByIdCompanyIdAndIdFileGroupIdAndIdFileIdAndDeleteMark(
+        String companyId,
+        String fileGroupId,
+        String fileId,
+        String deleteMark
+    );
 }

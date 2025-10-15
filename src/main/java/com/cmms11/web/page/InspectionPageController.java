@@ -68,6 +68,13 @@ public class InspectionPageController {
         model.addAttribute("plannedDateFrom", plannedDateFrom);
         model.addAttribute("plannedDateTo", plannedDateTo);
         
+        // 필터용 코드 데이터 추가
+        try {
+            model.addAttribute("statusList", codeService.listItems("APPRV", null, Pageable.unpaged()).getContent());
+        } catch (Exception e) {
+            model.addAttribute("statusList", java.util.List.of());
+        }
+        
         return _fragment ? "inspection/list :: content" : "inspection/list";
     }
 
@@ -109,7 +116,7 @@ public class InspectionPageController {
             // 참조 정보가 있으면 설정 (실적 입력 시 계획 복사)
             if (refId != null && !refId.isEmpty()) {
                 InspectionResponse refInspection = service.get(refId);
-                inspection = copyForActual(refInspection, refEntity, refId, refStage);
+                inspection = copyForActual(refInspection, refEntity, refId, refStage);  //Id, ref_* null 처리 됨.
             }
         } else {
             // 수정 모드
@@ -171,8 +178,31 @@ public class InspectionPageController {
      * 빈 Inspection 객체 생성 (신규 등록용)
      */
     private InspectionResponse createEmptyInspection(String stage) {
-        // 신규 등록 시에는 null 처리, form에서 사용자 입력 대기
-        return null;
+        // 신규 등록 시 빈 객체 생성 (Thymeleaf null 참조 방지)
+        return new InspectionResponse(
+            null,  // inspectionId
+            null,  // name
+            null,  // plantId
+            null,  // jobId
+            null,  // siteId
+            null,  // deptId
+            null,  // memberId
+            null,  // plannedDate
+            null,  // actualDate
+            "DRAFT",  // status - 기본값
+            stage != null ? stage : "ACT",  // stage - 기본값
+            null,  // refEntity
+            null,  // refId
+            null,  // refStage
+            null,  // approvalId
+            null,  // fileGroupId
+            null,  // note
+            null,  // createdAt
+            null,  // createdBy
+            null,  // updatedAt
+            null,  // updatedBy
+            java.util.List.of()  // items
+        );
     }
 
     /**
@@ -185,7 +215,31 @@ public class InspectionPageController {
         String refStage
     ) {
         // 실적 입력 시 계획 데이터 복사, Service에서 ID 재발급
-        return plan;
+        // inspectionId를 null로 설정하여 autoNumberService가 새 ID를 생성하도록 함
+        return new InspectionResponse(
+            null,  // inspectionId는 null (autoNumberService가 생성)
+            plan.name(),
+            plan.plantId(),
+            plan.jobId(),
+            plan.siteId(),
+            plan.deptId(),
+            plan.memberId(),
+            plan.plannedDate(),
+            plan.actualDate(),
+            "DRAFT",  // status는 DRAFT (실적은 새로운 승인 프로세스)
+            "ACT",  // stage를 ACT로 변경
+            refEntity,  // 참조 엔티티 (INSP)
+            refId,      // 참조 ID (계획의 inspectionId)
+            refStage,   // 참조 단계 (PLN)
+            null,  // approvalId는 null (새로운 결재)
+            null,  // fileGroupId는 null (새로운 파일)
+            plan.note(),
+            null,  // createdAt는 null (서버에서 설정)
+            null,  // createdBy는 null (서버에서 설정)
+            null,  // updatedAt는 null (서버에서 설정)
+            null,  // updatedBy는 null (서버에서 설정)
+            plan.items()  // 항목들은 복사
+        );
     }
 }
 

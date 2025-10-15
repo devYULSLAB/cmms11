@@ -58,6 +58,12 @@ public class Member {
     @Column(name = "updated_by", length = 10)
     private String updatedBy;
 
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "last_login_ip", length = 45)
+    private String lastLoginIp;
+
     // 편의 메서드들
     public String getMemberId() {
         return id != null ? id.getMemberId() : null;

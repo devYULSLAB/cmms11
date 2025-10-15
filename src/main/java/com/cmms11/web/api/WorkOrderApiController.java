@@ -1,6 +1,7 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
+import com.cmms11.workorder.WorkOrderApprovalFacade;
 import com.cmms11.workorder.WorkOrderItem;
 import com.cmms11.workorder.WorkOrderRequest;
 import com.cmms11.workorder.WorkOrderResponse;
@@ -32,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOrderApiController {
 
     private final WorkOrderService service;
+    private final WorkOrderApprovalFacade approvalFacade;
 
-    public WorkOrderApiController(WorkOrderService service) {
+    public WorkOrderApiController(WorkOrderService service, WorkOrderApprovalFacade approvalFacade) {
         this.service = service;
+        this.approvalFacade = approvalFacade;
     }
 
     @GetMapping
@@ -88,7 +91,7 @@ public class WorkOrderApiController {
 
     @PostMapping("/{orderId}/submit-plan-approval")
     public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String orderId) {
-        ApprovalResponse approval = service.submitPlanApproval(orderId);
+        ApprovalResponse approval = approvalFacade.submitPlanApproval(orderId);
         return ResponseEntity.ok(approval);
     }
 
@@ -100,14 +103,14 @@ public class WorkOrderApiController {
 
     @PostMapping("/{orderId}/prepare-actual")
     public ResponseEntity<WorkOrderResponse> prepareActual(@PathVariable String orderId) {
-        service.prepareActualStage(orderId);
+        approvalFacade.prepareActualStage(orderId);
         WorkOrderResponse response = service.get(orderId);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{orderId}/submit-actual-approval")
     public ResponseEntity<ApprovalResponse> submitActualApproval(@PathVariable String orderId) {
-        ApprovalResponse approval = service.submitActualApproval(orderId);
+        ApprovalResponse approval = approvalFacade.submitActualApproval(orderId);
         return ResponseEntity.ok(approval);
     }
 }

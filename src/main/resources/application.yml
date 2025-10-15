@@ -10,3 +10,8 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+    session:
+      timeout: 1h  # 세션 타임아웃: 1시간 (기본값)
+      cookie:
+        http-only: true
+        secure: false  # HTTPS 환경에서는 true로 설정

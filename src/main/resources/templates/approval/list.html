@@ -10,22 +10,6 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">전자결재</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">목록</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">전자결재</a>
-          <span class="sep">/</span>
-          <span>결재 목록</span>
-        </div>
-      </nav>
       <main>
         <div class="container">
           <section data-slot-root th:fragment="content" data-page="approval-list" data-module="approval-list">
@@ -44,11 +28,11 @@
                     <div class="col-span-3">
                       <select class="input" name="status">
                         <option value="">상태(전체)</option>
-                        <option value="DRAFT" th:selected="${status == 'DRAFT'}">임시저장</option>
-                        <option value="SUBMIT" th:selected="${status == 'SUBMIT'}">상신</option>
-                        <option value="PROC" th:selected="${status == 'PROC'}">결재중</option>
-                        <option value="APPROV" th:selected="${status == 'APPROV'}">승인완료</option>
-                        <option value="REJECT" th:selected="${status == 'REJECT'}">반려</option>
+                        <option th:each="statusItem : ${statusList}"
+                                th:value="${statusItem.code}"
+                                th:text="${statusItem.name}"
+                                th:selected="${status == statusItem.code}">
+                        </option>
                       </select>
                     </div>
                     <div class="col-span-3">
@@ -85,16 +69,16 @@
                       <td th:text="${approval.title}">-</td>
                       <td th:text="${approval.createdBy}">-</td>
                       <td>
-                        <span class="badge" th:text="${approval.status == 'DRAFT' ? '임시저장' : approval.status == 'SUBMIT' ? '상신' : approval.status == 'PROC' ? '결재중' : approval.status == 'APPROV' ? '승인완료' : approval.status == 'REJECT' ? '반려' : approval.status}"
-                              th:classappend="${approval.status == 'DRAFT' ? '' : approval.status == 'SUBMIT' ? 'info' : approval.status == 'PROC' ? 'warning' : approval.status == 'APPROV' ? 'success' : 'danger'}">-</span>
+                        <span class="badge"
+                              th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}"
+                              th:classappend="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? 'success' : approval.status == 'PROC' ? 'info' : approval.status == 'REJCT' ? 'danger' : ''}">-</span>
                       </td>
                       <td th:text="${approval.submittedAt}">-</td>
                       <td th:text="${approval.completedAt}">-</td>
                       <td class="actions">
-                        <a class="btn btn-sm" th:href="@{/approval/edit/{id}(id=${approval.approvalId})}">수정</a>
-                        <button class="btn btn-sm danger"
-                                th:data-delete-url="@{/approval/delete/{id}(id=${approval.approvalId})}"
-                                th:data-redirect="@{/approval/list}"
+                        <a class="btn btn-xs" th:href="@{/approval/form(id=${approval.approvalId})}">수정</a>
+                        <button class="btn btn-xs danger"
+                                th:attr="data-delete-url=@{/api/approvals/{id}(id=${approval.approvalId})},data-redirect=@{/approval/list}"
                                 data-confirm="정말 삭제하시겠습니까?">삭제</button>
                       </td>
                     </tr>
@@ -117,9 +101,6 @@
           </section>
         </div>
       </main>
-      <footer>
-        <div class="container">© 전자결재</div>
-      </footer>
     </div>
     
   </body>
