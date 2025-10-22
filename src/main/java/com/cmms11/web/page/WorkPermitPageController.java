@@ -110,7 +110,19 @@ public class WorkPermitPageController {
         Model model
     ) {
         boolean isNew = (id == null || id.isEmpty());
-        WorkPermitResponse workPermit = isNew ? createEmptyWorkPermit(stage) : service.get(id);
+        WorkPermitResponse workPermit;
+        
+        if (isNew) {
+            workPermit = createEmptyWorkPermit(stage);
+            
+            // 참조 정보가 있으면 설정 (실적 입력 시 계획 복사)
+            if (refId != null && !refId.isEmpty()) {
+                WorkPermitResponse refWorkPermit = service.get(refId);
+                workPermit = copyForActual(refWorkPermit, refEntity, refId, refStage);
+            }
+        } else {
+            workPermit = service.get(id);
+        }
         
         model.addAttribute("workPermit", workPermit);
         model.addAttribute("isNew", isNew);
@@ -152,6 +164,42 @@ public class WorkPermitPageController {
             null,  // updatedAt
             null,  // updatedBy
             java.util.List.of()  // items
+        );
+    }
+
+    /**
+     * 계획 복사하여 실적 생성용 객체 생성 (ID는 null)
+     */
+    private WorkPermitResponse copyForActual(
+        WorkPermitResponse plan,
+        String refEntity,
+        String refId,
+        String refStage
+    ) {
+        return new WorkPermitResponse(
+            null,  // permitId는 null (autoNumberService가 생성)
+            plan.name(),
+            plan.plantId(),
+            plan.jobId(),
+            plan.siteId(),
+            plan.deptId(),
+            plan.memberId(),
+            plan.plannedDate(),
+            plan.actualDate(),
+            plan.workSummary(),
+            plan.hazardFactor(),
+            plan.safetyFactor(),
+            plan.checksheetJson(),
+            "DRAFT",  // status는 DRAFT
+            "ACT",  // stage를 ACT로 변경
+            refEntity,  // 참조 엔티티 (PERM)
+            refId,      // 참조 ID (계획의 permitId)
+            refStage,   // 참조 단계 (PLN)
+            null,  // approvalId는 null
+            null,  // fileGroupId는 null
+            plan.note(),
+            null, null, null, null,
+            plan.items()  // 항목들은 복사
         );
     }
 

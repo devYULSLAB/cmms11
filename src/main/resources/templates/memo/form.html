@@ -16,22 +16,24 @@
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="card-title">게시/메모 등록/수정</div>
+                <div class="card-title">TM(Trouble Memo) 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/memo/list}">목록</a>
-                  <button type="submit" class="btn primary">
-                    <span th:text="${isNew ? '등록' : '저장'}">저장</span>
+                  <button type="submit" form="memo-form" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '수정'}">등록</span>
                   </button>
                 </div>
               </div>
               <div class="card-body">
-                <form data-form-manager
-                      th:attr="data-action=${isNew ? '/api/memos' : '/api/memos/' + memo.memoId},
-                               data-method=${isNew ? 'POST' : 'PUT'}"
+                <form id="memo-form"
+                      data-form-manager
+                      th:data-action="${isNew ? '/api/memos' : '/api/memos/' + memo.memoId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
                       data-redirect="/memo/list">
 
                   <!-- Hidden fields -->
                   <input type="hidden" name="memoId" th:value="${memo?.memoId}" />
+                  
                   <!-- 기본정보 -->
                   <div class="section">
                     <div class="section-title">기본정보</div>
@@ -40,24 +42,6 @@
                         <label class="label required" for="title">제목</label>
                         <input id="title" name="title" class="input" required maxlength="100" 
                               th:value="${memo.title}" />
-                      </div>
-                    </div>
-                    <div class="grid cols-12">
-                      <div class="form-row col-span-3">
-                        <label class="label" for="refEntity">참조 모듈</label>
-                        <select id="refEntity" name="refEntity">
-                          <option value="">(선택)</option>
-                          <option th:each="module : ${refModules}"
-                                  th:value="${module.code}"
-                                  th:text="${module.code + ' - ' + module.name}"
-                                  th:selected="${memo.refEntity == module.code}">
-                          </option>
-                        </select>
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="refId">참조 ID</label>
-                        <input id="refId" name="refId" class="input" maxlength="10" placeholder="예: O250101001" 
-                              th:value="${memo.refId}" />
                       </div>
                     </div>
                   </div>
@@ -99,12 +83,6 @@
                         <li class="empty">첨부된 파일이 없습니다.</li>
                       </ul>
                     </div>
-                  </div>
-
-                  <div class="actions actions-top-medium">
-                    <button class="btn primary" type="submit">
-                      <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                    </button>
                   </div>
                 </form>
               </div>

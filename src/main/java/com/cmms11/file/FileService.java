@@ -2,29 +2,21 @@ package com.cmms11.file;
 
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
+import com.cmms11.file.storage.StorageService;
 import com.cmms11.security.MemberUserDetailsService;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -39,7 +31,7 @@ public class FileService {
     private final FileGroupRepository groupRepository;
     private final FileItemRepository itemRepository;
     private final AutoNumberService autoNumberService;
-    private final Path storageRoot;
+    private final StorageService storageService;
     private final long maxFileSize;
     private final Set<String> allowedExtensions;
 
@@ -47,25 +39,20 @@ public class FileService {
         FileGroupRepository groupRepository,
         FileItemRepository itemRepository,
         AutoNumberService autoNumberService,
-        @Value("${app.file-storage.location:storage/uploads}") String storageLocation,
+        StorageService storageService,
         @Value("${app.file-storage.max-size:10485760}") long maxFileSize,
         @Value("${app.file-storage.allowed-extensions:jpg,jpeg,png,pdf,txt}") String allowedExtensions
     ) {
         this.groupRepository = groupRepository;
         this.itemRepository = itemRepository;
         this.autoNumberService = autoNumberService;
-        this.storageRoot = Paths.get(storageLocation).toAbsolutePath().normalize();
+        this.storageService = storageService;
         this.maxFileSize = maxFileSize;
         this.allowedExtensions = Arrays.stream(allowedExtensions.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .map(String::toLowerCase)
             .collect(Collectors.toSet());
-        try {
-            Files.createDirectories(this.storageRoot);
-        } catch (IOException e) {
-            throw new IllegalStateException("파일 저장소를 초기화할 수 없습니다.", e);
-        }
     }
 
     public FileGroupResponse upload(String requestedGroupId, String refEntity, String refId, List<MultipartFile> files) {
@@ -77,7 +64,7 @@ public class FileService {
 
         LocalDateTime now = LocalDateTime.now();
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         FileGroup group = resolveGroup(requestedGroupId, refEntity, refId, companyId, memberId, now);
         group.setUpdatedAt(now);
@@ -101,8 +88,20 @@ public class FileService {
             // ✅ UUID 기반 fileId 생성 (sequence LOCK 제거!)
             String fileId = generateShortFileId();
             String storedName = buildStoredName(fileId, extension);
-            Path target = prepareTargetPath(companyId, group.getId().getFileGroupId(), storedName);
-            String checksum = storeFile(file, target);
+            
+            // 파일 저장 (StorageService 사용)
+            String storagePath;
+            try (InputStream inputStream = file.getInputStream()) {
+                storagePath = storageService.store(
+                    companyId, 
+                    group.getId().getFileGroupId(), 
+                    storedName,
+                    inputStream, 
+                    file.getContentType()
+                );
+            } catch (IOException e) {
+                throw new IllegalStateException("파일을 저장할 수 없습니다.", e);
+            }
 
             FileItem item = new FileItem();
             item.setId(new FileItemId(companyId, group.getId().getFileGroupId(), fileId));
@@ -112,8 +111,8 @@ public class FileService {
             item.setExt(extension);
             item.setMime(file.getContentType());
             item.setSize(file.getSize());
-            item.setChecksumSha256(checksum);
-            item.setStoragePath(storageRoot.relativize(target).toString().replace('\\', '/'));
+            item.setChecksumSha256(null);  // checksum 제거
+            item.setStoragePath(storagePath);
             item.setDeleteMark("N");
             item.setCreatedAt(now);
             item.setCreatedBy(memberId);
@@ -140,35 +139,42 @@ public class FileService {
     @Transactional(readOnly = true)
     public FileDownload download(String groupId, String fileId) {
         FileItem item = requireActiveFile(groupId, fileId);
-        Path filePath = storageRoot.resolve(item.getStoragePath()).normalize();
-        
-        // 기존 경로 호환성: 새 경로에 파일이 없으면 구 경로(groupId만) 확인
-        if (!filePath.startsWith(storageRoot) || !Files.exists(filePath)) {
-            // Fallback: storage/uploads/{groupId}/{storedName} 경로 시도
-            Path legacyPath = storageRoot.resolve(groupId).resolve(item.getStoredName()).normalize();
-            if (legacyPath.startsWith(storageRoot) && Files.exists(legacyPath)) {
-                filePath = legacyPath;
-            } else {
-                throw new NotFoundException("파일을 찾을 수 없습니다: " + fileId);
-            }
-        }
+        String storagePath = item.getStoragePath();
         
         try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists() || !resource.isReadable()) {
-                throw new NotFoundException("파일을 읽을 수 없습니다: " + fileId);
+            // 파일 존재 확인
+            if (!storageService.exists(storagePath)) {
+                // Fallback: 구 경로 시도
+                if (storageService.existsLegacy(groupId, item.getStoredName())) {
+                    InputStream inputStream = storageService.retrieveLegacy(groupId, item.getStoredName());
+                    return createFileDownload(inputStream, item);
+                }
+                throw new NotFoundException("파일을 찾을 수 없습니다: " + fileId);
             }
-            return new FileDownload(
-                resource,
-                item.getOriginalName(),
-                item.getMime(),
-                item.getSize() != null ? item.getSize() : resource.contentLength()
-            );
-        } catch (MalformedURLException e) {
-            throw new IllegalStateException("파일을 읽을 수 없습니다: " + fileId, e);
-        } catch (IOException e) {
-            throw new IllegalStateException("파일 크기를 확인할 수 없습니다: " + fileId, e);
+            
+            // InputStream 가져오기
+            InputStream inputStream = storageService.retrieve(storagePath);
+            return createFileDownload(inputStream, item);
+            
+        } catch (Exception e) {
+            throw new IllegalStateException("파일 다운로드 실패: " + fileId, e);
         }
+    }
+    
+    private FileDownload createFileDownload(InputStream inputStream, FileItem item) {
+        Resource resource = new InputStreamResource(inputStream) {
+            @Override
+            public String getFilename() {
+                return item.getOriginalName();
+            }
+        };
+        
+        return new FileDownload(
+            resource,
+            item.getOriginalName(),
+            item.getMime(),
+            item.getSize()
+        );
     }
 
     public void delete(String groupId, String fileId) {
@@ -176,7 +182,7 @@ public class FileService {
         
         // ⭐ 소프트 삭제: 물리 파일은 유지, DB에 deleteMark = 'Y' 설정
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
         
         item.setDeleteMark("Y");
         item.setUpdatedAt(now);
@@ -302,43 +308,6 @@ public class FileService {
         return fileId + "." + extension;
     }
 
-    private Path prepareTargetPath(String companyId, String groupId, String storedName) {
-        // storage/uploads/{companyId}/{groupId} 구조
-        Path groupDir = storageRoot.resolve(companyId).resolve(groupId);
-        try {
-            Files.createDirectories(groupDir);
-        } catch (IOException e) {
-            throw new IllegalStateException("파일 디렉터리를 생성할 수 없습니다.", e);
-        }
-        Path target = groupDir.resolve(storedName).normalize();
-        if (!target.startsWith(storageRoot)) {
-            throw new IllegalArgumentException("잘못된 파일 경로가 감지되었습니다.");
-        }
-        return target;
-    }
-
-    private String storeFile(MultipartFile file, Path target) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (DigestInputStream inputStream = new DigestInputStream(file.getInputStream(), digest)) {
-                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return HexFormat.of().formatHex(digest.digest());
-        } catch (IOException e) {
-            throw new IllegalStateException("파일을 저장할 수 없습니다.", e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("지원되지 않는 해시 알고리즘입니다.", e);
-        }
-    }
-
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 
     /**
      * 짧은 UUID 기반 fileId 생성 (sequence 사용 안 함)

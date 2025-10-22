@@ -19,12 +19,12 @@
     initList: function(root) {
       console.log('Approval list page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.approvalListInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Approval list already initialized, skipping');
         return;
       }
-      root.dataset.approvalListInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initPagination(root);
       this.initSearch(root);
@@ -35,12 +35,12 @@
     initDetail: function(root) {
       console.log('Approval detail page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.approvalDetailInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Approval detail already initialized, skipping');
         return;
       }
-      root.dataset.approvalDetailInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initApprovalActions(root);
       this.initPrintButton(root);
@@ -50,12 +50,12 @@
     initForm: function(root) {
       console.log('Approval form page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.approvalFormInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Approval form already initialized, skipping');
         return;
       }
-      root.dataset.approvalFormInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initEditor(root);
       this.initApproverManagement(root);
@@ -136,64 +136,238 @@
     // 결재선 관리 초기화 (root 기반)
     initApproverManagement: function(root) {
       const approverItems = root.querySelector('#approver-items');
-      const memberIdInput = root.querySelector('#member-id-input');
+      const autocompleteWrapper = root.querySelector('[data-approver-autocomplete]');
+      const displayInput = autocompleteWrapper?.querySelector('[data-approver-display]');
+      const hiddenInput = autocompleteWrapper?.querySelector('[data-approver-id]');
+      const suggestionsEl = autocompleteWrapper?.querySelector('[data-approver-suggestions]');
       const decisionSelect = root.querySelector('#decision-select');
       const addBtn = root.querySelector('#add-approver');
-      const orgPickerBtn = root.querySelector('#btn-org-picker');
       
-      if (!approverItems || !memberIdInput || !decisionSelect || !addBtn) return;
+      if (!approverItems || !autocompleteWrapper || !displayInput || !hiddenInput || !suggestionsEl || !decisionSelect || !addBtn) {
+        return;
+      }
       
-      // 중복 초기화 방지
       if (approverItems.dataset.initialized === 'true') {
         console.log('Approver management already initialized');
         return;
       }
       
+      const AUTOCOMPLETE_DEBOUNCE = 200;
+      const suggestionCache = new Map();
+      
       let approverCount = 0;
       
-      // 사용자 정보 조회 (API 호출)
-      const fetchMemberInfo = async (memberId) => {
-        try {
-          const result = await window.cmms.common.DataLoader.load(`/api/members/${memberId}`);
-          return {
-            name: result.name || '알 수 없음',
-            deptId: result.deptId || 'N/A',
-            position: result.position || '',
-            title: result.title || ''
-          };
-        } catch (error) {
-          console.error('Member fetch error:', error);
-          return { name: '알 수 없음', deptId: 'N/A', position: '', title: '' };
+      const formatDisplayLabel = (member) => {
+        if (!member) return '';
+        const { name, memberId, deptName } = member;
+        if (name && memberId) {
+          return deptName ? `${name} (${memberId}) · ${deptName}` : `${name} (${memberId})`;
         }
+        return memberId || name || '';
       };
       
-      // 순서 재정렬
+      const resetAutocomplete = () => {
+        displayInput.value = '';
+        hiddenInput.value = '';
+        delete hiddenInput.dataset.name;
+        delete hiddenInput.dataset.deptName;
+        delete hiddenInput.dataset.position;
+        delete hiddenInput.dataset.title;
+        hideSuggestions();
+      };
+      
+      const hideSuggestions = () => {
+        suggestionsEl.hidden = true;
+        suggestionsEl.innerHTML = '';
+        delete suggestionsEl.dataset.items;
+        delete suggestionsEl.dataset.activeIndex;
+      };
+      
+      const renderSuggestions = (items, keyword) => {
+        let html = '';
+        if (items.length === 0) {
+          html = `<div class="approval-member-empty">'${keyword}'에 대한 검색 결과가 없습니다.</div>`;
+        } else {
+          html = items.map(({ memberId, name, deptName, position }) => {
+            return `
+              <button type="button" class="approval-member-suggestion" data-approval-suggestion
+                data-member-id="${memberId}"
+                data-member-name="${name ?? ''}"
+                data-dept-name="${deptName ?? ''}"
+                data-position="${position ?? ''}"
+              >
+                <div><strong>${name ?? memberId}</strong><small>${memberId}</small></div>
+                <div>${deptName ? `<small>${deptName}</small>` : ''}${position ? ` <small>${position}</small>` : ''}</div>
+              </button>
+            `;
+          }).join('');
+        }
+        suggestionsEl.innerHTML = html;
+        suggestionsEl.hidden = false;
+        suggestionsEl.dataset.items = JSON.stringify(items);
+        suggestionsEl.dataset.activeIndex = '-1';
+      };
+      
+      const getCachedSuggestions = (keyword) => {
+        const cacheKey = keyword.toLowerCase();
+        const cached = suggestionCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < 60_000) {
+          return cached.data;
+        }
+        return null;
+      };
+      
+      const fetchSuggestions = async (keyword, options = {}) => {
+        const trimmed = keyword.trim();
+        if (!trimmed) return [];
+        const cached = getCachedSuggestions(trimmed);
+        if (cached) return cached;
+        
+        const params = new URLSearchParams({ q: trimmed, size: '7' });
+        const response = await fetch(`/api/members/approval-candidates?${params.toString()}`, {
+          credentials: 'same-origin',
+          signal: options.signal
+        });
+        if (!response.ok) {
+          throw new Error(`Search failed: ${response.status}`);
+        }
+        const json = await response.json();
+        const list = Array.isArray(json?.content) ? json.content : [];
+        suggestionCache.set(trimmed.toLowerCase(), { data: list, timestamp: Date.now() });
+        return list;
+      };
+      
+      let debounceTimer = null;
+      let activeFetch = null;
+      
+      const scheduleSearch = (value) => {
+        if (debounceTimer) {
+          window.clearTimeout(debounceTimer);
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+          hideSuggestions();
+          hiddenInput.value = '';
+          return;
+        }
+        
+        debounceTimer = window.setTimeout(async () => {
+          if (activeFetch) {
+            activeFetch.abort();
+          }
+          const controller = new AbortController();
+          activeFetch = controller;
+          try {
+            const suggestions = await fetchSuggestions(trimmed, { signal: controller.signal });
+            renderSuggestions(suggestions, trimmed);
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Member search error', error);
+              hideSuggestions();
+            }
+          } finally {
+            if (activeFetch === controller) {
+              activeFetch = null;
+            }
+          }
+        }, AUTOCOMPLETE_DEBOUNCE);
+      };
+      
+      const selectCandidate = (candidate) => {
+        hiddenInput.value = candidate.memberId;
+        hiddenInput.dataset.name = candidate.name ?? '';
+        hiddenInput.dataset.deptName = candidate.deptName ?? '';
+        hiddenInput.dataset.position = candidate.position ?? '';
+        displayInput.value = formatDisplayLabel(candidate);
+        hideSuggestions();
+      };
+      
+      const activateNextSuggestion = (direction) => {
+        if (suggestionsEl.hidden) return;
+        const items = JSON.parse(suggestionsEl.dataset.items ?? '[]');
+        if (!items.length) return;
+        let activeIndex = Number.parseInt(suggestionsEl.dataset.activeIndex ?? '-1', 10);
+        activeIndex += direction;
+        if (activeIndex < 0) activeIndex = items.length - 1;
+        if (activeIndex >= items.length) activeIndex = 0;
+        suggestionsEl.dataset.activeIndex = String(activeIndex);
+        suggestionsEl.querySelectorAll('[data-approval-suggestion]').forEach((btn, idx) => {
+          if (idx === activeIndex) {
+            btn.classList.add('is-active');
+            btn.focus();
+          } else {
+            btn.classList.remove('is-active');
+          }
+        });
+      };
+      
+      displayInput.addEventListener('input', (event) => {
+        hiddenInput.value = '';
+        delete hiddenInput.dataset.name;
+        delete hiddenInput.dataset.deptName;
+        delete hiddenInput.dataset.position;
+        scheduleSearch(event.target.value);
+      });
+      
+      displayInput.addEventListener('focus', (event) => {
+        const value = event.target.value.trim();
+        if (value) {
+          scheduleSearch(value);
+        }
+      });
+      
+      displayInput.addEventListener('blur', () => {
+        window.setTimeout(() => hideSuggestions(), 150);
+      });
+      
+      displayInput.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          activateNextSuggestion(1);
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          activateNextSuggestion(-1);
+        } else if (event.key === 'Enter') {
+          const items = JSON.parse(suggestionsEl.dataset.items ?? '[]');
+          const activeIndex = Number.parseInt(suggestionsEl.dataset.activeIndex ?? '-1', 10);
+          if (!suggestionsEl.hidden && items.length && activeIndex >= 0) {
+            event.preventDefault();
+            selectCandidate(items[activeIndex]);
+          } else if (hiddenInput.value) {
+            event.preventDefault();
+            addApprover();
+          }
+        } else if (event.key === 'Escape') {
+          hideSuggestions();
+        }
+      });
+      
+      suggestionsEl.addEventListener('mousedown', (event) => {
+        const button = event.target.closest('[data-approval-suggestion]');
+        if (!button) return;
+        const candidate = {
+          memberId: button.dataset.memberId,
+          name: button.dataset.memberName,
+          deptName: button.dataset.deptName,
+          position: button.dataset.position
+        };
+        selectCandidate(candidate);
+      });
+      
       const renumber = () => {
         const items = Array.from(approverItems.querySelectorAll('.approver-item'));
-        
         items.forEach((item, idx) => {
-          // 1. 화면 번호 업데이트
           const orderElement = item.querySelector('.order');
           if (orderElement) orderElement.textContent = String(idx + 1);
-          
-          // 2. ⭐ hidden 필드 이름 재정렬
-          const hiddenInputs = item.querySelectorAll('input[type="hidden"]');
-          hiddenInputs.forEach(input => {
-            const name = input.name;
-            // steps[X].field → steps[idx].field
-            input.name = name.replace(/steps\[\d+\]/, `steps[${idx}]`);
+          item.querySelectorAll('input[type="hidden"]').forEach((input) => {
+            input.name = input.name.replace(/steps\[\d+\]/, `steps[${idx}]`);
           });
-          
-          // 3. stepNo 값도 업데이트
           const stepNoInput = item.querySelector('input[name*=".stepNo"]');
           if (stepNoInput) stepNoInput.value = idx + 1;
         });
-        
-        // 4. ⭐ approverCount 재계산
         approverCount = items.length;
       };
       
-      // 빈 메시지 표시/숨김 관리
       const toggleEmptyMessage = (show) => {
         const emptyMessage = approverItems.querySelector('.empty-message');
         if (emptyMessage) {
@@ -201,22 +375,19 @@
         }
       };
       
-      // 결재자 추가
-      const addApprover = async () => {
-        const memberId = memberIdInput.value.trim();
+      const addApprover = () => {
+        const memberId = hiddenInput.value.trim();
         const decision = decisionSelect.value;
-        
         if (!memberId) {
           if (window.cmms?.notification) {
-            window.cmms.notification.warning('결재자 ID를 입력하세요.');
+            window.cmms.notification.warning('결재자를 선택하세요.');
           } else {
-            alert('결재자 ID를 입력하세요.');
+            alert('결재자를 선택하세요.');
           }
           return;
         }
         
-        // 중복 방지 (같은 사용자+구분)
-        const existing = Array.from(approverItems.querySelectorAll('.approver-item')).some(item => 
+        const existing = Array.from(approverItems.querySelectorAll('.approver-item')).some(item =>
           item.dataset.memberId === memberId && item.dataset.decision === decision
         );
         if (existing) {
@@ -228,24 +399,22 @@
           return;
         }
         
-        // 사용자 정보 조회
-        const memberInfo = await fetchMemberInfo(memberId);
-        
-        toggleEmptyMessage(false); // 빈 메시지 숨기기
-        // root 기반 DOM 생성
-        const item = root.createElement ? root.createElement('div') : document.createElement('div');
+        toggleEmptyMessage(false);
+        const item = document.createElement('div');
         item.className = 'approver-item';
         item.dataset.memberId = memberId;
         item.dataset.decision = decision;
-        
+
         const decisionText = decision === 'APPROVAL' ? '결재' : decision === 'AGREE' ? '합의' : '통보';
         const decisionClass = decision === 'APPROVAL' ? 'approval' : decision === 'AGREE' ? 'agree' : 'inform';
+        const memberName = hiddenInput.dataset.name || memberId;
+        const deptName = hiddenInput.dataset.deptName || '-';
         
         item.innerHTML = `
           <div class="order">${approverCount + 1}</div>
           <div class="member-id">${memberId}</div>
-          <div class="member-name">${memberInfo.name || '-'}</div>
-          <div class="member-dept">${memberInfo.deptId || '-'}</div>
+          <div class="member-name">${memberName}</div>
+          <div class="member-dept">${deptName}</div>
           <div class="decision">
             <span class="decision-badge ${decisionClass}">${decisionText}</span>
           </div>
@@ -261,19 +430,10 @@
         
         approverItems.appendChild(item);
         approverCount++;
-        memberIdInput.value = ''; // 입력 필드 초기화
+        resetAutocomplete();
       };
       
-      // 결재자 추가 버튼
       addBtn.addEventListener('click', addApprover);
-      
-      // Enter 키로 추가
-      memberIdInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          addApprover();
-        }
-      });
       
       // 결재선 관리 (삭제, 순서 변경)
       approverItems.addEventListener('click', (e) => {
@@ -286,7 +446,6 @@
           item.remove();
           approverCount--;
           renumber();
-          // 결재자가 없으면 빈 메시지 표시
           if (!approverItems.querySelector('.approver-item')) {
             toggleEmptyMessage(true);
           }
@@ -306,78 +465,8 @@
         }
       });
       
-      // 조직도 팝업 열기
-      if (orgPickerBtn) {
-        orgPickerBtn.addEventListener('click', () => {
-          const width = 900;
-          const height = 600;
-          const left = (screen.width - width) / 2;
-          const top = (screen.height - height) / 2;
-          
-          window.open(
-            '/common/org-picker',
-            'orgPicker',
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-          );
-        });
-      }
-      
-      // 팝업에서 조직원 선택 시 호출되는 콜백 (네임스페이스 사용)
-      window.cmms.approval.onMemberSelected = async function(member) {
-        // 멤버 ID를 입력 필드에 설정
-        memberIdInput.value = member.memberId;
-        
-        // 자동으로 결재선에 추가
-        const decision = decisionSelect.value;
-        
-        // 중복 방지
-        const existing = Array.from(approverItems.querySelectorAll('.approver-item')).some(item => 
-          item.dataset.memberId === member.memberId && item.dataset.decision === decision
-        );
-        if (existing) {
-          if (window.cmms?.notification) {
-            window.cmms.notification.warning('이미 추가된 결재자입니다.');
-          } else {
-            alert('이미 추가된 결재자입니다.');
-          }
-          return;
-        }
-        
-        toggleEmptyMessage(false); // 빈 메시지 숨기기
-        // root 기반 DOM 생성
-        const item = root.createElement ? root.createElement('div') : document.createElement('div');
-        item.className = 'approver-item';
-        item.dataset.memberId = member.memberId;
-        item.dataset.decision = decision;
-        
-        const decisionText = decision === 'APPROVAL' ? '결재' : decision === 'AGREE' ? '합의' : '통보';
-        const decisionClass = decision === 'APPROVAL' ? 'approval' : decision === 'AGREE' ? 'agree' : 'inform';
-        
-        item.innerHTML = `
-          <div class="order">${approverCount + 1}</div>
-          <div class="member-id">${member.memberId}</div>
-          <div class="member-name">${member.name || '-'}</div>
-          <div class="member-dept">${member.deptName || '-'}</div>
-          <div class="decision">
-            <span class="decision-badge ${decisionClass}">${decisionText}</span>
-          </div>
-          <div class="actions">
-            <button class="btn sm" type="button" data-move="up" title="위로">▲</button>
-            <button class="btn sm" type="button" data-move="down" title="아래로">▼</button>
-            <button class="btn sm danger" type="button" data-remove title="삭제">×</button>
-          </div>
-          <input type="hidden" name="steps[${approverCount}].memberId" value="${member.memberId}" />
-          <input type="hidden" name="steps[${approverCount}].decision" value="${decision}" />
-          <input type="hidden" name="steps[${approverCount}].stepNo" value="${approverCount + 1}" />
-        `;
-        
-        approverItems.appendChild(item);
-        approverCount++;
-        memberIdInput.value = ''; // 입력 필드 초기화
-      };
-      
-      // HTML에 이미 빈 메시지가 있으므로 별도 초기화 불필요
-      
+      renumber();
+      toggleEmptyMessage(!approverItems.querySelector('.approver-item'));
       approverItems.dataset.initialized = 'true';
     },
     

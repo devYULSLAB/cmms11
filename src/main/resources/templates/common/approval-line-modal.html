@@ -1,0 +1,67 @@
+<th:block th:fragment="approval-line-modal">
+  <div id="approval-line-modal" class="approval-modal" hidden>
+    <div class="approval-modal__backdrop" data-approval-modal-dismiss></div>
+    <div class="approval-modal__container">
+      <header class="approval-modal__header">
+        <h2 class="approval-modal__title">결재선 구성</h2>
+        <button type="button" class="approval-modal__close" data-approval-modal-dismiss>&times;</button>
+      </header>
+      <section class="approval-modal__body">
+        <p class="approval-modal__description">
+          결재자 이름 또는 사번을 입력하면 자동으로 후보가 제안됩니다. 결재 유형은 결재/합의/참조 중 선택합니다.
+        </p>
+        <table class="approval-modal__table">
+          <thead>
+            <tr>
+              <th style="width:60px;">순서</th>
+              <th>결재자</th>
+              <th style="width:140px;">유형</th>
+              <th style="width:80px;">작업</th>
+            </tr>
+          </thead>
+          <tbody id="approval-line-rows"></tbody>
+        </table>
+        <button type="button" class="btn secondary" data-approval-line-add>결재선 추가</button>
+      </section>
+      <footer class="approval-modal__footer">
+        <div class="approval-modal__meta">
+          <span class="badge" id="approval-modal-stage"></span>
+          <span id="approval-modal-target"></span>
+        </div>
+        <div class="approval-modal__actions">
+          <button type="button" class="btn" data-approval-modal-dismiss>취소</button>
+          <button type="button" class="btn primary" data-approval-line-submit>상신</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <style>
+    .approval-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
+    .approval-modal[hidden]{display:none}
+    .approval-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.45)}
+    .approval-modal__container{position:relative;background:#fff;border-radius:12px;box-shadow:0 20px 45px rgba(0,0,0,0.15);width:min(720px,94vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+    .approval-modal__header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+    .approval-modal__title{margin:0;font-size:18px;font-weight:600}
+    .approval-modal__close{border:none;background:transparent;font-size:24px;cursor:pointer;line-height:1;color:var(--muted)}
+    .approval-modal__body{padding:20px;overflow:auto}
+    .approval-modal__description{margin-top:0;margin-bottom:16px;color:var(--muted);font-size:14px}
+    .approval-modal__table{width:100%;border-collapse:collapse;margin-bottom:12px}
+    .approval-modal__table th,.approval-modal__table td{border:1px solid var(--border);padding:8px;text-align:center;vertical-align:middle}
+    .approval-modal__table input[type="text"],.approval-modal__table select{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px}
+    .approval-modal__footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .approval-modal__meta{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+    .approval-modal__actions{display:flex;gap:10px}
+    .approval-modal__row-remove{border:none;background:transparent;color:var(--danger,#d9534f);cursor:pointer;font-size:22px;line-height:1}
+    .approval-member-input{position:relative;text-align:left}
+    .approval-member-input input[type="text"]{padding-right:32px}
+    .approval-member-suggestions{position:absolute;left:0;top:100%;z-index:10;width:100%;max-height:220px;overflow:auto;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.12)}
+    .approval-member-suggestions[hidden]{display:none}
+    .approval-member-suggestion{display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 10px;border:none;background:transparent;font-size:13px;cursor:pointer;text-align:left;gap:12px}
+    .approval-member-suggestion:hover,.approval-member-suggestion.is-active{background:rgba(46,125,254,0.08)}
+    .approval-member-suggestion strong{font-weight:600}
+    .approval-member-suggestion small{color:var(--muted,#6b7280);font-size:12px}
+    .approval-member-suggestion[aria-disabled="true"]{opacity:0.5;cursor:not-allowed}
+    .approval-member-empty{padding:10px 12px;font-size:13px;color:var(--muted,#6b7280)}
+  </style>
+</th:block>

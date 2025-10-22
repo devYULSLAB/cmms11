@@ -20,6 +20,8 @@ import { initDataLoader } from './data-loader.js';
 import { initConfirmDialog } from './confirm-dialog.js';
 import { initValidator } from './validator.js';
 import { initPrintUtils } from './print-utils.js';
+import { initWorkflowActions } from './workflow-actions.js';
+import { initApprovalLineModal } from './approval-line-modal.js';
 
 /**
  * UI 모듈 초기화 함수
@@ -51,7 +53,13 @@ export function initUI() {
     // 8. 인쇄 유틸리티 초기화
     initPrintUtils();
     
-    // 9. 공통 이벤트 핸들러 초기화
+    // 9. 결재선 모달 초기화
+    initApprovalLineModal();
+
+    // 10. 워크플로우 액션 초기화
+    initWorkflowActions();
+    
+    // 11. 공통 이벤트 핸들러 초기화
     initCommonEventHandlers();
     
     console.log('UI modules initialized successfully');
@@ -112,19 +120,8 @@ function setupCommonEventHandlers() {
     }
   });
 
-  // data-print-btn 처리
-  document.querySelectorAll('[data-print-btn]').forEach(btn => {
-    if (btn.__printBound) return;
-    btn.__printBound = true;
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (window.cmms?.printUtils) {
-        window.cmms.printUtils.printPage();
-      } else {
-        window.print();
-      }
-    });
-  });
+  // data-print-btn 처리는 각 페이지 모듈에서 printUtils.initPrintButton(root)를 사용하여 처리
+  // 전역 바인딩 제거: 각 모듈에서 fillPrintMetadata를 호출해야 출력일/출력자가 표시됨
 
   // data-logout 처리
   document.querySelectorAll('[data-logout]').forEach(btn => {
@@ -151,5 +148,7 @@ export {
   initDataLoader, 
   initConfirmDialog, 
   initValidator, 
-  initPrintUtils 
+  initPrintUtils,
+  initWorkflowActions,
+  initApprovalLineModal
 };

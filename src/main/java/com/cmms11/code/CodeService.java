@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +55,7 @@ public class CodeService {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         Optional<CodeType> existing = typeRepository.findByIdCompanyIdAndIdCodeType(companyId, request.codeType());
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         if (existing.isPresent()) {
             CodeType type = existing.get();
@@ -89,7 +87,7 @@ public class CodeService {
         type.setName(request.name());
         type.setNote(request.note());
         type.setUpdatedAt(LocalDateTime.now());
-        type.setUpdatedBy(currentMemberId());
+        type.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return CodeTypeResponse.from(typeRepository.save(type));
     }
 
@@ -101,7 +99,7 @@ public class CodeService {
         }
         type.setDeleteMark("Y");
         type.setUpdatedAt(LocalDateTime.now());
-        type.setUpdatedBy(currentMemberId());
+        type.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         typeRepository.save(type);
     }
 
@@ -171,13 +169,5 @@ public class CodeService {
             .orElseThrow(() -> new NotFoundException("Code item not found: " + codeType + "/" + code));
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }
 

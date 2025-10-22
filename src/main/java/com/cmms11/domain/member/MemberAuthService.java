@@ -26,8 +26,9 @@ public class MemberAuthService {
             throw new UnauthorizedException("Authentication is required");
         }
 
-        String memberId = authentication.getName();
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        // MemberUserDetailsService의 메서드를 사용하여 파싱
+        String companyId = MemberUserDetailsService.getCurrentUserCompanyId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         Member member = memberRepository
                 .findByIdCompanyIdAndIdMemberId(companyId, memberId)

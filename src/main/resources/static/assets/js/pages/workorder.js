@@ -46,10 +46,11 @@
       this.initApprovalButtons(root);
     },
     
-    // 결재 상신 버튼 초기화 (공통 submitApproval 함수 사용)
+    // 결재 상신 버튼 초기화
     initApprovalButtons: function(root) {
-      // inspection.js에서 이미 window.submitApproval 전역 함수 등록됨
-      // 모든 모듈에서 공통 사용
+      // ✅ ui/workflow-actions.js에서 제공하는 전역 함수 사용
+      // submitApproval, confirmComplete는 이미 전역에 등록되어 있음
+      // 별도 초기화 불필요
     },
     
     // 폼 페이지 초기화 (root 기반)

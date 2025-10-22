@@ -1,78 +1,79 @@
 package com.cmms11.approval;
 
-import com.cmms11.approval.handler.ApprovalRefHandler;
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
 import com.cmms11.security.MemberUserDetailsService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 이름: ApprovalService
- * 작성자: codex
- * 작성일: 2025-08-20
- * 수정일:
- * 프로그램 개요: 결재 헤더 및 단계 CRUD 로직을 담당하는 서비스.
+ * 결재 도메인 서비스. REST + Outbox 기반 구조에 맞춰 상신/처리/Inbox 연동을 담당한다.
  */
 @Service
 @Transactional
 public class ApprovalService {
 
+    private static final Logger log = LoggerFactory.getLogger(ApprovalService.class);
+
     private static final String MODULE_CODE = "A";
     private static final String INBOX_MODULE_CODE = "I";
 
-    private static final String STATUS_DRAFT = "DRAFT";
     private static final String STATUS_SUBMITTED = "SUBMT";
     private static final String STATUS_IN_PROGRESS = "PROC";
     private static final String STATUS_APPROVED = "APPRV";
     private static final String STATUS_REJECTED = "REJCT";
+    private static final String STATUS_CANCELLED = "CNCLD";
+
+    private static final String DECISION_APPROVAL = "APPRL";
+    private static final String DECISION_AGREE = "AGREE";
+    private static final String DECISION_INFO = "INFO";
 
     private static final String INBOX_SUBMITTED = "SUBMT";
     private static final String INBOX_APPROVED = "APPRV";
     private static final String INBOX_REJECTED = "REJCT";
     private static final String INBOX_COMPLETED = "CMPLT";
 
-    private static final String DECISION_APPROVAL = "APPRL";
-    private static final String DECISION_AGREE = "AGREE";
-    private static final String DECISION_INFO = "INFO";
-
-    private static final String RESULT_APPROVE = "APPROVE";
-    private static final String RESULT_REJECT = "REJECT";
-
-    private static final Logger log = LoggerFactory.getLogger(ApprovalService.class);
+    private static final Pattern IDEMPOTENCY_KEY_PATTERN =
+        Pattern.compile("^[A-Z0-9]{2,}_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+_[A-F0-9]{8}$");
 
     private final ApprovalRepository repository;
     private final ApprovalStepRepository stepRepository;
     private final ApprovalInboxRepository inboxRepository;
+    private final ApprovalOutboxRepository outboxRepository;
     private final AutoNumberService autoNumberService;
-    private final List<ApprovalRefHandler> handlers;
+    private final ObjectMapper objectMapper;
 
     public ApprovalService(
         ApprovalRepository repository,
         ApprovalStepRepository stepRepository,
         ApprovalInboxRepository inboxRepository,
+        ApprovalOutboxRepository outboxRepository,
         AutoNumberService autoNumberService,
-        List<ApprovalRefHandler> handlers
+        ObjectMapper objectMapper
     ) {
         this.repository = repository;
         this.stepRepository = stepRepository;
         this.inboxRepository = inboxRepository;
+        this.outboxRepository = outboxRepository;
         this.autoNumberService = autoNumberService;
-        this.handlers = handlers;
+        this.objectMapper = objectMapper;
     }
+
+    // ===== 목록/조회 =====
 
     @Transactional(readOnly = true)
     public Page<ApprovalResponse> list(String keyword, Pageable pageable) {
@@ -102,63 +103,8 @@ public class ApprovalService {
     @Transactional(readOnly = true)
     public Page<ApprovalResponse> list(String title, String createdBy, String status, Pageable pageable) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-
-        Page<Approval> page = repository.findByFilters(
-            companyId, 
-            title, 
-            createdBy, 
-            status, 
-            pageable
-        );
-        
+        Page<Approval> page = repository.findByFilters(companyId, title, createdBy, status, pageable);
         return page.map(this::toResponseWithoutSteps);
-    }
-
-    /**
-     * 미결함: 내가 결재해야 할 문서
-     */
-    @Transactional(readOnly = true)
-    public Page<ApprovalResponse> findPendingApprovals(String memberId, Pageable pageable) {
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Approval> page = repository.findPendingByMemberId(companyId, memberId, pageable);
-        return page.map(this::toResponseWithoutSteps);
-    }
-
-    /**
-     * 기결함: 내가 승인/합의한 문서
-     */
-    @Transactional(readOnly = true)
-    public Page<ApprovalResponse> findApprovedApprovals(String memberId, Pageable pageable) {
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Approval> page = repository.findApprovedByMemberId(companyId, memberId, pageable);
-        return page.map(this::toResponseWithoutSteps);
-    }
-
-    /**
-     * 반려함: 내가 반려한 문서
-     */
-    @Transactional(readOnly = true)
-    public Page<ApprovalResponse> findRejectedApprovals(String memberId, Pageable pageable) {
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Approval> page = repository.findRejectedByMemberId(companyId, memberId, pageable);
-        return page.map(this::toResponseWithoutSteps);
-    }
-
-    /**
-     * 상신함: 내가 상신한 문서
-     */
-    @Transactional(readOnly = true)
-    public Page<ApprovalResponse> findSentApprovals(String memberId, Pageable pageable) {
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Page<Approval> page = repository.findSentByMemberId(companyId, memberId, pageable);
-        return page.map(this::toResponseWithoutSteps);
-    }
-
-    /**
-     * 목록 조회 시 단계 정보 제외한 응답 생성 (성능 최적화)
-     */
-    private ApprovalResponse toResponseWithoutSteps(Approval approval) {
-        return ApprovalResponse.from(approval, Collections.emptyList());
     }
 
     @Transactional(readOnly = true)
@@ -172,355 +118,149 @@ public class ApprovalService {
         return ApprovalResponse.from(approval, steps);
     }
 
+    @Transactional(readOnly = true)
+    public List<ApprovalStepResponse> getApprovalLine(String approvalId) {
+        return stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(
+                MemberUserDetailsService.DEFAULT_COMPANY,
+                approvalId
+            )
+            .stream()
+            .map(ApprovalStepResponse::from)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApprovalStepResponse> getApprovalOpinions(String approvalId) {
+        return getApprovalLine(approvalId).stream()
+            .filter(step -> step.comment() != null && !step.comment().isBlank())
+            .collect(Collectors.toList());
+    }
+
+    // ===== Inbox =====
+
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findPendingApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findPendingByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findApprovedApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findApprovedByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findRejectedApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findRejectedByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponse> findSentApprovals(String memberId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        Page<Approval> page = repository.findSentByMemberId(companyId, memberId, pageable);
+        return page.map(this::toResponseWithoutSteps);
+    }
+
+    // ===== 상신/처리 =====
+
     public ApprovalResponse create(ApprovalRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        String currentMemberId = MemberUserDetailsService.getCurrentMemberId();
+        String normalizedKey = normalizeIdempotencyKey(request.idempotencyKey());
+
+        validateIdempotencyKey(companyId, normalizedKey);
+
+        Optional<Approval> existing = repository.findByIdCompanyIdAndIdempotencyKey(companyId, normalizedKey);
+        if (existing.isPresent()) {
+            Approval approval = existing.get();
+            List<ApprovalStepResponse> stepResponses = stepRepository
+                .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(companyId, approval.getApprovalId())
+                .stream()
+                .map(ApprovalStepResponse::from)
+                .collect(Collectors.toList());
+            return ApprovalResponse.from(approval, stepResponses);
+        }
+
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String approvalId = autoNumberService.generateTxId(companyId, MODULE_CODE, LocalDate.now());
 
-        String newId = resolveId(companyId, request.approvalId());
-        Approval entity = new Approval();
-        entity.setId(new ApprovalId(companyId, newId));
-        entity.setCreatedAt(now);
-        entity.setCreatedBy(memberId);
-        applyRequest(entity, request);
-        entity.setUpdatedAt(now);
-        entity.setUpdatedBy(memberId);
-        Approval saved = repository.save(entity);
+        Approval approval = new Approval();
+        approval.setId(new ApprovalId(companyId, approvalId));
+        approval.setTitle(request.title());
+        approval.setStatus(STATUS_SUBMITTED);
+        approval.setRefEntity(request.refEntity());
+        approval.setRefId(request.refId());
+        approval.setRefStage(request.refStage());
+        approval.setCallbackUrl(request.callbackUrl());
+        approval.setIdempotencyKey(normalizedKey);
+        approval.setContent(request.content());
+        approval.setFileGroupId(request.fileGroupId());
+        approval.setSubmittedAt(now);
+        approval.setCreatedAt(now);
+        approval.setCreatedBy(currentMemberId);
+        approval.setUpdatedAt(now);
+        approval.setUpdatedBy(currentMemberId);
 
-        replaceSteps(saved, request.steps());
-        List<ApprovalStepResponse> steps = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(companyId, newId)
-            .stream()
-            .map(ApprovalStepResponse::from)
-            .collect(Collectors.toList());
-        return ApprovalResponse.from(saved, steps);
-    }
+        Approval saved = repository.save(approval);
+        List<ApprovalStep> steps = persistSteps(saved, request.steps(), now, currentMemberId);
 
-    public ApprovalResponse update(String approvalId, ApprovalRequest request) {
-        Approval entity = getExisting(approvalId);
-        applyRequest(entity, request);
-        entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedBy(currentMemberId());
-        Approval saved = repository.save(entity);
+        enqueueOutbox(saved, steps, ApprovalEventType.SUBMITTED, now, currentMemberId, null);
 
-        replaceSteps(saved, request.steps());
-        List<ApprovalStepResponse> steps = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
-            .stream()
-            .map(ApprovalStepResponse::from)
-            .collect(Collectors.toList());
-        return ApprovalResponse.from(saved, steps);
-    }
-
-    public void delete(String approvalId) {
-        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        Approval entity = getExisting(approvalId);
-        
-        // 원본 모듈 상태 복원 콜백 (DRAFT로 되돌림)
-        notifyRefModule(entity, "DELETE");
-        
-        stepRepository.deleteByIdCompanyIdAndIdApprovalId(companyId, approvalId);
-        inboxRepository.deleteByIdCompanyIdAndApprovalId(companyId, approvalId);
-        repository.delete(entity);
-    }
-
-    public ApprovalResponse approve(String approvalId, String comment) {
-        return processApproval(approvalId, comment, RESULT_APPROVE);
-    }
-
-    public ApprovalResponse reject(String approvalId, String comment) {
-        return processApproval(approvalId, comment, RESULT_REJECT);
-    }
-
-    /**
-     * 승인/반려 공통 처리 (중복 제거)
-     */
-    private ApprovalResponse processApproval(
-        String approvalId,
-        String comment,
-        String stepResult
-    ) {
-        Approval entity = getExisting(approvalId);
-        LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
-
-        // 결재 상태 확인
-        if (!STATUS_SUBMITTED.equals(entity.getStatus()) && !STATUS_IN_PROGRESS.equals(entity.getStatus())) {
-            throw new IllegalStateException("결재 대기 중인 문서만 처리할 수 있습니다. 현재 상태: " + entity.getStatus());
-        }
-
-        // ⭐ 스텝 1회만 조회
-        List<ApprovalStep> steps = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(entity.getCompanyId(), approvalId);
-
-        ApprovalStep targetStep = steps.stream()
-            .filter(step -> memberId.equals(step.getMemberId()))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("결재 권한이 없습니다"));
-
-        if (targetStep.getDecidedAt() != null) {
-            throw new IllegalStateException("이미 결재한 문서입니다");
-        }
-
-        enforceStepOrder(steps, targetStep);
-
-        targetStep.setDecidedAt(now);
-        targetStep.setComment(comment);
-        targetStep.setResult(stepResult);
-        stepRepository.save(targetStep);
-
-        String nextStatus;
-        boolean shouldNotify = false;
-
-        if (RESULT_REJECT.equals(stepResult) && !DECISION_INFO.equals(targetStep.getDecision())) {
-            nextStatus = STATUS_REJECTED;
-            entity.setCompletedAt(now);
-            shouldNotify = true;
-        } else if (checkAllApproversCompleted(steps)) {
-            nextStatus = STATUS_APPROVED;
-            entity.setCompletedAt(now);
-            shouldNotify = true;
-        } else {
-            nextStatus = STATUS_IN_PROGRESS;
-            entity.setCompletedAt(null);
-        }
-
-        entity.setStatus(nextStatus);
-        entity.setUpdatedAt(now);
-        entity.setUpdatedBy(memberId);
-
-        Approval saved = repository.save(entity);
-
-        updateInboxAfterDecision(saved, targetStep, stepResult, now);
-
-        if (shouldNotify) {
-            notifyRefModule(saved, nextStatus);
-        }
-
-        // 응답 생성 (이미 로드된 steps 재사용)
         List<ApprovalStepResponse> stepResponses = steps.stream()
             .map(ApprovalStepResponse::from)
             .collect(Collectors.toList());
-        
-        log.info("결재 처리 완료: approvalId={}, result={}", approvalId, stepResult);
-        
         return ApprovalResponse.from(saved, stepResponses);
     }
 
-    /**
-     * 결재선 입력 후 상신 처리 (DRAFT → SUBMIT)
-     */
-    public ApprovalResponse submit(String approvalId, List<ApprovalStepRequest> steps) {
-        Approval entity = getExisting(approvalId);
+    public ApprovalResponse approve(String approvalId, String comment) {
+        return processApproval(approvalId, comment, STATUS_APPROVED, ApprovalEventType.APPROVED);
+    }
+
+    public ApprovalResponse reject(String approvalId, String comment) {
+        return processApproval(approvalId, comment, STATUS_REJECTED, ApprovalEventType.REJECTED);
+    }
+
+    public ApprovalResponse cancel(String approvalId, String comment) {
+        Approval approval = getExisting(approvalId);
+        if (!STATUS_SUBMITTED.equals(approval.getStatus()) && !STATUS_IN_PROGRESS.equals(approval.getStatus())) {
+            throw new IllegalStateException("SUBMT/PROC 상태만 취소할 수 있습니다. 현재 상태: " + approval.getStatus());
+        }
+
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String currentMemberId = MemberUserDetailsService.getCurrentMemberId();
+        approval.setStatus(STATUS_CANCELLED);
+        approval.setCompletedAt(now);
+        approval.setUpdatedAt(now);
+        approval.setUpdatedBy(currentMemberId);
 
-        // 상태 검증
-        if (!STATUS_DRAFT.equals(entity.getStatus())) {
-            throw new IllegalStateException("임시저장 상태에서만 상신할 수 있습니다. 현재 상태: " + entity.getStatus());
-        }
+        Approval saved = repository.save(approval);
+        updateInboxAfterCancel(saved, now);
 
-        // 상태 전환: DRAFT → SUBMT
-        entity.setStatus(STATUS_SUBMITTED);
-        entity.setSubmittedAt(now);
-        entity.setUpdatedAt(now);
-        entity.setUpdatedBy(memberId);
+        List<ApprovalStep> steps = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(saved.getCompanyId(), approvalId);
+        enqueueOutbox(saved, steps, ApprovalEventType.CANCELLED, now, currentMemberId, comment);
 
-        // 결재선 등록 (제공된 경우에만)
-        if (steps != null && !steps.isEmpty()) {
-            replaceSteps(entity, steps);
-        } else {
-            syncInboxMetadata(entity, now, memberId);
-        }
-
-        Approval saved = repository.save(entity);
-
-        // 응답 생성
-        List<ApprovalStepResponse> stepResponses = stepRepository
-            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(entity.getCompanyId(), approvalId)
-            .stream()
+        List<ApprovalStepResponse> stepResponses = steps.stream()
             .map(ApprovalStepResponse::from)
             .collect(Collectors.toList());
-            
-        log.info("결재 상신 완료: approvalId={}, steps={}", approvalId, stepResponses.size());
-        
         return ApprovalResponse.from(saved, stepResponses);
     }
 
-    private Approval getExisting(String approvalId) {
-        return repository
-            .findByIdCompanyIdAndIdApprovalId(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
-            .orElseThrow(() -> new NotFoundException("Approval not found: " + approvalId));
-    }
-
-    private void applyRequest(Approval entity, ApprovalRequest request) {
-        entity.setTitle(request.title());
-        entity.setStatus(request.status());
-        entity.setRefEntity(request.refEntity());
-        entity.setRefId(request.refId());
-        entity.setRefStage(request.refStage());  // ⭐ 추가: 결재 단계 저장
-        
-        entity.setContent(request.content());
-        entity.setFileGroupId(request.fileGroupId());
-    }
-
-    private void replaceSteps(Approval approval, List<ApprovalStepRequest> steps) {
-        String companyId = approval.getCompanyId();
-        String approvalId = approval.getApprovalId();
-
-        stepRepository.deleteByIdCompanyIdAndIdApprovalId(companyId, approvalId);
-        inboxRepository.deleteByIdCompanyIdAndApprovalId(companyId, approvalId);
-
-        if (steps == null || steps.isEmpty()) {
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        for (int i = 0; i < steps.size(); i++) {
-            ApprovalStepRequest request = steps.get(i);
-            int stepNo = request.stepNo() != null && request.stepNo() > 0 ? request.stepNo() : (i + 1);
-            ApprovalStep step = new ApprovalStep();
-            step.setId(new ApprovalStepId(companyId, approvalId, stepNo));
-            step.setMemberId(request.memberId());
-            step.setDecision(request.decision());
-            step.setResult(request.result());
-            step.setDecidedAt(request.decidedAt());
-            step.setComment(request.comment());
-            stepRepository.save(step);
-
-            createInboxEntry(approval, step, now);
-        }
-    }
-
-    private void createInboxEntry(Approval approval, ApprovalStep step, LocalDateTime createdAt) {
-        if (step.getMemberId() == null) {
-            return;
-        }
-
-        String companyId = approval.getCompanyId();
-        String approvalId = approval.getApprovalId();
-        String inboxId = autoNumberService.generateTxId(companyId, INBOX_MODULE_CODE, LocalDate.now());
-
-        ApprovalInbox inbox = new ApprovalInbox();
-        inbox.setId(new ApprovalInboxId(companyId, inboxId));
-        inbox.setMemberId(step.getMemberId());
-        inbox.setApprovalId(approvalId);
-        inbox.setStepNo(step.getId() != null ? step.getId().getStepNo() : null);
-        inbox.setInboxType(INBOX_SUBMITTED);
-        inbox.setIsRead("N");
-        inbox.setDecision(step.getDecision());
-        inbox.setTitle(approval.getTitle());
-        inbox.setRefEntity(approval.getRefEntity());
-        inbox.setRefId(approval.getRefId());
-        inbox.setSubmittedBy(approval.getUpdatedBy() != null ? approval.getUpdatedBy() : approval.getCreatedBy());
-        inbox.setSubmittedAt(approval.getSubmittedAt());
-        inbox.setCreatedAt(createdAt);
-        inboxRepository.save(inbox);
-    }
-
-    private void syncInboxMetadata(Approval approval, LocalDateTime submittedAt, String submittedBy) {
-        if (approval.getCompanyId() == null || approval.getApprovalId() == null) {
-            return;
-        }
-
-        List<ApprovalInbox> inboxes = inboxRepository
-            .findByIdCompanyIdAndApprovalId(approval.getCompanyId(), approval.getApprovalId());
-
-        LocalDateTime now = LocalDateTime.now();
-        for (ApprovalInbox inbox : inboxes) {
-            inbox.setTitle(approval.getTitle());
-            inbox.setRefEntity(approval.getRefEntity());
-            inbox.setRefId(approval.getRefId());
-            inbox.setSubmittedAt(submittedAt);
-            inbox.setSubmittedBy(submittedBy);
-            if (inbox.getInboxType() == null) {
-                inbox.setInboxType(INBOX_SUBMITTED);
-            }
-            inbox.setUpdatedAt(now);
-            inboxRepository.save(inbox);
-        }
-    }
-
-    private void updateInboxAfterDecision(
-        Approval approval,
-        ApprovalStep step,
-        String stepResult,
-        LocalDateTime now
-    ) {
-        if (approval.getCompanyId() == null || approval.getApprovalId() == null || step.getMemberId() == null) {
-            return;
-        }
-
-        Optional<ApprovalInbox> inboxOptional = inboxRepository
-            .findByIdCompanyIdAndApprovalIdAndMemberId(
-                approval.getCompanyId(),
-                approval.getApprovalId(),
-                step.getMemberId()
-            );
-
-        if (inboxOptional.isEmpty()) {
-            return;
-        }
-
-        ApprovalInbox inbox = inboxOptional.get();
-
-        if (DECISION_INFO.equals(step.getDecision())) {
-            inbox.setInboxType(INBOX_COMPLETED);
-        } else if (RESULT_REJECT.equals(stepResult)) {
-            inbox.setInboxType(INBOX_REJECTED);
-        } else {
-            inbox.setInboxType(INBOX_APPROVED);
-        }
-
-        inbox.setIsRead("Y");
-        inbox.setReadAt(now);
-        inbox.setUpdatedAt(now);
-        inboxRepository.save(inbox);
-    }
-
-    private void enforceStepOrder(List<ApprovalStep> steps, ApprovalStep targetStep) {
-        if (DECISION_INFO.equals(targetStep.getDecision())) {
-            return;
-        }
-
-        int targetNo = targetStep.getId() != null ? targetStep.getId().getStepNo() : 0;
-        for (ApprovalStep step : steps) {
-            if (step.getId() == null || step.getId().getStepNo() >= targetNo) {
-                continue;
-            }
-            if (!isSequentialDecision(step.getDecision())) {
-                continue;
-            }
-            if (step.getDecidedAt() == null) {
-                throw new IllegalStateException(
-                    String.format(
-                        "이전 결재자(%d번: %s)가 먼저 결재해야 합니다",
-                        step.getId().getStepNo(),
-                        step.getMemberId()
-                    )
-                );
-            }
-            if (RESULT_REJECT.equals(step.getResult())) {
-                throw new IllegalStateException(
-                    String.format("%d번 결재자가 반려하여 결재가 종료되었습니다", step.getId().getStepNo())
-                );
-            }
-        }
-    }
-
-    private boolean checkAllApproversCompleted(List<ApprovalStep> steps) {
-        return steps.stream()
-            .filter(step -> isSequentialDecision(step.getDecision()))
-            .allMatch(step -> step.getDecidedAt() != null && RESULT_APPROVE.equals(step.getResult()));
-    }
-
-    private boolean isSequentialDecision(String decision) {
-        return DECISION_APPROVAL.equals(decision) || DECISION_AGREE.equals(decision);
-    }
+    // ===== Inbox API =====
 
     @Transactional
     public void markInboxAsRead(String inboxId) {
-        markInboxAsRead(MemberUserDetailsService.DEFAULT_COMPANY, inboxId, currentMemberId());
+        markInboxAsRead(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            inboxId,
+            MemberUserDetailsService.getCurrentMemberId()
+        );
     }
 
     @Transactional
@@ -545,31 +285,40 @@ public class ApprovalService {
     }
 
     public long getUnreadInboxCount() {
-        return getUnreadInboxCount(MemberUserDetailsService.DEFAULT_COMPANY, currentMemberId());
+        return getUnreadInboxCount(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            MemberUserDetailsService.getCurrentMemberId()
+        );
     }
 
     public long getUnreadInboxCount(String companyId, String memberId) {
         return inboxRepository.countByIdCompanyIdAndMemberIdAndIsRead(companyId, memberId, "N");
     }
 
+    public long countInboxByType(String inboxType) {
+        return countInboxByType(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            MemberUserDetailsService.getCurrentMemberId(),
+            inboxType
+        );
+    }
+
     public long countInboxByType(String companyId, String memberId, String inboxType) {
         return inboxRepository.countByIdCompanyIdAndMemberIdAndInboxType(companyId, memberId, inboxType);
     }
 
-    public long countInboxByType(String inboxType) {
-        return countInboxByType(MemberUserDetailsService.DEFAULT_COMPANY, currentMemberId(), inboxType);
-    }
-
+    @Transactional(readOnly = true)
     public Page<ApprovalInboxResponse> getMyInbox(String type, Pageable pageable) {
-        return getMyInbox(MemberUserDetailsService.DEFAULT_COMPANY, currentMemberId(), type, pageable);
+        return getMyInbox(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            MemberUserDetailsService.getCurrentMemberId(),
+            type,
+            pageable
+        );
     }
 
-    public Page<ApprovalInboxResponse> getMyInbox(
-        String companyId,
-        String memberId,
-        String type,
-        Pageable pageable
-    ) {
+    @Transactional(readOnly = true)
+    public Page<ApprovalInboxResponse> getMyInbox(String companyId, String memberId, String type, Pageable pageable) {
         Page<ApprovalInbox> page;
         if (type == null || type.isBlank()) {
             page = inboxRepository.findByIdCompanyIdAndMemberId(companyId, memberId, pageable);
@@ -579,75 +328,326 @@ public class ApprovalService {
         return page.map(ApprovalInboxResponse::from);
     }
 
+    @Transactional(readOnly = true)
     public Optional<ApprovalInboxResponse> getMyInboxByApproval(String approvalId) {
-        return getMyInboxByApproval(MemberUserDetailsService.DEFAULT_COMPANY, approvalId, currentMemberId());
+        return getMyInboxByApproval(
+            MemberUserDetailsService.DEFAULT_COMPANY,
+            approvalId,
+            MemberUserDetailsService.getCurrentMemberId()
+        );
     }
 
-    public Optional<ApprovalInboxResponse> getMyInboxByApproval(
-        String companyId,
-        String approvalId,
-        String memberId
-    ) {
+    @Transactional(readOnly = true)
+    public Optional<ApprovalInboxResponse> getMyInboxByApproval(String companyId, String approvalId, String memberId) {
         return inboxRepository
             .findByIdCompanyIdAndApprovalIdAndMemberId(companyId, approvalId, memberId)
             .map(ApprovalInboxResponse::from);
     }
 
-    private String resolveId(String companyId, String requestedId) {
-        if (requestedId != null && !requestedId.isBlank()) {
-            String trimmed = requestedId.trim();
-            repository
-                .findByIdCompanyIdAndIdApprovalId(companyId, trimmed)
-                .ifPresent(existing -> {
-                    throw new IllegalArgumentException("Approval already exists: " + trimmed);
-                });
-            return trimmed;
-        }
-        return autoNumberService.generateTxId(companyId, MODULE_CODE, LocalDate.now());
+    // ===== 내부 로직 =====
+
+    private Approval getExisting(String approvalId) {
+        return repository
+            .findByIdCompanyIdAndIdApprovalId(MemberUserDetailsService.DEFAULT_COMPANY, approvalId)
+            .orElseThrow(() -> new NotFoundException("Approval not found: " + approvalId));
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
+    private ApprovalResponse toResponseWithoutSteps(Approval approval) {
+        return ApprovalResponse.from(approval, Collections.emptyList());
     }
 
-    /**
-     * 원본 모듈에 상태 변경 통보
-     */
-    /**
-     * 참조 모듈에 결재 상태 변경을 알립니다.
-     * 전략 패턴을 사용하여 적절한 핸들러를 찾아 처리합니다.
-     */
-    private void notifyRefModule(Approval approval, String action) {
-        if (approval.getRefEntity() == null || approval.getRefId() == null) {
+    private String normalizeIdempotencyKey(String rawKey) {
+        if (rawKey == null) {
+            return null;
+        }
+        return rawKey.trim().toUpperCase();
+    }
+
+    private void validateIdempotencyKey(String companyId, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new IllegalArgumentException("idempotencyKey는 필수입니다.");
+        }
+        if (!IDEMPOTENCY_KEY_PATTERN.matcher(idempotencyKey).matches()) {
+            throw new IllegalArgumentException("멱등키 형식이 올바르지 않습니다. 입력값: " + idempotencyKey);
+        }
+        if (!idempotencyKey.startsWith(companyId + "_")) {
+            throw new IllegalArgumentException("멱등키 회사 ID가 일치하지 않습니다.");
+        }
+    }
+
+    private List<ApprovalStep> persistSteps(
+        Approval approval,
+        List<ApprovalStepRequest> stepRequests,
+        LocalDateTime createdAt,
+        String submittedBy
+    ) {
+        if (stepRequests == null || stepRequests.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String companyId = approval.getCompanyId();
+        String approvalId = approval.getApprovalId();
+        List<ApprovalStep> steps = new ArrayList<>();
+
+        for (int i = 0; i < stepRequests.size(); i++) {
+            ApprovalStepRequest request = stepRequests.get(i);
+            int stepNo = request.stepNo() != null && request.stepNo() > 0 ? request.stepNo() : i + 1;
+
+            ApprovalStep step = new ApprovalStep();
+            step.setId(new ApprovalStepId(companyId, approvalId, stepNo));
+            step.setMemberId(request.memberId());
+            step.setDecision(request.decision());
+            step.setResult(null);
+            step.setDecidedAt(null);
+            step.setComment(null);
+            ApprovalStep savedStep = stepRepository.save(step);
+            steps.add(savedStep);
+
+            createInboxEntry(approval, savedStep, createdAt, submittedBy);
+        }
+
+        return steps;
+    }
+
+    private void createInboxEntry(
+        Approval approval,
+        ApprovalStep step,
+        LocalDateTime createdAt,
+        String submittedBy
+    ) {
+        if (step.getMemberId() == null) {
             return;
         }
-        
-        try {
-            String refEntity = approval.getRefEntity();
-            String refId = approval.getRefId();
-            String refStage = approval.getRefStage();
-            
-            // 핸들러 패턴: 적절한 핸들러를 찾아서 처리
-            ApprovalRefHandler handler = handlers.stream()
-                .filter(h -> h.supports(refEntity, refStage))
-                .findFirst()
-                .orElse(null);
-            
-            if (handler != null) {
-                handler.handle(action, refId, refStage);
-                log.info("결재 콜백 완료: refEntity={}, refStage={}, refId={}, action={}", 
-                    refEntity, refStage, refId, action);
-            } else {
-                log.warn("처리 가능한 핸들러가 없습니다: refEntity={}, refStage={}", refEntity, refStage);
+
+        String companyId = approval.getCompanyId();
+        String approvalId = approval.getApprovalId();
+        String inboxId = autoNumberService.generateTxId(companyId, INBOX_MODULE_CODE, LocalDate.now());
+
+        ApprovalInbox inbox = new ApprovalInbox();
+        inbox.setId(new ApprovalInboxId(companyId, inboxId));
+        inbox.setMemberId(step.getMemberId());
+        inbox.setApprovalId(approvalId);
+        inbox.setStepNo(step.getId() != null ? step.getId().getStepNo() : null);
+        inbox.setInboxType(INBOX_SUBMITTED);
+        inbox.setIsRead("N");
+        inbox.setDecision(step.getDecision());
+        inbox.setTitle(approval.getTitle());
+        inbox.setRefEntity(approval.getRefEntity());
+        inbox.setRefId(approval.getRefId());
+        inbox.setSubmittedBy(submittedBy);
+        inbox.setSubmittedAt(approval.getSubmittedAt());
+        inbox.setCreatedAt(createdAt);
+        inboxRepository.save(inbox);
+    }
+
+    private ApprovalResponse processApproval(
+        String approvalId,
+        String comment,
+        String finalStatusWhenCompleted,
+        ApprovalEventType eventType
+    ) {
+        Approval approval = getExisting(approvalId);
+        LocalDateTime now = LocalDateTime.now();
+        String currentMemberId = MemberUserDetailsService.getCurrentMemberId();
+
+        if (!STATUS_SUBMITTED.equals(approval.getStatus()) && !STATUS_IN_PROGRESS.equals(approval.getStatus())) {
+            throw new IllegalStateException("결재 대기 중인 문서만 처리할 수 있습니다. 현재 상태: " + approval.getStatus());
+        }
+
+        List<ApprovalStep> steps = stepRepository
+            .findByIdCompanyIdAndIdApprovalIdOrderByIdStepNo(approval.getCompanyId(), approvalId);
+
+        ApprovalStep targetStep = steps.stream()
+            .filter(step -> currentMemberId.equals(step.getMemberId()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("결재 권한이 없습니다."));
+
+        if (targetStep.getDecidedAt() != null) {
+            throw new IllegalStateException("이미 결재한 문서입니다.");
+        }
+
+        enforceStepOrder(steps, targetStep);
+
+        targetStep.setDecidedAt(now);
+        targetStep.setComment(comment);
+        targetStep.setResult(ApprovalEventType.REJECTED.equals(eventType) ? STATUS_REJECTED : STATUS_APPROVED);
+        stepRepository.save(targetStep);
+
+        boolean isReject = ApprovalEventType.REJECTED.equals(eventType) && !DECISION_INFO.equals(targetStep.getDecision());
+        boolean allCompleted = checkAllApproversCompleted(steps);
+
+        if (isReject) {
+            approval.setStatus(STATUS_REJECTED);
+            approval.setCompletedAt(now);
+        } else if (allCompleted) {
+            approval.setStatus(finalStatusWhenCompleted);
+            approval.setCompletedAt(now);
+        } else {
+            approval.setStatus(STATUS_IN_PROGRESS);
+            approval.setCompletedAt(null);
+        }
+
+        approval.setUpdatedAt(now);
+        approval.setUpdatedBy(currentMemberId);
+        Approval saved = repository.save(approval);
+
+        updateInboxAfterDecision(saved, targetStep, now);
+
+        if (isReject || allCompleted) {
+            enqueueOutbox(saved, steps, eventType, now, currentMemberId, comment);
+        } else {
+            enqueueOutbox(saved, steps, ApprovalEventType.SUBMITTED, now, currentMemberId, null);
+        }
+
+        List<ApprovalStepResponse> stepResponses = steps.stream()
+            .map(ApprovalStepResponse::from)
+            .collect(Collectors.toList());
+        return ApprovalResponse.from(saved, stepResponses);
+    }
+
+    private void enforceStepOrder(List<ApprovalStep> steps, ApprovalStep targetStep) {
+        if (DECISION_INFO.equals(targetStep.getDecision())) {
+            return;
+        }
+
+        int targetNo = targetStep.getId() != null ? targetStep.getId().getStepNo() : 0;
+        for (ApprovalStep step : steps) {
+            if (step.getId() == null || step.getId().getStepNo() >= targetNo) {
+                continue;
             }
-        } catch (Exception e) {
-            log.error("원본 모듈 콜백 실패: refEntity={}, refId={}, refStage={}, action={}", 
-                approval.getRefEntity(), approval.getRefId(), approval.getRefStage(), action, e);
+            if (!isSequentialDecision(step.getDecision())) {
+                continue;
+            }
+            if (step.getDecidedAt() == null) {
+                throw new IllegalStateException("이전 결재자가 먼저 결재해야 합니다.");
+            }
+            if (STATUS_REJECTED.equals(step.getResult())) {
+                throw new IllegalStateException("이전 결재자가 반려하여 결재가 종료되었습니다.");
+            }
+        }
+    }
+
+    private boolean checkAllApproversCompleted(List<ApprovalStep> steps) {
+        return steps.stream()
+            .filter(step -> isSequentialDecision(step.getDecision()))
+            .allMatch(step -> step.getDecidedAt() != null && STATUS_APPROVED.equals(step.getResult()));
+    }
+
+    private boolean isSequentialDecision(String decision) {
+        return DECISION_APPROVAL.equals(decision) || DECISION_AGREE.equals(decision);
+    }
+
+    private void updateInboxAfterDecision(
+        Approval approval,
+        ApprovalStep step,
+        LocalDateTime decidedAt
+    ) {
+        if (approval.getCompanyId() == null || approval.getApprovalId() == null || step.getMemberId() == null) {
+            return;
+        }
+
+        Optional<ApprovalInbox> inboxOptional = inboxRepository
+            .findByIdCompanyIdAndApprovalIdAndMemberId(
+                approval.getCompanyId(),
+                approval.getApprovalId(),
+                step.getMemberId()
+            );
+
+        if (inboxOptional.isEmpty()) {
+            return;
+        }
+
+        ApprovalInbox inbox = inboxOptional.get();
+
+        if (DECISION_INFO.equals(step.getDecision())) {
+            inbox.setInboxType(INBOX_COMPLETED);
+        } else if (STATUS_REJECTED.equals(step.getResult())) {
+            inbox.setInboxType(INBOX_REJECTED);
+        } else {
+            inbox.setInboxType(INBOX_APPROVED);
+        }
+
+        inbox.setIsRead("Y");
+        inbox.setReadAt(decidedAt);
+        inbox.setUpdatedAt(decidedAt);
+        inboxRepository.save(inbox);
+    }
+
+    private void updateInboxAfterCancel(Approval approval, LocalDateTime cancelledAt) {
+        List<ApprovalInbox> inboxes = inboxRepository
+            .findByIdCompanyIdAndApprovalId(approval.getCompanyId(), approval.getApprovalId());
+
+        for (ApprovalInbox inbox : inboxes) {
+            inbox.setInboxType(INBOX_COMPLETED);
+            inbox.setIsRead("Y");
+            inbox.setReadAt(cancelledAt);
+            inbox.setUpdatedAt(cancelledAt);
+            inboxRepository.save(inbox);
+        }
+    }
+
+    private void enqueueOutbox(
+        Approval approval,
+        List<ApprovalStep> steps,
+        ApprovalEventType eventType,
+        LocalDateTime occurredAt,
+        String actorId,
+        String comment
+    ) {
+        ApprovalEventPayload payload = new ApprovalEventPayload(
+            approval.getCompanyId(),
+            approval.getApprovalId(),
+            approval.getRefEntity(),
+            approval.getRefId(),
+            approval.getRefStage(),
+            approval.getStatus(),
+            eventType,
+            occurredAt,
+            actorId,
+            comment,
+            approval.getCallbackUrl(),
+            approval.getIdempotencyKey(),
+            steps.stream()
+                .map(step -> new ApprovalEventPayload.ApprovalEventStep(
+                    step.getId() != null ? step.getId().getStepNo() : null,
+                    step.getMemberId(),
+                    step.getDecision(),
+                    step.getResult(),
+                    step.getDecidedAt(),
+                    step.getComment()
+                ))
+                .collect(Collectors.toList())
+        );
+
+        String payloadJson = toJson(payload);
+
+        ApprovalOutbox outbox = new ApprovalOutbox();
+        outbox.setCompanyId(approval.getCompanyId());
+        outbox.setApprovalId(approval.getApprovalId());
+        outbox.setCallbackUrl(approval.getCallbackUrl());
+        outbox.setIdempotencyKey(approval.getIdempotencyKey());
+        outbox.setEventType(eventType);
+        outbox.setStatus(ApprovalOutboxStatus.PENDING);
+        outbox.setPayload(payloadJson);
+        outbox.setRetryCount(0);
+        outbox.setCreatedAt(occurredAt);
+        outbox.setUpdatedAt(occurredAt);
+        outbox.setNextAttemptAt(occurredAt);
+
+        outboxRepository.save(outbox);
+        log.debug(
+            "Outbox 이벤트 등록 - approvalId={}, eventType={}, outboxId={}",
+            approval.getApprovalId(),
+            eventType,
+            outbox.getId()
+        );
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Outbox 페이로드 직렬화에 실패했습니다.", e);
         }
     }
 }

@@ -4,8 +4,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +35,16 @@ public class MemberService {
             return repository.findByIdCompanyIdAndDeleteMark(companyId, "N", pageable);
         }
         return repository.search(companyId, "N", "%" + q + "%", pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MemberSearchResponse> searchForApproval(String keyword, String deptId, Pageable pageable) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        String normalizedKeyword = null;
+        if (keyword != null && !keyword.isBlank()) {
+            normalizedKeyword = "%" + keyword.trim() + "%";
+        }
+        return repository.searchForApproval(companyId, deptId, normalizedKeyword, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -108,15 +116,6 @@ public class MemberService {
         if (actor != null && !actor.isBlank()) {
             return actor;
         }
-        return currentMemberId();
-    }
-
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
+        return MemberUserDetailsService.getCurrentMemberId();
     }
 }

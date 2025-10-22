@@ -14,6 +14,12 @@ import com.cmms11.domain.site.SiteRepository;
 import com.cmms11.domain.role.Role;
 import com.cmms11.domain.role.RoleId;
 import com.cmms11.domain.role.RoleRepository;
+import com.cmms11.domain.func.Func;
+import com.cmms11.domain.func.FuncId;
+import com.cmms11.domain.func.FuncRepository;
+import com.cmms11.domain.storage.Storage;
+import com.cmms11.domain.storage.StorageId;
+import com.cmms11.domain.storage.StorageRepository;
 import com.cmms11.code.CodeType;
 import com.cmms11.code.CodeTypeId;
 import com.cmms11.code.CodeTypeRepository;
@@ -47,6 +53,8 @@ public class DataInitializer implements ApplicationRunner {
     private final SiteRepository siteRepository;
     private final DeptRepository deptRepository;
     private final RoleRepository roleRepository;
+    private final FuncRepository funcRepository;
+    private final StorageRepository storageRepository;
 
     private final CodeTypeRepository codeTypeRepository;
     private final CodeItemRepository codeItemRepository;
@@ -58,6 +66,8 @@ public class DataInitializer implements ApplicationRunner {
         SiteRepository siteRepository,
         DeptRepository deptRepository,
         RoleRepository roleRepository,
+        FuncRepository funcRepository,
+        StorageRepository storageRepository,
         CodeTypeRepository codeTypeRepository,
         CodeItemRepository codeItemRepository
     ) {
@@ -67,6 +77,8 @@ public class DataInitializer implements ApplicationRunner {
         this.siteRepository = siteRepository;
         this.deptRepository = deptRepository;
         this.roleRepository = roleRepository;
+        this.funcRepository = funcRepository;
+        this.storageRepository = storageRepository;
         this.codeTypeRepository = codeTypeRepository;
         this.codeItemRepository = codeItemRepository;
     }
@@ -77,12 +89,14 @@ public class DataInitializer implements ApplicationRunner {
         seedAdmin(now);
         seedCompanyHierarchy(now);
         seedRoles(now);
+        seedFuncs(now);
+        seedStorages(now);
         seedCodes();
     }
 
     private void seedAdmin(LocalDateTime now) {
         // ⭐ 각 회사별 admin 계정 생성
-        List<String> companyIds = List.of("CHROK", "HPS", "KEPS");
+        List<String> companyIds = List.of("CHROK", "HPS", "KEPS", "OES");
         
         companyIds.forEach(companyId -> {
             MemberId adminId = new MemberId(companyId, "admin");
@@ -299,6 +313,7 @@ public class DataInitializer implements ApplicationRunner {
             new SeedCodeItem("PROC", "처리중"),
             new SeedCodeItem("APPRV", "승인"),
             new SeedCodeItem("REJCT", "반려"),
+            new SeedCodeItem("CNCL", "취소"),
             new SeedCodeItem("CMPLT", "결재없이확정건")
         ));
 
@@ -320,6 +335,64 @@ public class DataInitializer implements ApplicationRunner {
         });
     }
 
+    private void seedFuncs(LocalDateTime now) {
+        // ⭐ 각 회사별 기능위치 데이터 생성
+        List<String> companyIds = List.of("CHROK", "HPS", "KEPS", "OES");
+        List<SeedFunc> funcs = List.of(
+            new SeedFunc("FUC01", "기능위치 1"),
+            new SeedFunc("FUC02", "기능위치 2")
+        );
+        
+        companyIds.forEach(companyId -> {
+            funcs.forEach(seedFunc -> {
+                FuncId id = new FuncId(companyId, seedFunc.funcId());
+                Func func = funcRepository.findById(id).orElseGet(Func::new);
+                
+                if (func.getId() == null) {
+                    func.setId(id);
+                    func.setCreatedAt(now);
+                    func.setCreatedBy(SYSTEM_USER);
+                }
+                
+                func.setName(seedFunc.name());
+                func.setDeleteMark("N");
+                func.setUpdatedAt(now);
+                func.setUpdatedBy(SYSTEM_USER);
+                
+                funcRepository.save(func);
+            });
+        });
+    }
+
+    private void seedStorages(LocalDateTime now) {
+        // ⭐ 각 회사별 창고 데이터 생성
+        List<String> companyIds = List.of("CHROK", "HPS", "KEPS", "OES");
+        List<SeedStorage> storages = List.of(
+            new SeedStorage("STG01", "창고 1"),
+            new SeedStorage("STG02", "창고 2")
+        );
+        
+        companyIds.forEach(companyId -> {
+            storages.forEach(seedStorage -> {
+                StorageId id = new StorageId(companyId, seedStorage.storageId());
+                Storage storage = storageRepository.findById(id).orElseGet(Storage::new);
+                
+                if (storage.getId() == null) {
+                    storage.setId(id);
+                    storage.setCreatedAt(now);
+                    storage.setCreatedBy(SYSTEM_USER);
+                }
+                
+                storage.setName(seedStorage.name());
+                storage.setDeleteMark("N");
+                storage.setUpdatedAt(now);
+                storage.setUpdatedBy(SYSTEM_USER);
+                
+                storageRepository.save(storage);
+            });
+        });
+    }
+
     private record SeedCodeItem(String code, String name) {
     }
 
@@ -327,6 +400,12 @@ public class DataInitializer implements ApplicationRunner {
     }
     
     private record SeedCompany(String companyId, String name, String bizNo, String email, String phone) {
+    }
+    
+    private record SeedFunc(String funcId, String name) {
+    }
+    
+    private record SeedStorage(String storageId, String name) {
     }
 }
 

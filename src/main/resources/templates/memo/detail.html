@@ -18,7 +18,7 @@
             <section class="card">
               <div class="card-header">
                 <div class="row actions-space-between">
-                  <div class="card-title">게시/메모 상세</div>
+                  <div class="card-title">TM(Trouble Memo) 상세</div>
                   <div class="toolbar">
                     <!-- 항상 활성화 -->
                     <a class="btn" th:href="@{/memo/list}">목록</a>
@@ -37,11 +37,9 @@
                 <div class="section">
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
-                    <div class="stack col-span-8"><div class="label">제목</div><div th:text="${memo.title}">설비 점검 주기 변경 안내</div></div>
-                    <div class="stack col-span-2"><div class="label">참조 모듈</div><div th:text="${memo.refEntity ?: '-'}">work_order</div></div>
-                    <div class="stack col-span-2"><div class="label">참조 ID</div><div th:text="${memo.refId ?: '-'}">O250101001</div></div>
+                    <div class="stack col-span-6"><div class="label">제목</div><div th:text="${memo.title}">설비 점검 주기 변경 안내</div></div>
                     <div class="stack col-span-3"><div class="label">작성자</div><div th:text="${memo.createdBy}">관리자</div></div>
-                    <div class="stack col-span-3"><div class="label">작성일</div><div th:text="${memo.createdAt}">2025-01-05</div></div>
+                    <div class="stack col-span-3"><div class="label">작성일시</div><div th:text="${#temporals.format(memo.createdAt, 'yyyy-MM-dd HH:mm')}">2025-01-05 14:30</div></div>
                   </div>
                 </div>
 
@@ -72,7 +70,7 @@
                   <div class="doc">
                     <header class="doc-header">
                       <div class="doc-title">게시/메모</div>
-                      <div class="meta">
+                      <div class="doc-meta">
                         <div class="meta-row">출력일시: <span id="print-date">-</span></div>
                         <div class="meta-row">인쇄자: <span id="print-user">-</span></div>
                       </div>
@@ -81,16 +79,10 @@
                     <div class="doc-body">
                       <div class="section">
                         <div class="section-title">기본 정보</div>
-                        <table>
+                        <table class="row-cols-4">
                           <tr>
                             <th>제목</th>
                             <td colspan="3" th:text="${memo.title}">설비 점검 주기 변경 안내</td>
-                          </tr>
-                          <tr th:if="${memo.refEntity}">
-                            <th>참조</th>
-                            <td th:text="${memo.refEntity}">WORK</td>
-                            <th>참조 ID</th>
-                            <td th:text="${memo.refId}">O250101001</td>
                           </tr>
                           <tr>
                             <th>작성자</th>

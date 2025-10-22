@@ -1,3 +1,4 @@
-plant_id,name,asset_id,site_id,dept_id,func_id,maker_name,spec,model,serial,install_date,depre_id,depre_period,purchase_cost,residual_value,inspection_yn,psm_yn,workpermit_yn,inspection_interval,last_inspection,next_inspection,file_group_id,note,status
-,순환 펌프,EQPMT,SEOUL,EQ,PMP,Acme Pumps,용량 40m3/h,M-100,SN-1001,2024-01-15,SL,10,12000000,1000000,Y,N,Y,12,2024-07-01,2025-07-01,FG0001,백업용 펌프,ACTIVE
-PLT1000002,에어 컴프레서,EQPMT,SEOUL,EQ,CMP,Atlas Copco,압력 7bar,GA15,SN-2002,2023-06-10,SL,8,15000000,1200000,N,N,N,6,2024-05-10,2024-11-10,,주기적 점검 대상,ACTIVE
+plant_id,name,asset_id,site_id,dept_id,func_id,maker_name,model,serial,spec,note
+,순환 펌프,EQPMT,SEOUL,EQ,PMP,Acme Pumps,M-100,SN-1001,용량 40m3/h,백업용 펌프
+PLT1000002,에어 컴프레서,EQPMT,SEOUL,EQ,CMP,Atlas Copco,GA15,SN-2002,압력 7bar,주기적 점검 대상
+PLT1000003,냉각 펌프,EQPMT,BUSAN,EQ,PMP,Grundfos,CR-150,SN-3003,압력 5bar 유량 50m3/h,냉각수 순환용

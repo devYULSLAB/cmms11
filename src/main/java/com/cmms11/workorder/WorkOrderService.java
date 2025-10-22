@@ -11,8 +11,6 @@ import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,7 +83,7 @@ public class WorkOrderService {
     public WorkOrderResponse create(WorkOrderRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         String newId = resolveId(companyId, request.orderId(), request.plannedDate());
         WorkOrder entity = new WorkOrder();
@@ -116,7 +114,7 @@ public class WorkOrderService {
         WorkOrder entity = getExisting(orderId);
         applyRequest(entity, request);  // 요청 데이터를 엔티티에 적용
         entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedBy(currentMemberId());
+        entity.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         WorkOrder saved = repository.save(entity);
         List<WorkOrderItem> items = synchronizeItems(
             entity.getId().getCompanyId(),
@@ -215,108 +213,116 @@ public class WorkOrderService {
         return autoNumberService.generateTxId(companyId, MODULE_CODE, date);
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
+    /**
+     * 결재 승인 콜백 (PLN/ACT 통합)
+     */
+    public void onApprovalApprove(String workOrderId, String stage) {
+        WorkOrder order = getExisting(workOrderId);
+        order.setStatus("APPRV");
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(order);
     }
 
     /**
-     * 계획 결재 승인 콜백
+     * 결재 반려 콜백 (PLN/ACT 통합)
      */
+    public void onApprovalReject(String workOrderId, String stage) {
+        WorkOrder order = getExisting(workOrderId);
+        order.setStatus("REJCT");
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(order);
+    }
+
+    /**
+     * 결재 삭제 콜백 (PLN/ACT 통합)
+     */
+    public void onApprovalDelete(String workOrderId, String stage) {
+        WorkOrder order = getExisting(workOrderId);
+        order.setStatus("DRAFT");
+        order.setApprovalId(null);
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(order);
+    }
+
+    /**
+     * 담당자 확정 (결재 없이 DRAFT → CMPLT)
+     * PLN/ACT 구분 없이 DRAFT 상태만 확정 가능
+     */
+    public void onComplete(String orderId) {
+        WorkOrder order = getExisting(orderId);
+        
+        if (!"DRAFT".equals(order.getStatus())) {
+            throw new IllegalStateException("작성 중인 문서만 확정 가능합니다.");
+        }
+        
+        order.setStatus("CMPLT");
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(order);
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
+     */
+    @Deprecated
     public void onPlanApprovalApprove(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        order.setStatus("APPRV");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
+        onApprovalApprove(workOrderId, "PLN");
     }
 
     /**
-     * 계획 자체 확정 (결재 없이 DRAFT → CMPLT)
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
      */
-    public void onPlanApprovalComplete(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        if (!"PLN".equals(order.getStage()) || !"DRAFT".equals(order.getStatus())) {
-            throw new IllegalStateException("작성 중인 계획만 확정 가능합니다.");
-        }
-        order.setStatus("CMPLT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
-    }
-
-    /**
-     * 계획 결재 반려 콜백
-     */
+    @Deprecated
     public void onPlanApprovalReject(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        order.setStatus("REJCT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
+        onApprovalReject(workOrderId, "PLN");
     }
 
     /**
-     * 계획 결재 삭제(취소) 콜백 - 상신 취소 시 DRAFT로 복원
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
      */
+    @Deprecated
     public void onPlanApprovalDelete(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        order.setStatus("DRAFT");
-        order.setApprovalId(null);
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
+        onApprovalDelete(workOrderId, "PLN");
     }
 
     /**
-     * 실적 결재 승인 콜백
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
      */
+    @Deprecated
     public void onActualApprovalApprove(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        order.setStatus("APPRV");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
+        onApprovalApprove(workOrderId, "ACT");
     }
 
     /**
-     * 실적 자체 확정 (결재 없이 DRAFT → CMPLT)
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
      */
-    public void onActualApprovalComplete(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        if (!"ACT".equals(order.getStage()) || !"DRAFT".equals(order.getStatus())) {
-            throw new IllegalStateException("작성 중인 실적만 확정 가능합니다.");
-        }
-        order.setStatus("CMPLT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
-    }
-
-    /**
-     * 실적 결재 반려 콜백
-     */
+    @Deprecated
     public void onActualApprovalReject(String workOrderId) {
-        WorkOrder order = getExisting(workOrderId);
-        order.setStatus("REJCT");
-        order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
-        repository.save(order);
+        onApprovalReject(workOrderId, "ACT");
     }
 
     /**
-     * 실적 결재 삭제(취소) 콜백 - 상신 취소 시 DRAFT로 복원
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
      */
+    @Deprecated
     public void onActualApprovalDelete(String workOrderId) {
+        onApprovalDelete(workOrderId, "ACT");
+    }
+
+    public void prepareActualStage(String workOrderId) {
         WorkOrder order = getExisting(workOrderId);
+
+        if (!"PLN".equals(order.getStage()) || !"APPRV".equals(order.getStatus())) {
+            throw new IllegalStateException("계획 결재가 완료되어야 실적을 입력할 수 있습니다.");
+        }
+
+        order.setStage("ACT");
         order.setStatus("DRAFT");
-        order.setApprovalId(null);
         order.setUpdatedAt(LocalDateTime.now());
-        order.setUpdatedBy(currentMemberId());
+        order.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(order);
     }
 

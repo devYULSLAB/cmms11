@@ -53,6 +53,10 @@
                         <input id="inventoryId" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
+                        <label class="label" for="unitIn">단위</label>
+                        <input id="unitIn" class="input inventory-unit" type="text" readonly placeholder="-" />
+                      </div>
+                      <div class="form-row col-span-3">
                         <label class="label required" for="storageId">창고</label>
                         <select id="storageId" name="storageId" required>
                           <option value="">선택</option>
@@ -98,6 +102,10 @@
                         <input id="inventoryIdOut" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
                       </div>
                       <div class="form-row col-span-3">
+                        <label class="label" for="unitOut">단위</label>
+                        <input id="unitOut" class="input inventory-unit" type="text" readonly placeholder="-" />
+                      </div>
+                      <div class="form-row col-span-3">
                         <label class="label required" for="storageId">창고</label>
                         <select name="storageId" required>
                           <option value="">선택</option>
@@ -131,6 +139,10 @@
                       <div class="form-row col-span-3">
                         <label class="label required" for="inventoryIdMove">재고번호</label>
                         <input id="inventoryIdMove" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label" for="unitMove">단위</label>
+                        <input id="unitMove" class="input inventory-unit" type="text" readonly placeholder="-" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="srcStorageId">출고 창고</label>
@@ -176,6 +188,10 @@
                       <div class="form-row col-span-3">
                         <label class="label required" for="inventoryIdAdj">재고번호</label>
                         <input id="inventoryIdAdj" name="inventoryId" class="input" required maxlength="10" placeholder="예: INV000012" />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label" for="unitAdj">단위</label>
+                        <input id="unitAdj" class="input inventory-unit" type="text" readonly placeholder="-" />
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label required" for="storageId">창고</label>

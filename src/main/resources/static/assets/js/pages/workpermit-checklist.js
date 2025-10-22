@@ -18,8 +18,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.check-confirm').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             if (this.checked) {
-                const notApplicableCheckbox = this.parentElement.querySelector('.check-not-applicable');
-                notApplicableCheckbox.checked = false;
+                const notApplicableCheckbox = this.closest('.checkbox-group').querySelector('.check-not-applicable');
+                if (notApplicableCheckbox) {
+                    notApplicableCheckbox.checked = false;
+                }
             }
         });
     });
@@ -27,14 +29,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.check-not-applicable').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             if (this.checked) {
-                const confirmCheckbox = this.parentElement.querySelector('.check-confirm');
-                confirmCheckbox.checked = false;
+                const confirmCheckbox = this.closest('.checkbox-group').querySelector('.check-confirm');
+                if (confirmCheckbox) {
+                    confirmCheckbox.checked = false;
+                }
             }
         });
     });
     
     // 폼 제출 시 체크리스트 데이터를 JSON으로 변환
-    const form = document.querySelector('form[data-validate]');
+    const form = document.querySelector('form[data-form-manager]');
     if (form) {
         form.addEventListener('submit', function() {
             const checklistData = collectChecklistData();

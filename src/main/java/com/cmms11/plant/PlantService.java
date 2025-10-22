@@ -3,17 +3,15 @@ package com.cmms11.plant;
 import com.cmms11.common.error.NotFoundException;
 import com.cmms11.common.seq.AutoNumberService;
 import com.cmms11.common.upload.BulkUploadError;
+import com.cmms11.common.upload.BulkUploadPreview;
 import com.cmms11.common.upload.BulkUploadResult;
 import com.cmms11.common.upload.CsvUtils;
 import com.cmms11.security.MemberUserDetailsService;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -21,8 +19,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -64,7 +60,7 @@ public class PlantService {
     public PlantResponse create(PlantRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         // plantId가 없으면 자동 생성
         String plantId = request.plantId();
@@ -131,7 +127,7 @@ public class PlantService {
         existing.setFileGroupId(request.fileGroupId());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
 
         return PlantResponse.from(repository.save(existing));
     }
@@ -157,27 +153,35 @@ public class PlantService {
         repository.save(existing);
     }
 
-    public BulkUploadResult upload(MultipartFile file) {
+    /**
+     * CSV 파일 검증 (저장하지 않음)
+     * 기본정보 + 제조사 정보만 업로드
+     * @return 유효한 데이터 리스트와 오류 내역
+     */
+    @Transactional(readOnly = true)
+    public BulkUploadPreview<PlantUploadDto> validateUpload(MultipartFile file) {
+        List<PlantUploadDto> validItems = new ArrayList<>();
         List<BulkUploadError> errors = new ArrayList<>();
-        List<Plant> pending = new ArrayList<>();
         Set<String> seenIds = new HashSet<>();
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
-        LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
-
+        
         try (CSVParser parser = CsvUtils.parse(file)) {
             Map<String, Integer> headerIndex = CsvUtils.normalizeHeaderMap(parser);
+            
+            // 필수 컬럼 체크
             CsvUtils.requireHeaders(headerIndex, List.of("name"));
-
+            
             for (CSVRecord record : parser) {
                 if (CsvUtils.isEmptyRecord(record)) {
                     continue;
                 }
+                
                 int rowNumber = CsvUtils.displayRowNumber(record);
+                
                 try {
-                    Plant plant = mapPlantRecord(record, headerIndex, companyId, now, memberId, seenIds);
-                    pending.add(plant);
-                    seenIds.add(plant.getId().getPlantId());
+                    PlantUploadDto dto = validateRecord(record, headerIndex, companyId, seenIds);
+                    validItems.add(dto);
+                    seenIds.add(dto.plantId());
                 } catch (IllegalArgumentException ex) {
                     errors.add(new BulkUploadError(rowNumber, ex.getMessage()));
                 }
@@ -185,115 +189,139 @@ public class PlantService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("CSV 파일을 읽을 수 없습니다.", ex);
         }
-
-        if (!pending.isEmpty()) {
-            repository.saveAll(pending);
-        }
-        return new BulkUploadResult(pending.size(), errors.size(), errors);
+        
+        return new BulkUploadPreview<>(validItems, errors);
     }
 
-    private Plant mapPlantRecord(
+    /**
+     * CSV 레코드 검증 (기본정보 + 제조사 정보만)
+     */
+    private PlantUploadDto validateRecord(
         CSVRecord record,
         Map<String, Integer> headerIndex,
         String companyId,
-        LocalDateTime now,
-        String memberId,
         Set<String> seenIds
     ) {
+        // plant_id 추출 및 검증
         String csvPlantId = CsvUtils.getString(record, headerIndex, "plant_id");
+        
+        // CSV 내 중복 체크
         if (csvPlantId != null && seenIds.contains(csvPlantId)) {
-            throw new IllegalArgumentException("CSV 내에서 중복된 설비 ID입니다: " + csvPlantId);
+            throw new IllegalArgumentException("CSV 내에서 중복된 설비 ID: " + csvPlantId);
         }
-
-        Plant plant;
-        String finalPlantId;
-        if (csvPlantId == null) {
-            finalPlantId = autoNumberService.generateMasterId(companyId, MODULE_CODE);
-            plant = new Plant();
-            plant.setId(new PlantId(companyId, finalPlantId));
-            plant.setCreatedAt(now);
-            plant.setCreatedBy(memberId);
-        } else {
-            finalPlantId = csvPlantId;
-            PlantId id = new PlantId(companyId, finalPlantId);
+        
+        // DB 중복 체크 (기존 데이터와의 충돌)
+        if (csvPlantId != null) {
+            PlantId id = new PlantId(companyId, csvPlantId);
             Optional<Plant> existing = repository.findById(id);
-            if (existing.isPresent()) {
-                plant = existing.get();
-                if (!"Y".equalsIgnoreCase(plant.getDeleteMark())) {
-                    throw new IllegalArgumentException("이미 존재하는 설비 ID입니다: " + finalPlantId);
-                }
-                if (plant.getCreatedAt() == null) {
-                    plant.setCreatedAt(now);
-                }
-                if (plant.getCreatedBy() == null) {
-                    plant.setCreatedBy(memberId);
-                }
-            } else {
-                plant = new Plant();
-                plant.setId(id);
-                plant.setCreatedAt(now);
-                plant.setCreatedBy(memberId);
+            if (existing.isPresent() && !"Y".equalsIgnoreCase(existing.get().getDeleteMark())) {
+                throw new IllegalArgumentException("이미 존재하는 설비 ID: " + csvPlantId);
             }
         }
+        
+        // 필수 필드 검증
+        String name = CsvUtils.getString(record, headerIndex, "name");
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name은 필수입니다");
+        }
+        
+        // 자동생성 ID 표시
+        String displayId = csvPlantId != null ? csvPlantId : "(자동생성)";
+        
+        return new PlantUploadDto(
+            displayId,
+            name,
+            CsvUtils.getString(record, headerIndex, "asset_id"),
+            CsvUtils.getString(record, headerIndex, "site_id"),
+            CsvUtils.getString(record, headerIndex, "dept_id"),
+            CsvUtils.getString(record, headerIndex, "func_id"),
+            CsvUtils.getString(record, headerIndex, "maker_name"),
+            CsvUtils.getString(record, headerIndex, "model"),
+            CsvUtils.getString(record, headerIndex, "serial"),
+            CsvUtils.getString(record, headerIndex, "spec"),
+            CsvUtils.getString(record, headerIndex, "note")
+        );
+    }
 
-        plant.setName(CsvUtils.requireNonBlank(CsvUtils.getString(record, headerIndex, "name"), "name"));
-        plant.setAssetId(CsvUtils.getString(record, headerIndex, "asset_id"));
-        plant.setSiteId(CsvUtils.getString(record, headerIndex, "site_id"));
-        plant.setDeptId(CsvUtils.getString(record, headerIndex, "dept_id"));
-        plant.setFuncId(CsvUtils.getString(record, headerIndex, "func_id"));
-        plant.setMakerName(CsvUtils.getString(record, headerIndex, "maker_name"));
-        plant.setSpec(CsvUtils.getString(record, headerIndex, "spec"));
-        plant.setModel(CsvUtils.getString(record, headerIndex, "model"));
-        plant.setSerial(CsvUtils.getString(record, headerIndex, "serial"));
-        plant.setInstallDate(toDate(record, headerIndex, "install_date"));
-        plant.setDepreId(CsvUtils.getString(record, headerIndex, "depre_id"));
-        plant.setDeprePeriod(toInteger(record, headerIndex, "depre_period"));
-        plant.setPurchaseCost(toBigDecimal(record, headerIndex, "purchase_cost"));
-        plant.setResidualValue(toBigDecimal(record, headerIndex, "residual_value"));
-        plant.setInspectionYn(normalizeFlag(record, headerIndex, "inspection_yn"));
-        plant.setPsmYn(normalizeFlag(record, headerIndex, "psm_yn"));
-        plant.setWorkpermitYn(normalizeFlag(record, headerIndex, "workpermit_yn"));
-        plant.setInspectionInterval(toInteger(record, headerIndex, "inspection_interval"));
-        plant.setLastInspection(toDate(record, headerIndex, "last_inspection"));
-        plant.setNextInspection(toDate(record, headerIndex, "next_inspection"));
-        plant.setFileGroupId(CsvUtils.getString(record, headerIndex, "file_group_id"));
-        plant.setNote(CsvUtils.getString(record, headerIndex, "note"));
+    /**
+     * 검증된 데이터 일괄 저장 (라인별 처리)
+     */
+    public BulkUploadResult saveUploadedData(List<PlantUploadDto> items) {
+        String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
+        LocalDateTime now = LocalDateTime.now();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
+        
+        int successCount = 0;
+        List<BulkUploadError> errors = new ArrayList<>();
+        
+        // 라인별로 저장 처리
+        for (int i = 0; i < items.size(); i++) {
+            PlantUploadDto dto = items.get(i);
+            int rowNumber = i + 2; // CSV 행번호 (헤더 제외)
+            
+            try {
+                Plant plant = convertDtoToPlant(dto, companyId, now, memberId);
+                repository.save(plant);
+                successCount++;
+            } catch (Exception ex) {
+                errors.add(new BulkUploadError(
+                    rowNumber, 
+                    "저장 실패: " + ex.getMessage()
+                ));
+            }
+        }
+        
+        return new BulkUploadResult(successCount, errors.size(), errors);
+    }
+
+    /**
+     * DTO를 Plant 엔티티로 변환
+     */
+    private Plant convertDtoToPlant(
+        PlantUploadDto dto,
+        String companyId,
+        LocalDateTime now,
+        String memberId
+    ) {
+        Plant plant = new Plant();
+        
+        // plant_id 처리 (자동생성 또는 지정)
+        String plantId;
+        if (dto.plantId().equals("(자동생성)")) {
+            plantId = autoNumberService.generateMasterId(companyId, MODULE_CODE);
+        } else {
+            plantId = dto.plantId();
+        }
+        
+        plant.setId(new PlantId(companyId, plantId));
+        
+        // 기본정보
+        plant.setName(dto.name());
+        plant.setAssetId(dto.assetId());
+        plant.setSiteId(dto.siteId());
+        plant.setDeptId(dto.deptId());
+        plant.setFuncId(dto.funcId());
+        plant.setNote(dto.note());
+        
+        // 제조사 정보
+        plant.setMakerName(dto.makerName());
+        plant.setModel(dto.model());
+        plant.setSerial(dto.serial());
+        plant.setSpec(dto.spec());
+        
+        // 기본값 설정
+        plant.setInspectionYn("N");
+        plant.setPsmYn("N");
+        plant.setWorkpermitYn("N");
         plant.setDeleteMark("N");
+        
+        // 메타 정보
+        plant.setCreatedAt(now);
+        plant.setCreatedBy(memberId);
         plant.setUpdatedAt(now);
         plant.setUpdatedBy(memberId);
+        
         return plant;
     }
 
-    private Integer toInteger(CSVRecord record, Map<String, Integer> headerIndex, String column) {
-        return CsvUtils.toInteger(CsvUtils.getString(record, headerIndex, column), column);
-    }
-
-    private BigDecimal toBigDecimal(CSVRecord record, Map<String, Integer> headerIndex, String column) {
-        return CsvUtils.toBigDecimal(CsvUtils.getString(record, headerIndex, column), column);
-    }
-
-    private LocalDate toDate(CSVRecord record, Map<String, Integer> headerIndex, String column) {
-        return CsvUtils.toLocalDate(CsvUtils.getString(record, headerIndex, column), column);
-    }
-
-    private String normalizeFlag(CSVRecord record, Map<String, Integer> headerIndex, String column) {
-        String value = CsvUtils.getString(record, headerIndex, column);
-        if (value == null) {
-            return null;
-        }
-        String upper = value.trim().toUpperCase(Locale.ROOT);
-        if (!upper.equals("Y") && !upper.equals("N")) {
-            throw new IllegalArgumentException(column + " 값은 Y 또는 N 이어야 합니다: " + value);
-        }
-        return upper;
-    }
-
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }

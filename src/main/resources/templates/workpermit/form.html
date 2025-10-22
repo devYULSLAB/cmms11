@@ -29,12 +29,11 @@
               <div class="card-body">
                 <form id="workpermit-form" 
                       data-form-manager
-                      th:attr="data-action=${isNew ? '/api/workpermits' : '/api/workpermits/' + workPermit.permitId},
-                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      th:data-action="${isNew ? '/api/workpermits' : '/api/workpermits/' + workPermit.permitId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
                       data-redirect="/workpermit/detail/{id}">
 
                   <!-- Hidden fields -->
-                  <input type="hidden" name="permitId" th:value="${workPermit?.permitId}" />
                   <input type="hidden" name="status" th:value="${workPermit?.status}" />
                   <input type="hidden" name="refEntity" th:value="${workPermit?.refEntity}" />
                   <input type="hidden" name="refId" th:value="${workPermit?.refId}" />
@@ -56,8 +55,11 @@
                       </div>
                       <div class="form-row col-span-3">
                         <label class="label" for="stage">계획/실적</label>
-                        <input id="stage" name="stage" class="input" value="PLN" readonly />
-                        <small class="help">작업허가는 계획(PLN) 단계만 존재합니다</small>
+                        <select id="stage" name="stage" disabled>
+                          <option value="PLN" selected th:selected="${workPermit?.stage == 'PLN' or workPermit?.stage == null}">계획</option>
+                          <option value="PROC" th:selected="${workPermit?.stage == 'PROC'}">진행</option>
+                          <option value="CMPLT" th:selected="${workPermit?.stage == 'CMPLT'}">완료</option>
+                        </select>
                       </div>
                     </div>
                     <div class="grid cols-12">
@@ -620,15 +622,6 @@
                       <ul class="file-list" aria-live="polite" aria-label="첨부된 파일 목록">
                         <li class="empty">첨부된 파일이 없습니다.</li>
                       </ul>
-                    </div>
-                  </div>
-
-                  <div class="section">
-                    <div class="section-title">메모</div>
-                    <div class="form-row col-span-12">
-                      <label class="label" for="note">비고</label>
-                      <textarea id="note" name="note" rows="4" maxlength="500" placeholder="기타 메모(최대 500자)" 
-                              th:text="${workPermit.note}"></textarea>
                     </div>
                   </div>
 

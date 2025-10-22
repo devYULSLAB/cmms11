@@ -18,12 +18,12 @@
     initList: function(root) {
       console.log('Inspection list page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.inspListInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Inspection list already initialized, skipping');
         return;
       }
-      root.dataset.inspListInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initPagination(root);
       this.initSearch(root);
@@ -34,12 +34,12 @@
     initDetail: function(root) {
       console.log('Inspection detail page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.inspDetailInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Inspection detail already initialized, skipping');
         return;
       }
-      root.dataset.inspDetailInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initPrintButton(root);
       this.initApprovalButtons(root);
@@ -47,58 +47,21 @@
     
     // 결재 상신 버튼 초기화
     initApprovalButtons: function(root) {
-      // submitApproval 전역 함수 등록 (공통 - 모든 모듈에서 사용)
-      if (!window.submitApproval) {
-        window.submitApproval = async function(id, stage, module = 'inspections', detailPath = 'inspection') {
-          try {
-            if (!confirm('결재를 상신하시겠습니까?')) {
-              return;
-            }
-            
-            // stage에 따라 API 선택
-            const apiUrl = stage === 'PLN' 
-              ? `/api/${module}/${id}/submit-plan-approval`
-              : `/api/${module}/${id}/submit-actual-approval`;
-            
-            const response = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'same-origin'
-            });
-            
-            if (!response.ok) {
-              throw new Error('결재 상신 실패: ' + response.status);
-            }
-            
-            if (window.cmms?.notification) {
-              window.cmms.notification.success('결재가 상신되었습니다.');
-            }
-            
-            // 상세 페이지 새로고침
-            setTimeout(() => {
-              window.cmms.navigation.navigate(`/${detailPath}/detail/${id}`);
-            }, 1000);
-            
-          } catch (error) {
-            console.error('Approval submission error:', error);
-            if (window.cmms?.notification) {
-              window.cmms.notification.error('결재 상신 중 오류가 발생했습니다.');
-            }
-          }
-        };
-      }
+      // ✅ ui/workflow-actions.js에서 제공하는 전역 함수 사용
+      // submitApproval, confirmComplete는 이미 전역에 등록되어 있음
+      // 별도 초기화 불필요
     },
     
     // 폼 페이지 초기화 (root 기반)
     initForm: function(root) {
       console.log('Inspection form page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.inspFormInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Inspection form already initialized, skipping');
         return;
       }
-      root.dataset.inspFormInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initPlantPicker(root);
       this.initInspectionItems(root);
@@ -109,12 +72,12 @@
     initPlan: function(root) {
       console.log('Inspection plan page initialized', root);
       
-      // ⭐ DOM 기반 중복 초기화 방지
-      if (root.dataset.inspPlanInit === 'true') {
+      // 중복 초기화 방지 (DOM 기반)
+      if (root.dataset.initialized === 'true') {
         console.log('Inspection plan already initialized, skipping');
         return;
       }
-      root.dataset.inspPlanInit = 'true';
+      root.dataset.initialized = 'true';
       
       this.initPlanItems(root);
       this.initPlanSubmit(root);
@@ -172,8 +135,16 @@
         });
       }
       
-      // 팝업에서 설비 선택 시 호출되는 콜백 (전역 함수 대신 이벤트 기반으로 처리)
-      // window.onPlantSelected 대신 공통 plant picker 이벤트 활용
+      // 팝업에서 설비 선택 시 호출되는 콜백
+      window.cmms.inspection.onPlantSelected = function(plant) {
+        const plantIdInput = root.querySelector('#plant_id');
+        if (plantIdInput) {
+          plantIdInput.value = plant.plantId;
+        }
+      };
+      
+      // plant-picker 팝업 호환성을 위해 window 루트에도 콜백 등록
+      window.onPlantSelected = window.cmms.inspection.onPlantSelected;
     },
     
     // 점검 항목 관리 초기화 (root 기반)
@@ -219,7 +190,7 @@
         <td><input class="input" name="items[${i}].minVal" maxlength="50" placeholder="최소" /></td>
         <td><input class="input" name="items[${i}].maxVal" maxlength="50" placeholder="최대" /></td>
         <td><input class="input" name="items[${i}].stdVal" maxlength="50" placeholder="기준" /></td>
-        <td><input class="input" name="items[${i}].result" maxlength="50" placeholder="결과" /></td>
+        <td><input class="input" name="items[${i}].resultVal" maxlength="50" placeholder="결과" /></td>
         <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger" data-remove-item>삭제</button></td>`;
       
       // 두 번째 행 (비고) - root 기반 DOM 생성
@@ -342,7 +313,7 @@
           <td><input class="input" name="items[${idx}].minVal" maxlength="50" placeholder="최소" value="${item.minVal || ''}" /></td>
           <td><input class="input" name="items[${idx}].maxVal" maxlength="50" placeholder="최대" value="${item.maxVal || ''}" /></td>
           <td><input class="input" name="items[${idx}].stdVal" maxlength="50" placeholder="기준" value="${item.stdVal || ''}" /></td>
-          <td><input class="input" name="items[${idx}].result" maxlength="50" placeholder="결과" value="${item.result || ''}" /></td>
+          <td><input class="input" name="items[${idx}].resultVal" maxlength="50" placeholder="결과" value="${item.resultVal || ''}" /></td>
           <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger ${idx === 0 ? 'hidden' : ''}" data-remove-item>삭제</button></td>`;
         
         const tr2 = root.createElement ? root.createElement('tr') : document.createElement('tr');

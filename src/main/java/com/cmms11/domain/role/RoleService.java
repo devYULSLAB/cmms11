@@ -6,8 +6,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +47,7 @@ public class RoleService {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         Optional<Role> existing = repository.findByIdCompanyIdAndIdRoleId(companyId, request.roleId());
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         if (existing.isPresent()) {
             Role role = existing.get();
@@ -81,7 +79,7 @@ public class RoleService {
         existing.setName(request.name());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return RoleResponse.from(repository.save(existing));
     }
 
@@ -89,7 +87,7 @@ public class RoleService {
         Role existing = getActiveRole(roleId);
         existing.setDeleteMark("Y");
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(existing);
     }
 
@@ -99,12 +97,4 @@ public class RoleService {
             .orElseThrow(() -> new NotFoundException("Role not found: " + roleId));
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }

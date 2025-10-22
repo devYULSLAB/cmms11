@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 /**
  * 애플리케이션 설정 클래스
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(AppConfig.FileStorageConfig.class)
+@PropertySource(value = "classpath:storage-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
 public class AppConfig {
 
     /**

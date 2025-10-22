@@ -1,6 +1,5 @@
 package com.cmms11.inventory;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -13,6 +12,7 @@ import jakarta.validation.constraints.Size;
 public record InventoryRequest(
     @Size(max = 10) String inventoryId,
     @Size(max = 100) String name,
+    @Size(max = 20) String unit,
     @Size(max = 5) String assetId,
     @Size(max = 5) String deptId,
     @Size(max = 100) String makerName,

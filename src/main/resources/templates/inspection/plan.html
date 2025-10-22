@@ -50,27 +50,27 @@
                         <tr class="plan-item-row">
                           <td class="cell-center line-no">1</td>
                           <td><input class="input" name="inspections[0].name" required maxlength="100" placeholder="예: 설비A 월간점검" /></td>
-                          <td><input class="input" name="inspections[0].plant_id" maxlength="10" placeholder="예: EQP000123" /></td>
+                          <td><input class="input" name="inspections[0].plantId" maxlength="10" placeholder="예: EQP000123" /></td>
                           <td>
-                            <select class="input" name="inspections[0].job_id">
+                            <select class="input" name="inspections[0].jobId">
                               <option value="">(선택)</option>
                               <option th:each="job : ${jobTypes}" th:value="${job.code}" th:text="${job.code}">INSP</option>
                             </select>
                           </td>
                           <td>
-                            <select class="input" name="inspections[0].site_id">
+                            <select class="input" name="inspections[0].siteId">
                               <option value="">(선택)</option>
                               <option th:each="site : ${sites}" th:value="${site.siteId}" th:text="${site.siteId}">SEOUL</option>
                             </select>
                           </td>
                           <td>
-                            <select class="input" name="inspections[0].dept_id">
+                            <select class="input" name="inspections[0].deptId">
                               <option value="">(선택)</option>
                               <option th:each="dept : ${depts}" th:value="${dept.deptId}" th:text="${dept.deptId}">EQ</option>
                             </select>
                           </td>
-                          <td><input class="input" name="inspections[0].member_id" maxlength="5" placeholder="예: M0001" /></td>
-                          <td><input class="input" name="inspections[0].planned_date" type="date" required /></td>
+                          <td><input class="input" name="inspections[0].memberId" maxlength="5" placeholder="예: M0001" /></td>
+                          <td><input class="input" name="inspections[0].plannedDate" type="date" required /></td>
                           <td class="cell-center">
                             <button type="button" class="btn sm danger hidden" data-remove-item>삭제</button>
                             <input type="hidden" name="inspections[0].status" value="PLAN" />

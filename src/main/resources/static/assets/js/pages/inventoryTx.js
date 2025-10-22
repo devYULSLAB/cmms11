@@ -134,8 +134,9 @@
       // 자재 선택 시 현재 재고 표시 (모든 탭의 inventoryId 필드에 바인딩)
       const inventoryInputs = root.querySelectorAll('input[name="inventoryId"]');
       inventoryInputs.forEach(input => {
-        input.addEventListener('change', () => this.loadCurrentStock(root));
-        input.addEventListener('blur', () => this.loadCurrentStock(root));
+        const handler = () => this.updateInventoryUnit(input);
+        input.addEventListener('change', handler);
+        input.addEventListener('blur', handler);
       });
       
       // 수량 변경 시 재고 반영
@@ -235,29 +236,34 @@
     
     // 현재 재고 로드
     loadCurrentStock: async function(root) {
-      const inventorySelect = root.querySelector('#inventoryId');
-      const currentStockSpan = root.querySelector('#currentStock');
-      
-      if (!inventorySelect || !currentStockSpan) return;
-      
-      const inventoryId = inventorySelect.value;
+      // TODO: 재고 수량 연동 시 구현
+    },
+
+    // 인벤토리 단위 업데이트
+    updateInventoryUnit: async function(input) {
+      const panel = input.closest('.tx-panel');
+      if (!panel) return;
+
+      const unitField = panel.querySelector('.inventory-unit');
+      if (!unitField) return;
+
+      const inventoryId = (input.value || '').trim();
       if (!inventoryId) {
-        currentStockSpan.textContent = '0';
-        this.updateStockPreview(root);
+        unitField.value = '';
         return;
       }
-      
+
       try {
-        const response = await fetch(`/api/inventories/${inventoryId}/stock`);
-        if (!response.ok) throw new Error('Failed to load stock info');
-        
+        const response = await fetch(`/api/inventoryTx/inventory-unit?inventoryId=${encodeURIComponent(inventoryId)}`, {
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Failed to load inventory unit');
+
         const data = await response.json();
-        currentStockSpan.textContent = data.currentStock || 0;
-        this.updateStockPreview(root);
+        unitField.value = data.unit || '';
       } catch (error) {
-        console.error('Stock load error:', error);
-        currentStockSpan.textContent = '0';
-        this.updateStockPreview(root);
+        console.error('Inventory unit load error:', error);
+        unitField.value = '';
       }
     },
     
@@ -360,6 +366,14 @@
       
       if (inventoryIdField) inventoryIdField.value = inventoryId;
       if (inventoryNameField) inventoryNameField.value = inventoryName;
+
+      // 활성 패널 입력 필드 업데이트
+      const activePanel = root.querySelector('.tx-panel.active');
+      const panelInventoryInput = activePanel?.querySelector('input[name="inventoryId"]');
+      if (panelInventoryInput) {
+        panelInventoryInput.value = inventoryId;
+        this.updateInventoryUnit(panelInventoryInput);
+      }
       
       // 검색 결과 숨기기
       const resultsSection = root.querySelector('#inventory-search-results');

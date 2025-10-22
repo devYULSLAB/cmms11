@@ -67,13 +67,13 @@ public class FuncController {
         } else {
             service.update(request.funcId(), request);
         }
-        return "redirect:/domain/func/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/func/list";
     }
 
     @PostMapping("/domain/func/delete/{funcId}")
     public String deleteForm(@PathVariable String funcId) {
         service.delete(funcId);
-        return "redirect:/domain/func/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/func/list";
     }
 
     // API 엔드포인트 제공 (조회만 - picker용)

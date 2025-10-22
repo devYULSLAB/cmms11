@@ -57,8 +57,8 @@
                     <td th:if="${type=='approved' or type=='rejected'}" th:text="${approval.completedAt}">-</td>
                     <td>
                       <span class="badge" 
-                            th:text="${approval.status == 'SUBMIT' ? '상신됨' : approval.status == 'PROC' ? '진행중' : approval.status == 'APPROV' ? '완료' : '반려'}"
-                            th:classappend="${approval.status == 'APPROV' ? 'success' : approval.status == 'REJECT' ? 'danger' : approval.status == 'PROC' ? 'warn' : 'info'}">
+                            th:text="${approval.status == 'SUBMT' ? '상신됨' : approval.status == 'PROC' ? '진행중' : approval.status == 'APPRV' ? '완료' : '반려'}"
+                            th:classappend="${approval.status == 'APPRV' ? 'success' : approval.status == 'REJCT' ? 'danger' : approval.status == 'PROC' ? 'warn' : 'info'}">
                         상신됨
                       </span>
                     </td>

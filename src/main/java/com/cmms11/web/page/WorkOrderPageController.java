@@ -86,7 +86,7 @@ public class WorkOrderPageController {
         Model model
     ) {
         WorkOrderResponse workOrder = service.get(orderId);
-        model.addAttribute("workOrder", workOrder);
+        model.addAttribute("workorder", workOrder);  // 템플릿과 일치하도록 소문자로 변경
         
         return _fragment ? "workorder/detail :: content" : "workorder/detail";
     }
@@ -111,10 +111,43 @@ public class WorkOrderPageController {
             // 신규 등록
             workOrder = createEmptyWorkOrder(stage);
             
-            // 참조 정보가 있으면 설정 (실적 입력 시 계획 복사)
+            // 참조 정보가 있으면 설정
             if (refId != null && !refId.isEmpty()) {
-                WorkOrderResponse refWorkOrder = service.get(refId);
-                workOrder = copyForActual(refWorkOrder, refEntity, refId, refStage);  // ID, ref_* null 처리 됨.
+                if ("WORK".equals(refEntity)) {
+                    // 실적 입력 시: 기존 WorkOrder 복사
+                    WorkOrderResponse refWorkOrder = service.get(refId);
+                    workOrder = copyForActual(refWorkOrder, refEntity, refId, refStage);
+                } else {
+                    // MEMO, INSPECTION 등에서 생성: 참조 정보만 설정 (파일은 별도 업로드)
+                    workOrder = new WorkOrderResponse(
+                        workOrder.orderId(),
+                        workOrder.name(),
+                        workOrder.plantId(),
+                        workOrder.jobId(),
+                        workOrder.siteId(),
+                        workOrder.deptId(),
+                        workOrder.memberId(),
+                        workOrder.plannedDate(),
+                        workOrder.plannedCost(),
+                        workOrder.plannedLabor(),
+                        workOrder.actualDate(),
+                        workOrder.actualCost(),
+                        workOrder.actualLabor(),
+                        workOrder.status(),
+                        workOrder.stage(),
+                        refEntity,  // 참조 모듈 설정
+                        refId,      // 참조 ID 설정
+                        refStage,   // 참조 단계 설정
+                        workOrder.approvalId(),
+                        workOrder.fileGroupId(),  // 파일은 workorder에서 별도 업로드
+                        workOrder.note(),
+                        workOrder.createdAt(),
+                        workOrder.createdBy(),
+                        workOrder.updatedAt(),
+                        workOrder.updatedBy(),
+                        workOrder.items()
+                    );
+                }
             }
         } else {
             // 수정 모드

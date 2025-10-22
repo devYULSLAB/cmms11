@@ -123,13 +123,8 @@
               return false;
             }
             
-            // 기본 회사(CHROK)는 userId만 전송 (하위 호환성)
-            if (companyId === 'CHROK') {
-              memberIdField.value = userId;
-            } else {
-              // 다른 회사는 companyId:userId 형식
-              memberIdField.value = companyId + ':' + userId;
-            }
+            // ⭐ 모든 회사에 대해 companyId:userId 형식으로 전송
+            memberIdField.value = companyId + ':' + userId;
             
             console.log('  📤 로그인 시도:', memberIdField.value);
           });

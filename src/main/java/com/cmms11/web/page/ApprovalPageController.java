@@ -81,14 +81,60 @@ public class ApprovalPageController {
         return _fragment ? "approval/form :: content" : "approval/form";
     }
 
+    @GetMapping("/approval/inbox")
+    public String inbox(
+        @RequestParam(required = false, defaultValue = "pending") String type,
+        @RequestParam(required = false, defaultValue = "false") boolean _fragment,
+        Pageable pageable,
+        Model model
+    ) {
+        String memberId = com.cmms11.security.MemberUserDetailsService.getCurrentMemberId();
+        Page<ApprovalResponse> page;
+        
+        switch (type) {
+            case "approved":
+                page = service.findApprovedApprovals(memberId, pageable);
+                break;
+            case "rejected":
+                page = service.findRejectedApprovals(memberId, pageable);
+                break;
+            case "sent":
+                page = service.findSentApprovals(memberId, pageable);
+                break;
+            case "pending":
+            default:
+                page = service.findPendingApprovals(memberId, pageable);
+                break;
+        }
+        
+        model.addAttribute("page", page);
+        model.addAttribute("type", type);
+        
+        return _fragment ? "approval/inbox :: content" : "approval/inbox";
+    }
+
     /**
      * 빈 Approval 객체 생성 (신규 등록용)
      */
     private ApprovalResponse createEmptyApproval() {
         return new ApprovalResponse(
-            null, null, "DRAFT", null, null, null, null, null,
-            null, null, null, null, null, null,
-            java.util.List.of()  // steps
+            null,
+            null,
+            "DRAFT",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            java.util.List.of()
         );
     }
 }

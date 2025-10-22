@@ -29,14 +29,15 @@
   </head>
   <body>
     <div class="page">
+      <div th:replace="common/approval-line-modal :: approval-line-modal"></div>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="workpermit-detail" data-module="workpermit-detail"
-               th:attr="data-file-group-id=${workpermit.fileGroupId},data-permit-id=${workpermit.permitId},data-print-enabled=true">
+               th:attr="data-file-group-id=${workpermit.fileGroupId},data-permit-id=${workpermit.permitId},data-dept-id=${workpermit.deptId},data-print-enabled=true">
         <main>
         <div class="container">
           <section class="card">
             <div class="card-header">
-              <div class="row" style="width:100%;justify-content:space-between">
+              <div class="row actions-space-between">
                 <div class="card-title">작업허가 상세</div>
                 <div class="toolbar" th:unless="${param.popup != null}">
                   <!-- 항상 활성화 -->
@@ -46,18 +47,32 @@
                   <!-- 수정: status=DRAFT일 때만 활성화 -->
                   <a class="btn" 
                      th:classappend="${workpermit.status == 'DRAFT' ? 'primary' : 'disabled'}"
-                     th:href="${workpermit.status == 'DRAFT' ? '/workpermit/form?id=' + workpermit.permitId : '#'}"
-                     th:onclick="${workpermit.status != 'DRAFT' ? 'return false;' : ''}">
+                     th:href="${workpermit.status == 'DRAFT' ? '/workpermit/form?id=' + workpermit.permitId : '#'}">
                     수정
                   </a>
                   
-                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) : 실제 작업허가는 PLN만 존재 -->
+                  <!-- 결재 상신: status=DRAFT일 때만 활성화 (PLN/ACT 무관) -->
                   <button class="btn" 
                           th:classappend="${workpermit.status == 'DRAFT' ? 'primary' : 'disabled'}"
                           th:disabled="${workpermit.status != 'DRAFT'}"
-                          th:onclick="${workpermit.status == 'DRAFT' ? 'submitApproval(\'' + workpermit.permitId + '\', \'' + workpermit.stage + '\', \'workpermits\', \'workpermit\')' : 'return false;'}">
+                          th:attr="onclick='submitApproval(\'' + ${workpermit.permitId} + '\', \'' + ${workpermit.stage} + '\', \'workpermits\', \'workpermit\')'">
                     결재 상신
                   </button>
+                  
+                  <!-- 담당자 확정: status=DRAFT일 때만 활성화 (PLN/ACT 모두) -->
+                  <button class="btn" 
+                          th:classappend="${workpermit.status == 'DRAFT' ? 'success' : 'disabled'}"
+                          th:disabled="${workpermit.status != 'DRAFT'}"
+                          th:attr="onclick='confirmComplete(\'' + ${workpermit.permitId} + '\', \'workpermits\', \'workpermit\')'">
+                    담당자 확정
+                  </button>
+                  
+                  <!-- 실적 입력: stage=PLN AND status=APPRV/CMPLT일 때만 활성화 -->
+                  <a class="btn" 
+                     th:classappend="${workpermit.stage == 'PLN' and (workpermit.status == 'APPRV' or workpermit.status == 'CMPLT') ? 'success' : 'disabled'}"
+                     th:href="${workpermit.stage == 'PLN' and (workpermit.status == 'APPRV' or workpermit.status == 'CMPLT') ? '/workpermit/form?stage=ACT&amp;refEntity=PERM&amp;refId=' + workpermit.permitId + '&amp;refStage=PLN' : '#'}">
+                    실적 입력
+                  </a>
                 </div>
               </div>
             </div>

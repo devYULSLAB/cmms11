@@ -16,8 +16,8 @@
           <section data-slot-root th:fragment="content" data-page="approval-form" data-module="approval-form">
           <form class="stack"
                 data-form-manager
-                th:attr="data-action=${isNew ? '/api/approvals' : '/api/approvals/' + approval.approvalId},
-                         data-method=${isNew ? 'POST' : 'PUT'}"
+                th:data-action="${isNew ? '/api/approvals' : '/api/approvals/' + approval.approvalId}"
+                th:data-method="${isNew ? 'POST' : 'PUT'}"
                 data-redirect="/approval/list">
 
             <!-- Hidden fields -->
@@ -97,9 +97,18 @@
                 <div class="grid cols-12">
                   <div class="form-row col-span-6">
                     <label class="label">결재선</label>
-                    <div class="actions actions-left-align actions-wrap">
-                      <input id="member-id-input" class="input input-flex-1" type="text" placeholder="결재자 ID" />
-                      <button class="btn" type="button" id="btn-org-picker" title="조직도에서 선택">👥</button>
+                    <div class="actions actions-left-align actions-wrap approver-input-group">
+                      <div class="approval-member-input" data-approver-autocomplete>
+                        <input
+                          class="input input-flex-1"
+                          type="text"
+                          placeholder="이름 또는 사번을 입력하세요"
+                          autocomplete="off"
+                          data-approver-display
+                        />
+                        <input type="hidden" data-approver-id />
+                        <div class="approval-member-suggestions" data-approver-suggestions hidden></div>
+                      </div>
                       <select id="decision-select" class="select-fixed-120">
                         <option value="APPROVAL">결재</option>
                         <option value="AGREE">합의</option>

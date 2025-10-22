@@ -33,7 +33,7 @@ public class ApprovalStep {
     private String decision;  // 결재 역할: APPROVAL, AGREE, INFORM
 
     @Column(length = 10)
-    private String result;    // 결재 결과: APPROVE, REJECT, PENDING (NULL)
+    private String result;    // 결재 결과: APPRV(승인), REJCT(반려), NULL(미결)
 
     @Column(name = "decided_at")
     private LocalDateTime decidedAt;

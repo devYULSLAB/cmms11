@@ -7,9 +7,17 @@ import com.cmms11.code.CodeService;
 import com.cmms11.domain.site.SiteService;
 import com.cmms11.domain.dept.DeptService;
 import com.cmms11.domain.func.FuncService;
+import com.cmms11.inspection.InspectionService;
+import com.cmms11.inspection.InspectionResponse;
+import com.cmms11.workorder.WorkOrderService;
+import com.cmms11.workorder.WorkOrderResponse;
+import com.cmms11.workpermit.WorkPermitService;
+import com.cmms11.workpermit.WorkPermitResponse;
 import java.util.List;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,19 +40,28 @@ public class PlantPageController {
     private final SiteService siteService;
     private final DeptService deptService;
     private final FuncService funcService;
+    private final InspectionService inspectionService;
+    private final WorkOrderService workOrderService;
+    private final WorkPermitService workPermitService;
 
     public PlantPageController(
         PlantService service,
         CodeService codeService,
         SiteService siteService,
         DeptService deptService,
-        FuncService funcService
+        FuncService funcService,
+        InspectionService inspectionService,
+        WorkOrderService workOrderService,
+        WorkPermitService workPermitService
     ) {
         this.service = service;
         this.codeService = codeService;
         this.siteService = siteService;
         this.deptService = deptService;
         this.funcService = funcService;
+        this.inspectionService = inspectionService;
+        this.workOrderService = workOrderService;
+        this.workPermitService = workPermitService;
     }
 
     /**
@@ -117,11 +134,60 @@ public class PlantPageController {
     @GetMapping("/plant/history")
     public String history(
         @RequestParam(name = "plantId", required = false) String plantId,
-        @RequestParam(name = "plantName", required = false) String plantName,
         Model model
     ) {
         model.addAttribute("plantId", plantId);
-        model.addAttribute("plantName", plantName);
+        
+        // plantId가 있으면 데이터 조회
+        if (plantId != null && !plantId.isEmpty()) {
+            try {
+                // 1. 설비 정보
+                PlantResponse plant = service.get(plantId);
+                model.addAttribute("plant", plant);
+                
+                // 2. 예방점검 이력 (최근 5건, 계획일 내림차순)
+                Page<InspectionResponse> inspections = inspectionService.list(
+                    null,           // inspectionId
+                    plantId,        // plantId
+                    null,           // name
+                    null,           // status
+                    null,           // stage
+                    null,           // plannedDateFrom
+                    null,           // plannedDateTo
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "plannedDate"))
+                );
+                model.addAttribute("inspections", inspections.getContent());
+                
+                // 3. 작업오더 이력 (최근 5건, 계획일 내림차순)
+                Page<WorkOrderResponse> workorders = workOrderService.list(
+                    null,           // orderId
+                    plantId,        // plantId
+                    null,           // status
+                    null,           // stage
+                    null,           // plannedDateFrom
+                    null,           // plannedDateTo
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "plannedDate"))
+                );
+                model.addAttribute("workorders", workorders.getContent());
+                
+                // 4. 작업허가 이력 (최근 5건, 계획일 내림차순)
+                Page<WorkPermitResponse> workpermits = workPermitService.list(
+                    null,           // permitId
+                    plantId,        // plantId
+                    null,           // jobId
+                    null,           // status
+                    null,           // stage
+                    null,           // plannedDateFrom
+                    null,           // plannedDateTo
+                    PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "plannedDate"))
+                );
+                model.addAttribute("workpermits", workpermits.getContent());
+                
+            } catch (Exception e) {
+                model.addAttribute("errorMessage", "설비 정보를 찾을 수 없습니다.");
+            }
+        }
+        
         return "plant/history";
     }
 

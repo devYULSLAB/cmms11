@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>파일 관리 · CMMS</title>
+    <!-- common CSS is loaded via layout/defaultLayout -->
+    <link rel="stylesheet" href="../../static/assets/css/base.css" />
+    <link rel="stylesheet" href="../../static/assets/css/file-browser.css" />
+  </head>
+  <body>
+    <div class="page">
+      <!-- Main Content -->
+      <section data-slot-root th:fragment="content" data-page="file-browser" data-module="file-browser">
+        <!-- FileBrowser 전용 CSS 로드 -->
+        <link rel="stylesheet" th:href="@{/assets/css/file-browser.css}" />
+        
+        <main>
+          <div class="container">
+            <section class="card">
+              <div class="card-header">
+                <div class="card-title">파일 관리 시스템</div>
+                <div class="toolbar">
+                  <span class="badge">목업 모드</span>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <div class="file-browser-container">
+                  <!-- Breadcrumb -->
+                  <div class="file-breadcrumb">
+                    <span>📁</span>
+                    <span id="breadcrumb">
+                      <a href="#" data-path="/">Home</a>
+                    </span>
+                  </div>
+                  
+                  <!-- Toolbar -->
+                  <div class="file-toolbar">
+                    <button class="btn primary" id="btn-upload">
+                      📤 업로드
+                    </button>
+                    <button class="btn" id="btn-create-folder">
+                      📁 폴더 생성
+                    </button>
+                    <button class="btn" id="btn-refresh">
+                      🔄 새로고침
+                    </button>
+                  </div>
+                  
+                  <!-- Main Content (트리 + 목록) -->
+                  <div class="file-browser-main">
+                    <!-- 좌측 폴더 트리 -->
+                    <div class="file-tree">
+                      <div id="folderTreeRoot">
+                        <!-- JavaScript로 동적 생성 -->
+                      </div>
+                    </div>
+                    
+                    <!-- 우측 파일 목록 -->
+                    <div class="file-list file-dropzone">
+                      <div class="file-list-table">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th width="50%">이름</th>
+                              <th width="15%">크기</th>
+                              <th width="20%">수정일</th>
+                              <th width="15%">작업</th>
+                            </tr>
+                          </thead>
+                          <tbody id="fileListBody">
+                            <!-- JavaScript로 동적 생성 -->
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+        
+        <script th:src="@{/assets/js/ui/file-browser.js}"></script>
+        <script>
+          // FileBrowser 초기화
+          document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.FileBrowser !== 'undefined') {
+              const browser = new window.FileBrowser();
+              browser.init();
+            }
+          });
+        </script>
+      </section>
+    </div>
+  </body>
+</html>
+

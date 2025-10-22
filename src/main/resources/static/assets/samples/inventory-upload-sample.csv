@@ -1,3 +1,4 @@
-inventory_id,name,asset_id,dept_id,maker_name,spec,model,serial,file_group_id,note,status
-,베어링 6204,ASSET,D0001,SKF,내경 20mm · 외경 47mm,6204ZZ,,FG1001,예비용 베어링,ACTIVE
-I200000015,모터 윤활유,ASSET,D0002,SHELL,ISO VG 68,,LUB-2024,,창고 비축,ACTIVE
+inventory_id,name,unit,maker_name,model,serial,spec,note
+,볼트 M10,EA,ABC 볼트,M10-20,SN-001,스테인리스 규격,예비용 볼트
+INV1000002,너트 M10,EA,XYZ 너트,N10,SN-002,스테인리스 규격,창고 비축
+INV1000003,모터 윤활유,L,SHELL,ISO-68,LUB-2024,ISO VG 68,정기 보충용

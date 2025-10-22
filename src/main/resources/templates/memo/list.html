@@ -16,7 +16,7 @@
           <div class="container">
             <section class="card">
               <div class="card-header">
-                <div class="card-title">게시/메모 목록</div>
+                <div class="card-title">TM(Trouble Memo) 목록</div>
                 <div class="toolbar">
                   <a class="btn primary" th:href="@{/memo/form}">새로 만들기</a>
                 </div>
@@ -76,8 +76,7 @@
                       <td class="actions">
                         <a class="btn btn-xs" th:href="@{/memo/form(id=${memo.memoId})}">수정</a>
                         <button class="btn btn-xs danger"
-                                th:attr="data-delete-url=@{/api/memos/{id}(id=${memo.memoId})},data-redirect=@{/memo/list}"
-                                data-confirm="정말 삭제하시겠습니까?">삭제</button>
+                                th:attr="data-delete-url=@{/api/memos/{id}(id=${memo.memoId})},data-redirect=@{/memo/list}">삭제</button>
                       </td>
                     </tr>
                   </tbody>

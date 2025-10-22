@@ -393,8 +393,8 @@ export function initNavigation() {
             const formData = new FormData(form);
             const jsonData = this.formDataToJSON(formData);
             
-            // CSRF 토큰 추출
-            const csrfToken = this.getCSRFToken();
+            // CSRF 토큰 추출 (core/csrf.js 사용)
+            const csrfToken = window.cmms?.csrf?.readToken() || '';
             
             // API 호출
             const response = await fetch(action, {
@@ -504,29 +504,6 @@ export function initNavigation() {
     },
 
     /**
-     * CSRF 토큰 추출 (통합 방식)
-     * @returns {string} CSRF 토큰
-     */
-    getCSRFToken: function() {
-      // 1. 쿠키에서 추출 시도 (Spring Security 기본 방식)
-      const cookies = document.cookie.split('; ');
-      for (const cookie of cookies) {
-        if (cookie.startsWith('XSRF-TOKEN=')) {
-          return decodeURIComponent(cookie.split('=')[1]);
-        }
-      }
-      
-      // 2. meta 태그에서 추출 시도 (Thymeleaf 템플릿)
-      const metaTag = document.querySelector('meta[name="_csrf"]');
-      if (metaTag) {
-        return metaTag.getAttribute('content') || '';
-      }
-      
-      console.warn('CSRF token not found');
-      return '';
-    },
-
-    /**
      * 삭제 핸들러 바인딩 함수
      */
     bindDeleteHandler: function bindDeleteHandler() {
@@ -539,9 +516,17 @@ export function initNavigation() {
         e.preventDefault();
         const url = btn.getAttribute('data-delete-url');
         const redirectTo = btn.getAttribute('data-redirect') || this.currentContentUrl;
-        const confirmMsg = btn.getAttribute('data-confirm');
-        if (confirmMsg && !confirm(confirmMsg)) return;
-        fetch(url, { method: 'POST', credentials: 'same-origin' })
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        
+        // ⭐ REST API 표준에 맞춰 DELETE 메서드 사용 + CSRF 토큰 추가
+        const csrfToken = window.cmms?.csrf?.readToken() || '';
+        fetch(url, { 
+          method: 'DELETE', 
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-TOKEN': csrfToken
+          }
+        })
           .then((res) => {
             if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
             if (!res.ok) throw new Error('Delete failed: ' + res.status);
@@ -569,7 +554,16 @@ export function initNavigation() {
         const redirectTo = btn.getAttribute('data-redirect') || this.currentContentUrl;
         const confirmMsg = btn.getAttribute('data-confirm');
         if (confirmMsg && !confirm(confirmMsg)) return;
-        fetch(url, { method: 'POST', credentials: 'same-origin' })
+        
+        // ⭐ CSRF 토큰 추가
+        const csrfToken = window.cmms?.csrf?.readToken() || '';
+        fetch(url, { 
+          method: 'POST', 
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-TOKEN': csrfToken
+          }
+        })
           .then((res) => {
             if (res.status === 403) throw window.cmms.csrf.toCsrfError(res);
             if (!res.ok) throw new Error('Action failed: ' + res.status);

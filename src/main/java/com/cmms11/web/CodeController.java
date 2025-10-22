@@ -77,7 +77,7 @@ public class CodeController {
             return "code/form";
         } catch (Exception e) {
             // 코드 타입이 존재하지 않는 경우 목록으로 리다이렉트
-            return "redirect:/code/list?error=notfound";
+            return "redirect:/layout/defaultLayout.html?content=/code/list&error=notfound";
         }
     }
 
@@ -125,7 +125,7 @@ public class CodeController {
             }
         }
 
-        return "redirect:/code/list";
+        return "redirect:/layout/defaultLayout.html?content=/code/list";
     }
 
     @PostMapping("/code/delete/{codeType}")
@@ -135,7 +135,7 @@ public class CodeController {
             service.deleteItem(codeType, item.code());
         }
         service.deleteType(codeType);
-        return "redirect:/code/list";
+        return "redirect:/layout/defaultLayout.html?content=/code/list";
     }
 
     // API 엔드포인트 제공

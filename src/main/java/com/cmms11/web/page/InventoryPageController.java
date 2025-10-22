@@ -135,6 +135,7 @@ public class InventoryPageController {
         return new InventoryResponse(
             null, // inventoryId
             null, // name
+            null, // unit
             null, // assetId
             null, // deptId
             null, // makerName

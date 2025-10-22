@@ -28,12 +28,11 @@
               <div class="card-body">
                 <form id="workorder-form"
                       data-form-manager
-                      th:attr="data-action=${isNew ? '/api/workorders' : '/api/workorders/' + workOrder.orderId},
-                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      th:data-action="${isNew ? '/api/workorders' : '/api/workorders/' + workOrder.orderId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
                       data-redirect="/workorder/detail/{id}">
 
                   <!-- Hidden fields -->
-                  <input type="hidden" name="orderId" th:value="${workOrder?.orderId}" />
                   <input type="hidden" name="status" th:value="${workOrder?.status}" />
                   <input type="hidden" name="refEntity" th:value="${workOrder?.refEntity}" />
                   <input type="hidden" name="refId" th:value="${workOrder?.refId}" />
@@ -179,6 +178,15 @@
                     </div>
                   </div>
 
+                  <!-- 메모 섹션 -->
+                  <div class="section">
+                    <div class="section-title">메모</div>
+                    <div class="form-row">
+                      <label class="label" for="note">메모</label>
+                      <textarea id="note" name="note" rows="4" maxlength="500" placeholder="메모(최대 500자)" th:text="${workOrder.note}"></textarea>
+                    </div>
+                  </div>
+
                   <!-- 작업 항목 섹션 -->
                   <div class="section">
                     <div class="section-title">작업 항목</div>
@@ -248,15 +256,6 @@
                       <ul class="file-list" aria-live="polite" aria-label="첨부된 파일 목록">
                         <li class="empty">첨부된 파일이 없습니다.</li>
                       </ul>
-                    </div>
-                  </div>
-
-                  <!-- 메모 섹션 -->
-                  <div class="section">
-                    <div class="section-title">메모</div>
-                    <div class="form-row">
-                      <label class="label" for="note">메모</label>
-                      <textarea id="note" name="note" rows="4" maxlength="500" placeholder="메모(최대 500자)" th:text="${workOrder.note}"></textarea>
                     </div>
                   </div>
 

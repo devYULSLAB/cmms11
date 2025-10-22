@@ -69,13 +69,13 @@ public class RoleController {
         } else {
             service.update(request.roleId(), request);
         }
-        return "redirect:/domain/role/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/role/list";
     }
 
     @PostMapping("/domain/role/delete/{roleId}")
     public String deleteForm(@PathVariable String roleId) {
         service.delete(roleId);
-        return "redirect:/domain/role/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/role/list";
     }
 
     // @ResponseBody

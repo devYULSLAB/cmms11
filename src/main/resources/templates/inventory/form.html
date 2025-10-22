@@ -19,13 +19,20 @@
                 <div class="card-title">자재/재고 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/inventory/list}">목록</a>
+                  <button type="submit" form="inventory-form" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '수정'}">등록</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form method="post" th:action="@{/inventory/save}">
+                <form id="inventory-form"
+                      data-form-manager
+                      th:data-action="${isNew ? '/api/inventories' : '/api/inventories/' + inventory.inventoryId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/inventory/detail/{id}">
 
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                  <input type="hidden" name="isNew" th:value="${isNew}" />
+                  <!-- Hidden fields -->
+
                   <!-- 기본정보 -->
                   <div class="section">
                     <div class="section-title">기본정보</div>
@@ -35,7 +42,7 @@
                         <input id="inventory_id" name="inventoryId" class="input" maxlength="10" placeholder="자동생성" 
                               th:value="${inventory.inventoryId}" readonly />
                       </div>
-                      <div class="form-row col-span-9">
+                      <div class="form-row col-span-6">
                         <label class="label required" for="name">자재명</label>
                         <input id="name" name="name" class="input" required maxlength="100" 
                               th:value="${inventory.name}" />
@@ -44,28 +51,13 @@
                         <label class="label" for="unit">단위</label>
                         <input id="unit" name="unit" class="input" maxlength="20" placeholder="EA, KG, M" 
                               th:value="${inventory.unit}" />
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="unit_cost">단가</label>
-                        <input id="unit_cost" name="unitCost" class="input" type="number" step="0.01" 
-                              th:value="${inventory.unitCost}" />
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="quantity">재고량</label>
-                        <input id="quantity" name="quantity" class="input" type="number" step="0.01" 
-                              th:value="${inventory.quantity}" />
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="storage_id">창고</label>
-                        <input id="storage_id" name="storageId" class="input" maxlength="10" placeholder="STR-001" 
-                              th:value="${inventory.storageId}" />
-                      </div>
+                      </div>                      
                     </div>
                   </div>
 
                   <!-- 제품정보 -->
                   <div class="section">
-                    <div class="section-title">제품정보</div>
+                    <div class="section-title">제조사 / 모델</div>
                     <div class="grid cols-12">
                       <div class="form-row col-span-6">
                         <label class="label" for="maker_name">제조사</label>
@@ -100,13 +92,6 @@
                       </div>
                     </div>
                   </div>
-
-                  <div class="actions actions-top-medium">
-                    <button class="btn primary" type="submit">
-                      <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                    </button>
-                  </div>
-
                 </form>
               </div>
             </section>

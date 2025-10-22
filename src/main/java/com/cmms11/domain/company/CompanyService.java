@@ -1,12 +1,11 @@
 package com.cmms11.domain.company;
 
 import com.cmms11.common.error.NotFoundException;
+import com.cmms11.security.MemberUserDetailsService;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +44,7 @@ public class CompanyService {
     public CompanyResponse create(CompanyRequest request) {
         Optional<Company> existing = repository.findById(request.companyId());
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         if (existing.isPresent()) {
             Company entity = existing.get();
@@ -80,7 +79,7 @@ public class CompanyService {
         existing.setPhone(request.phone());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return CompanyResponse.from(repository.save(existing));
     }
 
@@ -88,7 +87,7 @@ public class CompanyService {
         Company existing = getActiveCompany(companyId);
         existing.setDeleteMark("Y");
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(existing);
     }
 
@@ -97,12 +96,4 @@ public class CompanyService {
             .orElseThrow(() -> new NotFoundException("Company not found: " + companyId));
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }

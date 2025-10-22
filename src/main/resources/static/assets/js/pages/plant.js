@@ -411,87 +411,163 @@
     // 업로드 폼 제출 초기화 (root 기반)
     initUploadSubmit: function(root) {
       const form = root.querySelector('#uploadForm');
+      const previewSection = root.querySelector('#previewSection');
+      const validDataBody = root.querySelector('#validDataBody');
+      const errorSection = root.querySelector('#errorSection');
+      const errorBody = root.querySelector('#errorBody');
+      const previewSummary = root.querySelector('#previewSummary');
+      const saveBtn = root.querySelector('#saveBtn');
+      const cancelBtn = root.querySelector('#cancelBtn');
+      
       if (!form) return;
       
+      let validatedData = null; // 검증된 데이터 저장
+      
+      // 1단계: 업로드 및 검증
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         
         const fileInput = root.querySelector('#csvFile');
-        const summary = root.querySelector('#uploadSummary');
-        const errorSection = root.querySelector('#errorSection');
-        const errorRows = errorSection?.querySelector('[data-error-rows]');
-        
         const file = fileInput?.files[0];
+        
         if (!file) {
-          this.showUploadSummary('먼저 업로드할 CSV 파일을 선택하세요.', true, root);
+          this.showNotification('파일을 선택하세요', true);
           return;
         }
-        
-        this.showUploadSummary('업로드 중입니다. 잠시만 기다려 주세요...', false, root);
-        if (errorSection) errorSection.hidden = true;
-        if (errorRows) errorRows.innerHTML = '';
         
         const formData = new FormData();
         formData.append('file', file);
         
         try {
+          // 검증 API 호출 (저장 안 함)
           const response = await fetch(form.action, {
             method: 'POST',
-            body: formData,
+            body: formData
           });
           
           if (!response.ok) {
-            this.showUploadSummary('업로드 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', true, root);
+            this.showNotification('검증 중 오류가 발생했습니다', true);
             return;
           }
           
           const result = await response.json();
-          const summaryText = `성공 ${result.successCount}건 · 실패 ${result.failureCount}건`;
-          this.showUploadSummary(summaryText, result.failureCount > 0, root);
+          validatedData = result.validItems;
           
-          // 업로드 완료 후 파일 입력 초기화
-          if (fileInput) fileInput.value = '';
+          // 유효한 데이터 테이블 렌더링
+          this.renderValidData(validDataBody, result.validItems);
           
-          if (Array.isArray(result.errors) && result.errors.length && errorSection && errorRows) {
-            errorSection.hidden = false;
-            result.errors.forEach((error) => {
-              const row = document.createElement('tr');
-              const rowCell = document.createElement('td');
-              rowCell.textContent = error.rowNumber;
-              rowCell.className = 'cell-center';
-              const messageCell = document.createElement('td');
-              messageCell.textContent = error.message;
-              row.appendChild(rowCell);
-              row.appendChild(messageCell);
-              errorRows.appendChild(row);
-            });
+          // 오류 렌더링
+          this.renderErrors(errorBody, result.errors);
+          
+          // 섹션 표시
+          if (previewSection) previewSection.hidden = false;
+          if (errorSection) {
+            errorSection.hidden = result.errors.length === 0;
           }
+          
+          // 요약 표시
+          if (previewSummary) {
+            previewSummary.textContent = `(성공: ${result.successCount}건, 실패: ${result.failureCount}건)`;
+            previewSummary.className = result.failureCount > 0 ? 'badge warning' : 'badge success';
+          }
+          
         } catch (err) {
-          this.showUploadSummary('파일 업로드 중 오류가 발생했습니다.', true, root);
+          this.showNotification('검증 중 오류 발생', true);
         }
+      });
+      
+      // 2단계: 저장 버튼
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          if (!validatedData || validatedData.length === 0) {
+            this.showNotification('저장할 데이터가 없습니다', true);
+            return;
+          }
+          
+          try {
+            const response = await fetch('/api/plants/upload/confirm', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(validatedData)
+            });
+            
+            if (!response.ok) {
+              this.showNotification('저장 중 오류가 발생했습니다', true);
+              return;
+            }
+            
+            const result = await response.json();
+            
+            this.showNotification(`${result.successCount}건 저장되었습니다`, false);
+            
+            // 페이지 이동
+            setTimeout(() => {
+              window.cmms.navigation.navigate('/plant/list');
+            }, 1500);
+            
+          } catch (err) {
+            this.showNotification('저장 중 오류 발생', true);
+          }
+        });
+      }
+      
+      // 취소 버튼
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          if (previewSection) previewSection.hidden = true;
+          if (errorSection) errorSection.hidden = true;
+          validatedData = null;
+          form.reset();
+        });
+      }
+    },
+    
+    // 유효한 데이터 렌더링
+    renderValidData: function(tbody, items) {
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      
+      items.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.plantId || '-'}</td>
+          <td>${item.name || '-'}</td>
+          <td>${item.assetId || '-'}</td>
+          <td>${item.siteId || '-'}</td>
+          <td>${item.deptId || '-'}</td>
+          <td>${item.funcId || '-'}</td>
+          <td>${item.makerName || '-'}</td>
+          <td>${item.model || '-'}</td>
+        `;
+        tbody.appendChild(row);
       });
     },
     
-    // 업로드 요약 표시 (공통 notification 사용, root 기반)
-    showUploadSummary: function(message, isError, root) {
-      const summary = root.querySelector('#uploadSummary');
-      if (!summary) return;
+    // 오류 렌더링
+    renderErrors: function(tbody, errors) {
+      if (!tbody) return;
+      tbody.innerHTML = '';
       
-      summary.hidden = false;
-      summary.textContent = message;
-      if (isError) {
-        summary.classList.add('danger-text');
-      } else {
-        summary.classList.remove('danger-text');
-      }
-      
-      // 공통 notification으로도 표시
+      errors.forEach(error => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${error.rowNumber}</td>
+          <td>${error.message}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    },
+    
+    // 알림 표시
+    showNotification: function(message, isError) {
       if (window.cmms?.notification) {
         if (isError) {
           window.cmms.notification.error(message);
         } else {
           window.cmms.notification.success(message);
         }
+      } else {
+        alert(message);
       }
     }
   });

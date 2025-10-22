@@ -90,9 +90,9 @@
                         <td th:text="${step.memberId}">-</td>
                         <td th:text="${step.decision == 'APPROVAL' ? '결재' : step.decision == 'AGREE' ? '합의' : '통보'}">결재</td>
                         <td>
-                          <span th:if="${step.result == 'APPROVE'}" class="badge success">승인</span>
-                          <span th:if="${step.result == 'REJECT'}" class="badge danger">반려</span>
-                          <span th:if="${step.result == null or step.result == 'PENDING'}" class="badge">대기</span>
+                          <span th:if="${step.result == 'APPRV'}" class="badge success">승인</span>
+                          <span th:if="${step.result == 'REJCT'}" class="badge danger">반려</span>
+                          <span th:if="${step.result == null}" class="badge">대기</span>
                         </td>
                         <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
                         <td th:text="${step.comment ?: ''}">-</td>
@@ -169,7 +169,7 @@
                           <td th:text="${step.stepNo}">1</td>
                           <td th:text="${step.memberId}">-</td>
                           <td th:text="${step.decision == 'APPROVAL' ? '결재' : step.decision == 'AGREE' ? '합의' : '통보'}">결재</td>
-                          <td th:text="${step.result == 'APPROVE' ? '승인' : step.result == 'REJECT' ? '반려' : '대기'}">대기</td>
+                          <td th:text="${step.result == 'APPRV' ? '승인' : step.result == 'REJCT' ? '반려' : '대기'}">대기</td>
                           <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
                           <td th:text="${step.comment ?: '-'}">-</td>
                         </tr>

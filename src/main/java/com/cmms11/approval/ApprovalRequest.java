@@ -13,14 +13,14 @@ import java.util.List;
  * 프로그램 개요: 결재 생성/수정 요청 DTO.
  */
 public record ApprovalRequest(
-    @Size(max = 10) String approvalId,
     @NotBlank @Size(max = 100) String title,
-    @Size(max = 10) String status,
-    @Size(max = 64) String refEntity,
-    @Size(max = 10) String refId,
-    @Size(max = 10) String refStage,
+    @NotBlank @Size(max = 64) String refEntity,
+    @NotBlank @Size(max = 10) String refId,
+    @NotBlank @Size(max = 10) String refStage,
     String content,
     @Size(max = 10) String fileGroupId,
+    @NotBlank @Size(max = 255) String callbackUrl,
+    @NotBlank @Size(max = 100) String idempotencyKey,
     @Valid List<ApprovalStepRequest> steps
 ) {
 }

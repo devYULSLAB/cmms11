@@ -27,6 +27,9 @@ dependencies {
     
     // AWS SDK for S3
     implementation 'software.amazon.awssdk:s3:2.21.29'
+    
+    // WebDAV Client (Sardine)
+    implementation 'com.github.lookfirst:sardine:5.10'
 
     implementation 'org.flywaydb:flyway-core'
     // Flyway database support for MySQL/MariaDB
@@ -36,6 +39,8 @@ dependencies {
     // Lombok to reduce boilerplate on entities/ids
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
 }
 

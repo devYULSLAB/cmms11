@@ -58,22 +58,13 @@
       -->
       <aside class="sidebar">
         <nav class="sidemenu">
-          <!-- 공장 관리 메뉴-->
-          <div class="menu-group open" data-group>
-            <button type="button" class="menu-title" aria-expanded="true">설비 관리 메뉴</button>
-            <div class="menu-items">
-              <a class="menu-item" th:href="@{/plant/form}" href="/plant/form">설비 등록</a>
-              <a class="menu-item" th:href="@{/plant/list}" href="/plant/list">설비 목록</a>
-              <a class="menu-item" th:href="@{/plant/history}" href="/plant/history">설비 이력</a>
-            </div>
-          </div>
 
-          <!-- 재고 관리 메뉴-->
-          <div class="menu-group open" data-group>
-            <button type="button" class="menu-title" aria-expanded="true">재고 관리 메뉴</button>
+          <!-- TM 메모 관리 메뉴-->
+          <div class="menu-group" data-group>
+            <button type="button" class="menu-title" aria-expanded="false">메모 관리 메뉴</button>
             <div class="menu-items">
-              <a class="menu-item" th:href="@{/inventory/form}" href="/inventory/form">재고 등록</a>
-              <a class="menu-item" th:href="@{/inventory/list}" href="/inventory/list">재고 목록</a>
+              <a class="menu-item" th:href="@{/memo/form}" href="/memo/form">작성</a>
+              <a class="menu-item" th:href="@{/memo/list}" href="/memo/list">목록</a>
             </div>
           </div>
 
@@ -98,11 +89,12 @@
             </div>
           </div>
 
-          <!-- 작업허가 관리 메뉴 / 실적은 없음 -->
+          <!-- 작업허가 관리 메뉴 / 실적은 없으나 미래 대비용 준비 함 -->
           <div class="menu-group" data-group>
             <button type="button" class="menu-title" aria-expanded="false">작업허가 관리 메뉴</button>
             <div class="menu-items">
-              <a class="menu-item" th:href="@{/workpermit/form(stage=PLN)}" href="/workpermit/form?stage=PLN">허가서 등록</a>
+              <a class="menu-item" th:href="@{/workpermit/form(stage=PLN)}" href="/workpermit/form?stage=PLN">계획 등록</a>
+              <a class="menu-item" th:href="@{/workpermit/form(stage=ACT)}" href="/workpermit/form?stage=ACT">실적 입력</a>
               <a class="menu-item" th:href="@{/workpermit/list}" href="/workpermit/list">목록</a>
             </div>
           </div>
@@ -117,23 +109,41 @@
             </div>
           </div>
 
+          <!-- 설비 관리 메뉴-->
+          <div class="menu-group open" data-group>
+            <button type="button" class="menu-title" aria-expanded="true">설비 관리 메뉴</button>
+            <div class="menu-items">
+              <a class="menu-item" th:href="@{/plant/form}" href="/plant/form">설비 등록</a>
+              <a class="menu-item" th:href="@{/plant/list}" href="/plant/list">설비 목록</a>
+              <a class="menu-item" th:href="@{/plant/history}" href="/plant/history">설비 이력</a>
+            </div>
+          </div>
+
+          <!-- 재고 관리 메뉴-->
+          <div class="menu-group open" data-group>
+            <button type="button" class="menu-title" aria-expanded="true">재고 관리 메뉴</button>
+            <div class="menu-items">
+              <a class="menu-item" th:href="@{/inventory/form}" href="/inventory/form">재고 등록</a>
+              <a class="menu-item" th:href="@{/inventory/list}" href="/inventory/list">재고 목록</a>
+            </div>
+          </div>
+
+          <!-- 파일 관리 메뉴-->
+          <div class="menu-group" data-group>
+            <button type="button" class="menu-title" aria-expanded="false">파일 관리 메뉴</button>
+            <div class="menu-items">
+              <a class="menu-item" th:href="@{/filebrowser}" href="/filebrowser">매뉴얼 탐색기</a>
+            </div>
+          </div>
+
           <!-- 결재관리 메뉴-->
           <div class="menu-group" data-group>
             <button type="button" class="menu-title" aria-expanded="false">결재관리 메뉴</button>
             <div class="menu-items">
               <a class="menu-item" th:href="@{/approval/form}" href="/approval/form">작성</a>
-              <a class="menu-item" th:href="@{/approval/list}" href="/approval/list">결재함</a>
+              <a class="menu-item" th:href="@{/approval/inbox}" href="/approval/inbox">결재함</a>
             </div>
-          </div>
-
-          <!-- 메모 관리 메뉴-->
-          <div class="menu-group" data-group>
-            <button type="button" class="menu-title" aria-expanded="false">메모 관리 메뉴</button>
-            <div class="menu-items">
-              <a class="menu-item" th:href="@{/memo/form}" href="/memo/form">작성</a>
-              <a class="menu-item" th:href="@{/memo/list}" href="/memo/list">목록</a>
-            </div>
-          </div>
+          </div>          
 
           <!-- 도메인 관리 메뉴-->
           <div class="menu-group" data-group>
@@ -149,10 +159,20 @@
             </div>
           </div>
 
+          <!-- 공통코드 관리 메뉴-->
           <div class="menu-group" data-group>
             <button type="button" class="menu-title" aria-expanded="false">공통코드 관리 메뉴</button>
             <div class="menu-items">
-              <a class="menu-item" th:href="@{/code/types}" href="/code/types">코드 타입</a>
+              <a class="menu-item" th:href="@{/code/list}" href="/code/list">코드 타입</a>
+            </div>
+          </div>
+
+          <!-- 시스템관리 메뉴-->
+          <div class="menu-group" data-group>
+            <button type="button" class="menu-title" aria-expanded="false">시스템관리 메뉴</button>
+            <div class="menu-items">
+              <a class="menu-item" th:href="@{/approval/list}" href="/approval/list">결재목록</a>
+              <a class="menu-item" th:href="@{/system/audit}" href="/system/audit">감사</a>
             </div>
           </div>
         </nav>
@@ -181,31 +201,10 @@
         <div class="container">CMMS</div>
       </footer>
     </div>
-    <!-- 공통 JavaScript 라이브러리 로드 (기존 방식 - 롤백용, 주석 처리) -->
-    <!-- 
-    <script th:src="@{/assets/js/common/fileUpload.js}" src="../../static/assets/js/common/fileUpload.js"></script>
-    <script th:src="@{/assets/js/common/FileList.js}" src="../../static/assets/js/common/FileList.js"></script>
-    <script th:src="@{/assets/js/common.js}" src="../../static/assets/js/common.js"></script>
-    <script th:src="@{/assets/js/auth.js}" src="../../static/assets/js/auth.js"></script>
-    <script th:src="@{/assets/js/app.js}" src="../../static/assets/js/app.js"></script>
-    -->
-    
+        
     <!-- 새로운 ES 모듈 방식 -->
     <script type="module" th:src="@{/assets/js/main.js}" src="../../static/assets/js/main.js"></script>
-    
-    <!-- 파일 위젯 (필요시 활성화) -->
-    <!-- <script src="../assets/js/file-widget.js"></script> -->
-    
-    <!-- SPA 네비게이션 및 초기 콘텐츠 설정 (main.js에서 처리됨) -->
-    <!-- 
-    <script>
-      // SPA 네비게이션 초기화
-      document.addEventListener('DOMContentLoaded', () => {
-        window.cmms.navigation.init();
-      });
-    </script>
-    -->
-    
+        
     <script th:inline="javascript">
       // 초기 콘텐츠 설정
       window.initialContent = /*[[${content}]]*/ '/plant/list.html';

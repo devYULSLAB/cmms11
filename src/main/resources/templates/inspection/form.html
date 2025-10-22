@@ -27,12 +27,11 @@
               <div class="card-body">
                 <form id="inspection-form" 
                       data-form-manager
-                      th:attr="data-action=${isNew ? '/api/inspections' : '/api/inspections/' + inspection.inspectionId},
-                               data-method=${isNew ? 'POST' : 'PUT'}"
+                      th:data-action="${isNew ? '/api/inspections' : '/api/inspections/' + inspection.inspectionId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
                       data-redirect="/inspection/detail/{id}">
 
                   <!-- Hidden fields -->
-                  <input type="hidden" name="inspectionId" th:value="${inspection?.inspectionId}" />
                   <input type="hidden" name="status" th:value="${inspection?.status}" />
                   <input type="hidden" name="refEntity" th:value="${inspection?.refEntity}" />
                   <input type="hidden" name="refId" th:value="${inspection?.refId}" />
@@ -166,7 +165,7 @@
                           <td><input class="input" name="items[0].minVal" maxlength="50" placeholder="최소" /></td>
                           <td><input class="input" name="items[0].maxVal" maxlength="50" placeholder="최대" /></td>
                           <td><input class="input" name="items[0].stdVal" maxlength="50" placeholder="기준" /></td>
-                          <td><input class="input" name="items[0].result" maxlength="50" placeholder="결과" /></td>
+                          <td><input class="input" name="items[0].resultVal" maxlength="50" placeholder="결과" /></td>
                           <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger hidden" data-remove-item>삭제</button></td>
                         </tr>
                         <tr class="insp-item-note-row">

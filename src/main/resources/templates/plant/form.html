@@ -19,13 +19,20 @@
                 <div class="card-title">설비 등록/수정</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/plant/list}">목록</a>
+                  <button type="submit" form="plant-form" class="btn primary">
+                    <span th:text="${isNew ? '등록' : '수정'}">등록</span>
+                  </button>
                 </div>
               </div>
               <div class="card-body">
-                <form method="post" th:action="@{/plant/save}">
+                <form id="plant-form"
+                      data-form-manager
+                      th:data-action="${isNew ? '/api/plants' : '/api/plants/' + plant.plantId}"
+                      th:data-method="${isNew ? 'POST' : 'PUT'}"
+                      data-redirect="/plant/detail/{id}">
 
-                  <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                  <input type="hidden" name="isNew" th:value="${isNew}" />
+                  <!-- Hidden fields -->
+                  
                   <!-- 기본정보 -->
                   <div class="section">
                     <div class="section-title">기본정보</div>
@@ -173,6 +180,23 @@
                         </select>
                       </div>
                       <div class="form-row col-span-3">
+                        <label class="label" for="inspection_interval">주기(개월)</label>
+                        <input id="inspection_interval" name="inspectionInterval" class="input" type="number" min="0" step="1" 
+                              th:value="${plant.inspectionInterval}" />
+                      </div>                                         
+                      <div class="form-row col-span-3">
+                        <label class="label" for="last_inspection">최종 점검일</label>
+                        <input id="last_inspection" name="lastInspection" class="input" type="date" 
+                              th:value="${plant.lastInspection}" />
+                      </div>
+                      <div class="form-row col-span-3">
+                        <label class="label" for="next_inspection">다음 점검일</label>
+                        <input id="next_inspection" name="nextInspection" class="input" type="date" 
+                              th:value="${plant.nextInspection}" />
+                      </div>
+                    </div>
+                    <div class="grid cols-12">                    
+                      <div class="form-row col-span-3">
                         <label class="label" for="psm_yn">PSM 대상</label>
                         <select id="psm_yn" name="psmYn">
                           <option value="N" th:selected="${plant.psmYn == 'N'}">아니오</option>
@@ -185,24 +209,7 @@
                           <option value="N" th:selected="${plant.workpermitYn == 'N'}">아니오</option>
                           <option value="Y" th:selected="${plant.workpermitYn == 'Y'}">예</option>
                         </select>
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="inspection_interval">점검주기(개월)</label>
-                        <input id="inspection_interval" name="inspectionInterval" class="input" type="number" min="0" step="1" 
-                              th:value="${plant.inspectionInterval}" />
-                      </div>
-                    </div>
-                    <div class="grid cols-12">                    
-                      <div class="form-row col-span-3">
-                        <label class="label" for="last_inspection">최종 점검일</label>
-                        <input id="last_inspection" name="lastInspection" class="input" type="date" 
-                              th:value="${plant.lastInspection}" />
-                      </div>
-                      <div class="form-row col-span-3">
-                        <label class="label" for="next_inspection">다음 점검일</label>
-                        <input id="next_inspection" name="nextInspection" class="input" type="date" 
-                              th:value="${plant.nextInspection}" />
-                      </div>
+                      </div>                      
                     </div>
                   </div>
                   <!-- 첨부 -->
@@ -220,11 +227,6 @@
                           <li class="empty">첨부된 파일이 없습니다.</li>
                         </ul>
                       </div>
-                  </div>
-                  <div class="actions">
-                    <button class="btn primary" type="submit">
-                      <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                    </button>
                   </div>
                 </form>
               </div>

@@ -48,15 +48,19 @@ cmms11/
 ├─ web/page, web/api
 ├─ domain, plant, inventory
 ├─ inspection, workorder, workpermit
-│   ├─ *ApprovalHandler (결재 콜백 핸들러)
-│   └─ *ApprovalFacade (결재 상신 Facade)
+│   ├─ *ApprovalService (모듈 결재 상신)
+│   ├─ *ApprovalWebhookController (Webhook 수신)
+│   └─ Service (상태 전이/실적 준비)
 ├─ approval
-│   └─ handler/ApprovalRefHandler (인터페이스)
+│   ├─ ApprovalService (REST + Outbox)
+│   ├─ client/ApprovalClient
+│   ├─ ApprovalOutboxScheduler
+│   └─ WebhookIdempotencyRepository
 ├─ memo, file
 ```
 
 - 모든 테이블에 `company_id CHAR(5)` 선행.
-- **순환 참조 제거**: Handler 패턴 + Facade 패턴 적용 (2025-10-13)
+- **결재 연계**: Approval REST API + Outbox/Webhook + 모듈별 ApprovalService (2025-10-21)
 
 ---
 
@@ -364,7 +368,8 @@ th:readonly="${workOrder.status != 'DRAFT'}"
 <input id="stage" name="stage" class="input" value="PLN" readonly />
 <small class="help">작업허가는 계획(PLN) 단계만 존재합니다</small>
 ```
-- WorkPermit은 ACT 단계가 없으므로 Form에서 readonly로 고정
+- WorkPermit은 기본적으로 PLN 단계만 사용하지만, 향후 실적 단계(ACT) 확장을 대비해 백엔드 API는 ACT 입력도 수용하도록 설계되어 있습니다.
+- Form은 여전히 PLN만 전송하도록 readonly로 고정
 - Service는 request.stage를 수용하되 기본값은 PLN (Inspection/WorkOrder와 일관된 구조)
 - Form이 readonly이므로 실제로는 항상 PLN만 전송됨
 
@@ -456,132 +461,136 @@ entity.setStatus("DRAFT");
 - **ref_id**: 원문서 ID
 - **ref_stage**: `PLN` / `ACT`
 
-### 8-3. 결재 아키텍처 (순환 참조 제거)
+### 8-3. 결재 아키텍처 (REST + Outbox/Webhook)
 
-**문제**: 기존 ApprovalService ↔ InspectionService/WorkOrderService/WorkPermitService 간 양방향 순환 참조
+Legacy Handler/Facade 패턴을 제거하고, REST API + Outbox/Webhook 조합으로 결재 연계를 단순화했다. 업무 모듈은 Approval API를 통해 상신하고, 결과는 Webhook으로 비동기 통지된다.
 
-**해결**: **전략 패턴 (Handler Pattern)** + **Facade 패턴** 적용
+#### 8-3-1. 구성 개요
 
-#### 8-3-1. ApprovalRefHandler 인터페이스
+| 계층 | 담당 | 주요 구성 요소 |
+|------|------|----------------|
+| 결재 Core | ApprovalService | Approval/ApprovalStep 저장, Outbox 이벤트 발행 |
+| 전송 | ApprovalOutboxScheduler | `approval_outbox`의 `PENDING` → Webhook POST (HMAC 서명) |
+| 수신 | 업무 모듈 Webhook 컨트롤러 | 서명/멱등 검증 후 상태 전이 |
+| 모듈 연계 | `*ApprovalService` (Inspection/WorkOrder/WorkPermit) | ApprovalClient로 상신, 상태 SUBMT로 전환 |
 
-```java
-// approval/handler/ApprovalRefHandler.java
-public interface ApprovalRefHandler {
-    boolean supports(String refEntity, String refStage);
-    void handle(String action, String refId, String refStage);
-}
-```
-
-**구현체**:
-- `InspectionApprovalHandler` (refEntity="INSP")
-- `WorkOrderApprovalHandler` (refEntity="WORK")
-- `WorkPermitApprovalHandler` (refEntity="WPER")
-
-#### 8-3-2. ApprovalService 핸들러 패턴
+#### 8-3-2. ApprovalService + Outbox/Webhook 구조
 
 ```java
 @Service
+@Transactional
 public class ApprovalService {
-    private final List<ApprovalRefHandler> handlers;
-    
-    private void notifyRefModule(Approval approval, String action) {
-        ApprovalRefHandler handler = handlers.stream()
-            .filter(h -> h.supports(approval.getRefEntity(), approval.getRefStage()))
-            .findFirst()
-            .orElse(null);
-        
-        if (handler != null) {
-            handler.handle(action, approval.getRefId(), approval.getRefStage());
-        }
+    public ApprovalResponse create(ApprovalRequest request) {
+        Approval saved = repository.save(approvalEntity);
+        List<ApprovalStep> steps = persistSteps(saved, request.steps());
+        enqueueOutbox(saved, steps, ApprovalEventType.SUBMITTED, LocalDateTime.now(), actorId, null);
+        return ApprovalResponse.from(saved, toResponses(steps));
+    }
+
+    public ApprovalResponse approve(String approvalId, String comment) {
+        // 단계 검증 후 승인 처리
+        enqueueOutbox(saved, steps, ApprovalEventType.APPROVED, now, actorId, comment);
+        return ApprovalResponse.from(saved, toResponses(steps));
     }
 }
 ```
 
-**장점**:
-- ✅ 순환 참조 완전 제거
-- ✅ 새 모듈 추가 시 Handler만 구현하면 됨
-- ✅ 단일 책임 원칙 준수
-- ✅ 테스트 용이성 증가
+핵심 특징
+- Approval/ApprovalStep/Inbox 저장 → Outbox 이벤트 생성까지 하나의 트랜잭션으로 처리
+- `approval_outbox` 테이블에 상태(`PENDING`, `SENT`, `FAILED`) 기록, 스케줄러가 Webhook POST
+- `approval_webhook_log`, `webhook_idempotency` 로 Webhook 발송/수신 내역 추적
+- HMAC 서명(`X-Approval-Signature`)과 멱등키(`X-Approval-Idempotency-Key`)로 보안·중복 방지
 
-#### 8-3-3. Facade 서비스 (결재 상신)
+#### 8-3-3. 업무 모듈 연계 (ApprovalClient + Webhook)
 
-결재 상신 로직을 별도 Facade로 분리:
+모듈별 결재 상신 로직은 REST 클라이언트와 Webhook 컨트롤러로 구성한다.
 
-| Facade | 역할 | 주입 |
-|--------|------|------|
-| `InspectionApprovalFacade` | 예방점검 결재 상신 | InspectionService + ApprovalService |
-| `WorkOrderApprovalFacade` | 작업지시 결재 상신 | WorkOrderService + ApprovalService |
-| `WorkPermitApprovalFacade` | 작업허가 결재 상신 | WorkPermitService + ApprovalService |
+| 구성요소 | 역할 |
+|----------|------|
+| `ApprovalClient` | `RestTemplate` 기반 `/api/approvals` 호출 |
+| `*ApprovalService` | 모듈별 상신 로직, 결재선 DTO → `ApprovalRequest` 변환, 상태 초기화 |
+| `*ApprovalWebhookController` | Webhook 수신, 서명 검증 후 `*ApprovalService.applyApprovalStatus` 호출 |
+| `WebhookIdempotencyRepository` | 중복 Webhook 차단 |
 
-**메서드**:
-- `submitPlanApproval(id)`: 계획 결재 상신
-- `submitActualApproval(id)`: 실적 결재 상신
-- `prepareActualStage(id)`: 실적 단계 준비
-
-**Controller 사용 예시**:
+예시 (Inspection)
 ```java
-@RestController
-public class InspectionApiController {
-    private final InspectionService service;
-    private final InspectionApprovalFacade approvalFacade;
-    
-    @PostMapping("/{id}/submit-plan-approval")
-    public ApprovalResponse submitPlanApproval(@PathVariable String id) {
-        return approvalFacade.submitPlanApproval(id);
-    }
+ApprovalSubmissionRequest request = ... // UI 모달에서 전달
+ApprovalResponse approval = approvalClient.submitApproval(approvalRequest);
+inspection.setApprovalId(approval.approvalId());
+inspection.setStatus("SUBMT");
+
+@PostMapping("/webhook")
+public ResponseEntity<Void> handleWebhook(...) {
+    verifySignature(...);
+    approvalService.applyApprovalStatus(payload.refId(), payload.refStage(), transition);
 }
 ```
+
+#### 8-3-4. 프런트엔드 상신 UX
+
+| 컴포넌트 | 설명 |
+|----------|------|
+| `approval-line-modal.html` | 결재선 입력 모달 (공용), 자동완성 제안 영역 포함 |
+| `approval-line-modal.js` | 모달 열기/닫기, 결재선 수집, 멤버 자동완성(`GET /api/members/approval-candidates`), REST 호출 |
+| `workflow-actions.js` | `submitApproval()` 호출 시 모달 트리거 (Inspection/WorkOrder/WorkPermit) |
+
+버튼 동작 → 모달 → `/api/{module}/{id}/approvals` POST → 성공 알림 → 상세 페이지 갱신.
 
 ### 8-4. 결재 흐름
 
-결재 요청 → Approval 생성 → 승인/반려 시 핸들러 호출 → 도메인 Service 콜백 → status 자동 변경  
-(모든 처리 `@Transactional`)
+1. UI 모달에서 결재선 입력 후 `/api/{module}/{id}/approvals` 호출  
+2. 업무 모듈 `*ApprovalService`가 상태 검증 후 `ApprovalClient.submitApproval()` 실행  
+3. ApprovalService가 Outbox 이벤트 생성 및 상태 SUBMT로 저장  
+4. 스케줄러가 Webhook 발송 → 업무 모듈 `*ApprovalWebhookController` 수신  
+5. 서명/멱등 검증 후 `applyApprovalStatus()` 호출 → 상태 APPRV/REJCT/DRAFT 반영  
+6. 실패 시 Outbox 재시도 및 모니터링 API로 확인
 
-### 8-5. 모듈별 결재 메서드 표준
+### 8-5. 모듈별 결재 연계 표준
 
-#### Service 메서드 (콜백 전용)
+#### 업무 ApprovalService
 
-| 모듈 | 계획 콜백 | 실적 콜백 |
-|------|----------|----------|
-| **InspectionService** | `onPlanApprovalApprove/Reject/Delete/Complete` | `onActualApprovalApprove/Reject/Delete/Complete` |
-| **WorkOrderService** | `onPlanApprovalApprove/Reject/Delete/Complete` | `onActualApprovalApprove/Reject/Delete/Complete` |
-| **WorkPermitService** | `onPlanApprovalApprove/Reject/Delete/Complete` | – |
+| 모듈 | 상신 메서드 | 상태 전이 메서드 |
+|------|-------------|-----------------|
+| `InspectionApprovalService` | `submitApproval(inspectionId, ApprovalSubmissionRequest)` | `applyApprovalStatus(id, stage, transition)` |
+| `WorkOrderApprovalService` | `submitApproval(workOrderId, ApprovalSubmissionRequest)` | `applyApprovalStatus(id, stage, transition)` |
+| `WorkPermitApprovalService` | `submitApproval(permitId, ApprovalSubmissionRequest)` | `applyApprovalStatus(id, stage, transition)` |
 
-#### Facade 메서드 (결재 상신)
+#### 업무 Service (상태 전환/단계 준비)
 
-| Facade | 메서드 |
-|--------|--------|
-| **InspectionApprovalFacade** | `submitPlanApproval`, `submitActualApproval`, `prepareActualStage` |
-| **WorkOrderApprovalFacade** | `submitPlanApproval`, `submitActualApproval`, `prepareActualStage` |
-| **WorkPermitApprovalFacade** | `submitPlanApproval` |
+| 모듈 | 상태 전환 메서드 |
+|------|-----------------|
+| `InspectionService` | `prepareActualStage()`, `onApprovalApprove/Reject/Delete()` |
+| `WorkOrderService` | `prepareActualStage()`, `onApprovalApprove/Reject/Delete()` |
+| `WorkPermitService` | `onApprovalApprove/Reject/Delete()` (실적 없음) |
+
+#### API 컨트롤러 표준
+
+| Endpoint | 설명 |
+|----------|------|
+| `POST /api/{module}/{id}/approvals` | 결재 상신 (모달에서 결재선 포함) |
+| `POST /api/{module}/{id}/prepare-actual` | 실적 단계 준비(필요 모듈만) |
+| `POST /api/{module}/approvals/webhook` | Webhook 수신 (서명 검증 + 멱등) |
+
+---
 
 ---
 
 ## 9. Service / Repository 표준
 
-### Service 메서드
+### Service 메서드 구성
 
-```java
-// 기본 CRUD
-list(), get(), create(), update(), delete()
+**도메인 Service (InspectionService / WorkOrderService / WorkPermitService)**
 
-// 결재 콜백 (ApprovalRefHandler에서 호출)
-onPlanApprovalApprove(), onPlanApprovalReject(), onPlanApprovalDelete(), onPlanApprovalComplete()
-onActualApprovalApprove(), onActualApprovalReject(), onActualApprovalDelete(), onActualApprovalComplete()
+- 기본 CRUD: `list()`, `get()`, `create()`, `update()`, `delete()`
+- 결재 결과 반영: `onApprovalApprove()`, `onApprovalReject()`, `onApprovalDelete()`
+- 단계 전환/실적 준비: `prepareActualStage()` (필요 모듈만)
+- 유틸리티: `applyRequest()`, `resolveId()`, `currentMemberId()`
 
-// 유틸리티
-applyRequest(), resolveId(), currentMemberId()
-```
+**모듈 ApprovalService (`InspectionApprovalService` 등)**
 
-### Facade 메서드 (순환 참조 제거)
-
-```java
-// 결재 상신 (Service 대신 Facade 사용)
-submitPlanApproval(), submitActualApproval()
-
-// 단계 전환
-prepareActualStage()
-```
+- `submitApproval(id, ApprovalSubmissionRequest request)` : 결재선 + 메타 → Approval API 호출
+- `applyApprovalStatus(id, stage, ApprovalStatusTransition transition)` : Webhook 수신 후 상태 반영
+- 내부 보조: 멱등키/콜백 URL 생성, 결재 본문 구성, 상태 검증
 
 ### Repository 메서드
 
@@ -747,8 +756,8 @@ seedItems("DECSN", List.of(
 | **ApiController** | `<Module>ApiController` | InspectionApiController, PlantApiController |
 | **단일 Controller** | `<Module>Controller` | DeptController, CodeController |
 | Service | `<Module>Service` | InspectionService, PlantService |
-| Facade | `<Module>ApprovalFacade` (결재 상신 전용) | InspectionApprovalFacade |
-| Handler | `<Module>ApprovalHandler` (결재 콜백 전용) | InspectionApprovalHandler |
+| Module Approval Service | `<Module>ApprovalService` (REST 상신) | InspectionApprovalService |
+| Webhook Controller | `<Module>ApprovalWebhookController` | WorkOrderApprovalWebhookController |
 | Repository | `<Module>Repository` | InspectionRepository, PlantRepository |
 | Entity | PascalCase | Inspection, Plant, Dept |
 | JS | kebab-case | inspection.js, plant.js |

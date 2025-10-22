@@ -61,7 +61,9 @@ public class MemberUserDetailsService implements UserDetailsService {
         } else {
             auths.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
-        return new User(memberId, m.getPasswordHash(), enabled, true, true, true, auths);
+        // ⭐ 모든 회사에 대해 companyId:memberId 형식으로 username 저장
+        String compositeUsername = companyId + ":" + memberId;
+        return new User(compositeUsername, m.getPasswordHash(), enabled, true, true, true, auths);
     }
     
     /**

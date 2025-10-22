@@ -24,8 +24,7 @@
                     <a class="btn" href="#" data-print-btn>인쇄</a>
                     <a class="btn" th:href="@{/inventory/form(id=${inventory.inventoryId})}">수정</a>
                     <button class="btn danger" 
-                            th:attr="data-delete-url=@{/api/inventories/{id}(id=${inventory.inventoryId})},data-redirect=@{/inventory/list}"
-                            data-confirm="정말 삭제하시겠습니까?">삭제</button>
+                            th:attr="data-delete-url=@{/api/inventories/{id}(id=${inventory.inventoryId})},data-redirect=@{/inventory/list}">삭제</button>
                   </div>
                 </div>
               </div>
@@ -35,16 +34,13 @@
                   <div class="section-title">기본정보</div>
                   <div class="grid cols-12">
                     <div class="stack col-span-3"><div class="label">자재 번호</div><div th:text="${inventory.inventoryId}">I200000001</div></div>
-                    <div class="stack col-span-9"><div class="label">자재명</div><div th:text="${inventory.name}">베어링 6203</div></div>
+                    <div class="stack col-span-6"><div class="label">자재명</div><div th:text="${inventory.name}">베어링 6203</div></div>
                     <div class="stack col-span-3"><div class="label">단위</div><div th:text="${inventory.unit}">EA</div></div>
-                    <div class="stack col-span-3"><div class="label">단가</div><div th:text="${inventory.unitCost}">1,500</div></div>
-                    <div class="stack col-span-3"><div class="label">재고량</div><div th:text="${inventory.quantity}">50</div></div>
-                    <div class="stack col-span-3"><div class="label">창고</div><div th:text="${inventory.storageId}">STR-001</div></div>
                   </div>
                 </div>
 
                 <div class="section">
-                  <div class="section-title">제품정보</div>
+                  <div class="section-title">제조사 / 모델</div>
                   <div class="grid cols-12">
                     <div class="stack col-span-6"><div class="label">제조사</div><div th:text="${inventory.makerName}">SKF</div></div>
                     <div class="stack col-span-6"><div class="label">사양</div><div th:text="${inventory.spec}">내경 17mm, 외경 40mm</div></div>

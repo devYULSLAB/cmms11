@@ -42,6 +42,12 @@ public class Approval {
     @Column(name = "ref_stage", length = 10)
     private String refStage;
 
+    @Column(name = "callback_url", length = 255)
+    private String callbackUrl;
+
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
+
     @Lob
     @Column
     private String content;

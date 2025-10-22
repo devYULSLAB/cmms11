@@ -67,13 +67,13 @@ public class DeptController {
         } else {
             service.update(request.deptId(), request);
         }
-        return "redirect:/domain/dept/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/dept/list";
     }
 
     @PostMapping("/domain/dept/delete/{deptId}")
     public String deleteForm(@PathVariable String deptId) {
         service.delete(deptId);
-        return "redirect:/domain/dept/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/dept/list";
     }
 
     // API 엔드포인트 제공 (조회만 - picker용)

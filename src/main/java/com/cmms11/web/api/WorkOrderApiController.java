@@ -1,7 +1,8 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
-import com.cmms11.workorder.WorkOrderApprovalFacade;
+import com.cmms11.approval.client.ApprovalSubmissionRequest;
+import com.cmms11.workorder.WorkOrderApprovalService;
 import com.cmms11.workorder.WorkOrderItem;
 import com.cmms11.workorder.WorkOrderRequest;
 import com.cmms11.workorder.WorkOrderResponse;
@@ -33,11 +34,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOrderApiController {
 
     private final WorkOrderService service;
-    private final WorkOrderApprovalFacade approvalFacade;
+    private final WorkOrderApprovalService approvalService;
 
-    public WorkOrderApiController(WorkOrderService service, WorkOrderApprovalFacade approvalFacade) {
+    public WorkOrderApiController(WorkOrderService service, WorkOrderApprovalService approvalService) {
         this.service = service;
-        this.approvalFacade = approvalFacade;
+        this.approvalService = approvalService;
     }
 
     @GetMapping
@@ -89,29 +90,29 @@ public class WorkOrderApiController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{orderId}/submit-plan-approval")
-    public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String orderId) {
-        ApprovalResponse approval = approvalFacade.submitPlanApproval(orderId);
+    @PostMapping("/{orderId}/approvals")
+    public ResponseEntity<ApprovalResponse> submitApproval(
+        @PathVariable String orderId,
+        @Valid @RequestBody ApprovalSubmissionRequest request
+    ) {
+        ApprovalResponse approval = approvalService.submitApproval(orderId, request);
         return ResponseEntity.ok(approval);
     }
 
-    @PostMapping("/{orderId}/confirm-plan")
-    public ResponseEntity<Void> confirmPlan(@PathVariable String orderId) {
-        service.onPlanApprovalComplete(orderId);
+    /**
+     * 담당자 확정 (API) - 결재 없이 DRAFT → CMPLT (PLN/ACT 통합)
+     */
+    @PostMapping("/{orderId}/confirm")
+    public ResponseEntity<Void> confirm(@PathVariable String orderId) {
+        service.onComplete(orderId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{orderId}/prepare-actual")
     public ResponseEntity<WorkOrderResponse> prepareActual(@PathVariable String orderId) {
-        approvalFacade.prepareActualStage(orderId);
+        service.prepareActualStage(orderId);
         WorkOrderResponse response = service.get(orderId);
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{orderId}/submit-actual-approval")
-    public ResponseEntity<ApprovalResponse> submitActualApproval(@PathVariable String orderId) {
-        ApprovalResponse approval = approvalFacade.submitActualApproval(orderId);
-        return ResponseEntity.ok(approval);
     }
 }
 

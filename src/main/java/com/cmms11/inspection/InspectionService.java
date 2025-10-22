@@ -11,8 +11,6 @@ import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,7 +89,7 @@ public class InspectionService {
     public InspectionResponse create(InspectionRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         String newId = resolveId(companyId, request.inspectionId(), request.plannedDate());
         Inspection entity = new Inspection();
@@ -122,7 +120,7 @@ public class InspectionService {
         Inspection entity = getExisting(inspectionId);
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedBy(currentMemberId());
+        entity.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         Inspection saved = repository.save(entity);
         List<InspectionItem> items = synchronizeItems(
             entity.getId().getCompanyId(),
@@ -219,110 +217,119 @@ public class InspectionService {
         return autoNumberService.generateTxId(companyId, MODULE_CODE, date);
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
+    /**
+     * 결재 승인 콜백 (PLN/ACT 통합)
+     */
+    public void onApprovalApprove(String inspectionId, String stage) {
+        Inspection inspection = getExisting(inspectionId);
+        inspection.setStatus("APPRV");
+        inspection.setUpdatedAt(LocalDateTime.now());
+        inspection.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(inspection);
     }
 
+    /**
+     * 결재 반려 콜백 (PLN/ACT 통합)
+     */
+    public void onApprovalReject(String inspectionId, String stage) {
+        Inspection inspection = getExisting(inspectionId);
+        inspection.setStatus("REJCT");
+        inspection.setUpdatedAt(LocalDateTime.now());
+        inspection.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(inspection);
+    }
 
     /**
-     * 계획 결재 승인 콜백
+     * 결재 삭제 콜백 (PLN/ACT 통합)
      */
+    public void onApprovalDelete(String inspectionId, String stage) {
+        Inspection inspection = getExisting(inspectionId);
+        inspection.setStatus("DRAFT");
+        inspection.setApprovalId(null);
+        inspection.setUpdatedAt(LocalDateTime.now());
+        inspection.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(inspection);
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
+     */
+    @Deprecated
     public void onPlanApprovalApprove(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("APPRV");
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalApprove(inspectionId, "PLN");
     }
 
     /**
-     * 계획 결재 반려 콜백
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
      */
+    @Deprecated
     public void onPlanApprovalReject(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("REJCT");
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalReject(inspectionId, "PLN");
     }
 
     /**
-     * 계획 결재 삭제 콜백
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
      */
+    @Deprecated
     public void onPlanApprovalDelete(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("DRAFT");
-        inspection.setApprovalId(null);
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalDelete(inspectionId, "PLN");
     }
 
     /**
-     * 계획 자체 확정 (결재 없이 DRAFT → CMPLT)
+     * 담당자 확정 (결재 없이 DRAFT → CMPLT)
+     * PLN/ACT 구분 없이 DRAFT 상태만 확정 가능
      */
-    public void onPlanApprovalComplete(String inspectionId) {
+    public void onComplete(String inspectionId) {
         Inspection inspection = getExisting(inspectionId);
-        if (!"PLN".equals(inspection.getStage()) || !"DRAFT".equals(inspection.getStatus())) {
-            throw new IllegalStateException("작성 중인 계획만 확정 가능합니다.");
+        
+        if (!"DRAFT".equals(inspection.getStatus())) {
+            throw new IllegalStateException("작성 중인 문서만 확정 가능합니다.");
         }
+        
         inspection.setStatus("CMPLT");
         inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
+        inspection.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(inspection);
     }
 
-
     /**
-     * 실적 결재 승인 콜백
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
      */
+    @Deprecated
     public void onActualApprovalApprove(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("APPRV");
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalApprove(inspectionId, "ACT");
     }
 
     /**
-     * 실적 결재 반려 콜백
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
      */
+    @Deprecated
     public void onActualApprovalReject(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("REJCT");
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalReject(inspectionId, "ACT");
     }
 
     /**
-     * 실적 결재 삭제 콜백
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
      */
+    @Deprecated
     public void onActualApprovalDelete(String inspectionId) {
-        Inspection inspection = getExisting(inspectionId);
-        inspection.setStatus("DRAFT");
-        inspection.setApprovalId(null);
-        inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
-        repository.save(inspection);
+        onApprovalDelete(inspectionId, "ACT");
     }
 
     /**
-     * 실적 자체 확정 (결재 없이 DRAFT → CMPLT)
+     * 실적 입력 단계 준비 (PLN+APPRV → ACT+DRAFT)
      */
-    public void onActualApprovalComplete(String inspectionId) {
+    public void prepareActualStage(String inspectionId) {
         Inspection inspection = getExisting(inspectionId);
-        if (!"ACT".equals(inspection.getStage()) || !"DRAFT".equals(inspection.getStatus())) {
-            throw new IllegalStateException("작성 중인 실적만 확정 가능합니다.");
+
+        if (!"PLN".equals(inspection.getStage()) || !"APPRV".equals(inspection.getStatus())) {
+            throw new IllegalStateException("계획 결재가 완료되어야 실적을 입력할 수 있습니다.");
         }
-        inspection.setStatus("CMPLT");
+
+        inspection.setStage("ACT");
+        inspection.setStatus("DRAFT");
         inspection.setUpdatedAt(LocalDateTime.now());
-        inspection.setUpdatedBy(currentMemberId());
+        inspection.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(inspection);
     }
 

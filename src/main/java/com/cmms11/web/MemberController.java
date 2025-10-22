@@ -2,6 +2,7 @@ package com.cmms11.web;
 
 import com.cmms11.domain.member.Member;
 import com.cmms11.domain.member.MemberId;
+import com.cmms11.domain.member.MemberSearchResponse;
 import com.cmms11.domain.member.MemberService;
 import com.cmms11.domain.dept.DeptService;
 import com.cmms11.domain.dept.DeptResponse;
@@ -85,13 +86,13 @@ public class MemberController {
         } else {
             service.update(member, form.getPassword(), null);
         }
-        return "redirect:/domain/member/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/member/list";
     }
 
     @PostMapping("/domain/member/delete/{memberId}")
     public String deleteForm(@PathVariable String memberId) {
         service.delete(memberId, null);
-        return "redirect:/domain/member/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/member/list";
     }
 
     // API 엔드포인트 제공
@@ -127,6 +128,19 @@ public class MemberController {
         }
         Member saved = service.create(member, req.password, req.actor);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @ResponseBody
+    @GetMapping("/api/members/approval-candidates")
+    public Page<MemberSearchResponse> searchApprovalCandidates(
+        @RequestParam(name = "q", required = false) String keyword,
+        @RequestParam(name = "deptId", required = false) String deptId,
+        @RequestParam(name = "page", defaultValue = "0") int page,
+        @RequestParam(name = "size", defaultValue = "7") int size
+    ) {
+        int limitedSize = Math.max(1, Math.min(size, 10));
+        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), limitedSize);
+        return service.searchForApproval(keyword, deptId, pageRequest);
     }
 
     public static class MemberForm {

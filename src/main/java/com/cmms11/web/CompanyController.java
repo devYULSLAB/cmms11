@@ -80,13 +80,13 @@ public class CompanyController {
         } else {
             service.update(request.companyId(), request);
         }
-        return "redirect:/domain/company/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/company/list";
     }
 
     @PostMapping("/domain/company/delete/{companyId}")
     public String deleteForm(@PathVariable String companyId) {
         service.delete(companyId);
-        return "redirect:/domain/company/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/company/list";
     }
 
     // API 엔드포인트 제공

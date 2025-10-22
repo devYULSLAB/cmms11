@@ -6,8 +6,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +54,7 @@ public class SiteService {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         Optional<Site> existing = repository.findByIdCompanyIdAndIdSiteId(companyId, request.siteId());
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         if (existing.isPresent()) {
             Site entity = existing.get();
@@ -94,7 +92,7 @@ public class SiteService {
         existing.setAddress(request.address());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return SiteResponse.from(repository.save(existing));
     }
 
@@ -102,7 +100,7 @@ public class SiteService {
         Site existing = getActiveSite(siteId);
         existing.setDeleteMark("Y");
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(existing);
     }
 
@@ -112,13 +110,5 @@ public class SiteService {
             .orElseThrow(() -> new NotFoundException("Site not found: " + siteId));
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }
 

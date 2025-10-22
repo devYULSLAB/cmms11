@@ -53,9 +53,6 @@
                       <th class="table-col-name-medium">재고명</th>
                       <th class="table-col-info-small">단위</th>
                       <th class="table-col-type-medium">제조사</th>
-                      <th class="table-col-info-small">단가</th>
-                      <th class="table-col-info-small">재고량</th>
-                      <th class="table-col-type-small">창고</th>
                       <th class="table-col-action-medium">액션</th>
                     </tr>
                   </thead>
@@ -65,9 +62,6 @@
                       <td th:text="${inventory.name}">-</td>
                       <td th:text="${inventory.unit}">-</td>
                       <td th:text="${inventory.makerName}">-</td>
-                      <td th:text="${inventory.unitCost}">-</td>
-                      <td th:text="${inventory.quantity}">-</td>
-                      <td th:text="${inventory.storageId}">-</td>
                       <td class="actions">
                         <a class="btn btn-xs" th:href="@{/inventory/form(id=${inventory.inventoryId})}">수정</a>
                         <form th:action="@{/inventory/delete/{id}(id=${inventory.inventoryId})}" method="post" style="display:inline;">

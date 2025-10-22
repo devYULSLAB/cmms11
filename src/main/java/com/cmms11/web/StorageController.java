@@ -67,13 +67,13 @@ public class StorageController {
         } else {
             service.update(request.storageId(), request);
         }
-        return "redirect:/domain/storage/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/storage/list";
     }
 
     @PostMapping("/domain/storage/delete/{storageId}")
     public String deleteForm(@PathVariable String storageId) {
         service.delete(storageId);
-        return "redirect:/domain/storage/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/storage/list";
     }
 
     // API 엔드포인트 제공

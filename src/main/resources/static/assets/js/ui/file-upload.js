@@ -37,6 +37,10 @@ export function initFileUpload() {
       
       const input = container.querySelector('input[type="file"]');
       if (!input) return;
+
+      // 초기 상태 설정: 기존 파일 목록을 보관하고 UI를 동기화
+      this.setSelectedFiles(container, Array.from(input.files || []));
+      this.renderFileList(container, this.getSelectedFiles(container), input);
       
       // 드래그 앤 드롭 이벤트 설정
       container.addEventListener('dragover', (e) => {
@@ -54,13 +58,13 @@ export function initFileUpload() {
         container.classList.remove('dragover');
         
         const files = Array.from(e.dataTransfer.files);
-        this.handleFiles(files, input);
+        this.handleFiles(files, input, container);
       });
       
       // 파일 선택 이벤트
       input.addEventListener('change', (e) => {
         const files = Array.from(e.target.files);
-        this.handleFiles(files, input);
+        this.handleFiles(files, input, container);
       });
 
       // data-attachments-add 버튼 처리 (기존 호환성)
@@ -77,12 +81,17 @@ export function initFileUpload() {
      * @param {Array} files - 처리할 파일 배열
      * @param {HTMLInputElement} input - 파일 입력 요소
      */
-    handleFiles: function(files, input) {
+    handleFiles: function(files, input, container) {
       const validFiles = this.validateFiles(files);
       
       if (validFiles.length > 0) {
-        this.displaySelectedFiles(validFiles, input);
-        this.updateFileInput(validFiles, input);
+        // 기존 파일 목록과 새 파일들을 병합 후 중복 제거
+        const existingFiles = this.getSelectedFiles(container);
+        const mergedFiles = this.mergeFiles(existingFiles, validFiles);
+
+        this.setSelectedFiles(container, mergedFiles);
+        this.updateFileInput(mergedFiles, input);
+        this.renderFileList(container, mergedFiles, input);
       }
     },
     
@@ -120,35 +129,68 @@ export function initFileUpload() {
     },
     
     /**
-     * 선택된 파일 목록 표시
-     * @param {Array} files - 표시할 파일 배열
+     * 컨테이너에 저장된 파일 목록을 반환
+     * @param {HTMLElement} container - 파일 업로드 컨테이너
+     * @returns {Array<File>} 선택된 파일 목록
+     */
+    getSelectedFiles: function(container) {
+      if (!container.__selectedFiles) {
+        container.__selectedFiles = [];
+      }
+      return container.__selectedFiles;
+    },
+
+    /**
+     * 컨테이너에 파일 목록을 저장
+     * @param {HTMLElement} container - 파일 업로드 컨테이너
+     * @param {Array<File>} files - 저장할 파일 목록
+     */
+    setSelectedFiles: function(container, files) {
+      container.__selectedFiles = files;
+    },
+
+    /**
+     * 파일 목록 병합 및 중복 제거
+     * @param {Array<File>} existingFiles - 기존 파일 목록
+     * @param {Array<File>} newFiles - 새로 추가된 파일 목록
+     * @returns {Array<File>} 병합된 파일 목록
+     */
+    mergeFiles: function(existingFiles, newFiles) {
+      const fileMap = new Map();
+      const addToMap = (file) => {
+        fileMap.set(this.buildFileKey(file), file);
+      };
+      existingFiles.forEach(addToMap);
+      newFiles.forEach(addToMap);
+      return Array.from(fileMap.values());
+    },
+
+    /**
+     * 파일 목록 렌더링
+     * @param {HTMLElement} container - 파일 업로드 컨테이너
+     * @param {Array<File>} files - 렌더링할 파일 목록
      * @param {HTMLInputElement} input - 파일 입력 요소
      */
-    displaySelectedFiles: function(files, input) {
-      // data-file-upload 컨테이너 찾기
-      const container = input.closest('[data-file-upload]');
-      if (!container) {
-        console.warn('파일 업로드 컨테이너를 찾을 수 없습니다');
-        return;
-      }
-      
-      // .file-list 목록 찾기
+    renderFileList: function(container, files, input) {
       let fileList = container.querySelector('.file-list');
-      
       if (!fileList) {
         fileList = document.createElement('ul');
         fileList.className = 'file-list list-unstyled';
         container.appendChild(fileList);
       }
-      
-      // 파일 추가 전에 empty 메시지 제거
-      const emptyItem = fileList.querySelector('.empty');
-      if (emptyItem) {
-        emptyItem.remove();
+
+      fileList.innerHTML = '';
+
+      if (!files.length) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'empty';
+        emptyItem.textContent = '첨부된 파일이 없습니다.';
+        fileList.appendChild(emptyItem);
+        return;
       }
-      
+
       files.forEach(file => {
-        const listItem = this.createFileListItem(file);
+        const listItem = this.createFileListItem(file, input, container);
         fileList.appendChild(listItem);
       });
     },
@@ -156,11 +198,15 @@ export function initFileUpload() {
     /**
      * 파일 목록 항목 생성
      * @param {File} file - 파일 객체
+     * @param {HTMLInputElement} input - 파일 입력 요소
      * @returns {HTMLElement} 파일 목록 항목 요소
      */
-    createFileListItem: function(file) {
+    createFileListItem: function(file, input, container) {
       const li = document.createElement('li');
       li.className = 'attachment-item';
+      
+      // 파일 객체 참조 저장
+      li.__fileObject = file;
       
       // 파일명
       const fileName = document.createElement('div');
@@ -179,7 +225,7 @@ export function initFileUpload() {
       removeBtn.innerHTML = '×';
       removeBtn.title = '삭제';
       removeBtn.addEventListener('click', () => {
-        li.remove();
+        this.removeFileByKey(container, this.buildFileKey(file), input);
       });
       
       // Flexbox 레이아웃에 맞게 조립
@@ -188,6 +234,20 @@ export function initFileUpload() {
       li.appendChild(removeBtn);
       
       return li;
+    },
+    
+    /**
+     * 파일 제거
+     * @param {HTMLElement} container - 파일 업로드 컨테이너
+     * @param {string} fileKey - 제거할 파일 식별 키
+     * @param {HTMLInputElement} input - 파일 입력 요소
+     */
+    removeFileByKey: function(container, fileKey, input) {
+      const currentFiles = this.getSelectedFiles(container);
+      const filteredFiles = currentFiles.filter(file => this.buildFileKey(file) !== fileKey);
+      this.setSelectedFiles(container, filteredFiles);
+      this.updateFileInput(filteredFiles, input);
+      this.renderFileList(container, filteredFiles, input);
     },
     
     /**
@@ -202,6 +262,15 @@ export function initFileUpload() {
         dataTransfer.items.add(file);
       });
       input.files = dataTransfer.files;
+    },
+
+    /**
+     * 파일 고유 키 생성
+     * @param {File} file - 파일 객체
+     * @returns {string} 고유 키
+     */
+    buildFileKey: function(file) {
+      return [file.name, file.size, file.lastModified].join('::');
     },
     
     /**

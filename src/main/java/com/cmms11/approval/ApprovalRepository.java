@@ -52,11 +52,15 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
      */
     @Query(
         "SELECT DISTINCT a FROM Approval a " +
-        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
         "WHERE a.id.companyId = :companyId " +
-        "AND s.memberId = :memberId " +
-        "AND s.decidedAt IS NULL " +
         "AND a.status IN ('SUBMT', 'PROC') " +
+        "AND EXISTS (" +
+        "  SELECT 1 FROM ApprovalStep s " +
+        "  WHERE s.id.companyId = a.id.companyId " +
+        "  AND s.id.approvalId = a.id.approvalId " +
+        "  AND s.memberId = :memberId " +
+        "  AND s.decidedAt IS NULL" +
+        ") " +
         "ORDER BY a.createdAt DESC"
     )
     Page<Approval> findPendingByMemberId(
@@ -70,12 +74,16 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
      */
     @Query(
         "SELECT DISTINCT a FROM Approval a " +
-        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
         "WHERE a.id.companyId = :companyId " +
-        "AND s.memberId = :memberId " +
-        "AND s.decidedAt IS NOT NULL " +
-        "AND s.result = 'APPROVE' " +
-        "ORDER BY s.decidedAt DESC"
+        "AND EXISTS (" +
+        "  SELECT 1 FROM ApprovalStep s " +
+        "  WHERE s.id.companyId = a.id.companyId " +
+        "  AND s.id.approvalId = a.id.approvalId " +
+        "  AND s.memberId = :memberId " +
+        "  AND s.decidedAt IS NOT NULL " +
+        "  AND s.result = 'APPRV'" +
+        ") " +
+        "ORDER BY a.createdAt DESC"
     )
     Page<Approval> findApprovedByMemberId(
         @Param("companyId") String companyId,
@@ -88,12 +96,16 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
      */
     @Query(
         "SELECT DISTINCT a FROM Approval a " +
-        "JOIN ApprovalStep s ON a.id.companyId = s.id.companyId AND a.id.approvalId = s.id.approvalId " +
         "WHERE a.id.companyId = :companyId " +
-        "AND s.memberId = :memberId " +
-        "AND s.decidedAt IS NOT NULL " +
-        "AND s.result = 'REJECT' " +
-        "ORDER BY s.decidedAt DESC"
+        "AND EXISTS (" +
+        "  SELECT 1 FROM ApprovalStep s " +
+        "  WHERE s.id.companyId = a.id.companyId " +
+        "  AND s.id.approvalId = a.id.approvalId " +
+        "  AND s.memberId = :memberId " +
+        "  AND s.decidedAt IS NOT NULL " +
+        "  AND s.result = 'REJCT'" +
+        ") " +
+        "ORDER BY a.createdAt DESC"
     )
     Page<Approval> findRejectedByMemberId(
         @Param("companyId") String companyId,
@@ -116,4 +128,6 @@ public interface ApprovalRepository extends JpaRepository<Approval, ApprovalId> 
         @Param("memberId") String memberId,
         Pageable pageable
     );
+
+    Optional<Approval> findByIdCompanyIdAndIdempotencyKey(String companyId, String idempotencyKey);
 }

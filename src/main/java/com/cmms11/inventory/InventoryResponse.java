@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public record InventoryResponse(
     String inventoryId,
     String name,
+    String unit,
     String assetId,
     String deptId,
     String makerName,
@@ -31,6 +32,7 @@ public record InventoryResponse(
         return new InventoryResponse(
             inventoryId,
             inventory.getName(),
+            inventory.getUnit(),
             inventory.getAssetId(),
             inventory.getDeptId(),
             inventory.getMakerName(),

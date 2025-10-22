@@ -75,13 +75,13 @@ public class SiteController {
         } else {
             service.update(request.siteId(), request);
         }
-        return "redirect:/domain/site/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/site/list";
     }
 
     @PostMapping("/domain/site/delete/{siteId}")
     public String deleteForm(@PathVariable String siteId) {
         service.delete(siteId);
-        return "redirect:/domain/site/list";
+        return "redirect:/layout/defaultLayout.html?content=/domain/site/list";
     }
 
     // API 엔드포인트 제공 (불필요 - 서버사이드에서만 참조)

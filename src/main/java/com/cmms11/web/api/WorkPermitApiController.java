@@ -1,7 +1,8 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
-import com.cmms11.workpermit.WorkPermitApprovalFacade;
+import com.cmms11.approval.client.ApprovalSubmissionRequest;
+import com.cmms11.workpermit.WorkPermitApprovalService;
 import com.cmms11.workpermit.WorkPermitRequest;
 import com.cmms11.workpermit.WorkPermitResponse;
 import com.cmms11.workpermit.WorkPermitService;
@@ -32,11 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkPermitApiController {
 
     private final WorkPermitService service;
-    private final WorkPermitApprovalFacade approvalFacade;
+    private final WorkPermitApprovalService approvalService;
 
-    public WorkPermitApiController(WorkPermitService service, WorkPermitApprovalFacade approvalFacade) {
+    public WorkPermitApiController(WorkPermitService service, WorkPermitApprovalService approvalService) {
         this.service = service;
-        this.approvalFacade = approvalFacade;
+        this.approvalService = approvalService;
     }
 
     @GetMapping
@@ -83,15 +84,21 @@ public class WorkPermitApiController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{permitId}/submit-plan-approval")
-    public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String permitId) {
-        ApprovalResponse approval = approvalFacade.submitPlanApproval(permitId);
+    @PostMapping("/{permitId}/approvals")
+    public ResponseEntity<ApprovalResponse> submitApproval(
+        @PathVariable String permitId,
+        @Valid @RequestBody ApprovalSubmissionRequest request
+    ) {
+        ApprovalResponse approval = approvalService.submitApproval(permitId, request);
         return ResponseEntity.ok(approval);
     }
 
-    @PostMapping("/{permitId}/confirm-plan")
-    public ResponseEntity<Void> confirmPlan(@PathVariable String permitId) {
-        service.onPlanApprovalComplete(permitId);
+    /**
+     * 담당자 확정 (API) - 결재 없이 DRAFT → CMPLT (PLN/ACT 통합)
+     */
+    @PostMapping("/{permitId}/confirm")
+    public ResponseEntity<Void> confirm(@PathVariable String permitId) {
+        service.onComplete(permitId);
         return ResponseEntity.ok().build();
     }
 }

@@ -6,8 +6,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +53,7 @@ public class FuncService {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         Optional<Func> existing = repository.findByIdCompanyIdAndIdFuncId(companyId, request.funcId());
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         if (existing.isPresent()) {
             Func func = existing.get();
@@ -87,7 +85,7 @@ public class FuncService {
         existing.setName(request.name());
         existing.setNote(request.note());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return FuncResponse.from(repository.save(existing));
     }
 
@@ -95,7 +93,7 @@ public class FuncService {
         Func existing = getActiveFunc(funcId);
         existing.setDeleteMark("Y");
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setUpdatedBy(currentMemberId());
+        existing.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(existing);
     }
 
@@ -103,14 +101,5 @@ public class FuncService {
         return repository.findByIdCompanyIdAndIdFuncId(MemberUserDetailsService.DEFAULT_COMPANY, funcId)
             .filter(func -> !"Y".equalsIgnoreCase(func.getDeleteMark()))
             .orElseThrow(() -> new NotFoundException("Func not found: " + funcId));
-    }
-
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
     }
 }

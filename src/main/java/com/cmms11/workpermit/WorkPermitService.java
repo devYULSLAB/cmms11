@@ -5,11 +5,10 @@ import com.cmms11.common.seq.AutoNumberService;
 import com.cmms11.security.MemberUserDetailsService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,7 +87,7 @@ public class WorkPermitService {
     public WorkPermitResponse create(WorkPermitRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         String newId = resolveId(companyId, request.permitId(), request.plannedDate());
         WorkPermit entity = new WorkPermit();
@@ -119,7 +118,7 @@ public class WorkPermitService {
         WorkPermit entity = getExisting(permitId);
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedBy(currentMemberId());
+        entity.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         WorkPermit saved = repository.save(entity);
         saveItems(saved.getId().getCompanyId(), saved.getId().getPermitId(), request);
         return WorkPermitResponse.from(saved);
@@ -167,7 +166,7 @@ public class WorkPermitService {
         itemRepository.deleteByPermit(companyId, permitId);
         if (request.items() == null || request.items().isEmpty()) return;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
         int line = 1;
         for (WorkPermitItemRequest r : request.items()) {
             if (r == null) continue;
@@ -198,61 +197,103 @@ public class WorkPermitService {
         return autoNumberService.generateTxId(companyId, MODULE_CODE, date);
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
-
     /**
-     * 계획 결재 승인 콜백
+     * 결재 승인 콜백 (PLN 단계만)
      */
-    public void onPlanApprovalApprove(String permitId) {
+    public void onApprovalApprove(String permitId, String stage) {
         WorkPermit permit = getExisting(permitId);
         permit.setStatus("APPRV");
         permit.setUpdatedAt(LocalDateTime.now());
-        permit.setUpdatedBy(currentMemberId());
+        permit.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(permit);
     }
 
     /**
-     * 계획 자체 확정 (결재 없이 DRAFT → CMPLT)
+     * 결재 반려 콜백 (PLN 단계만)
      */
-    public void onPlanApprovalComplete(String permitId) {
-        WorkPermit permit = getExisting(permitId);
-        if (!"PLN".equals(permit.getStage()) || !"DRAFT".equals(permit.getStatus())) {
-            throw new IllegalStateException("작성 중인 계획만 확정 가능합니다.");
-        }
-        permit.setStatus("CMPLT");
-        permit.setUpdatedAt(LocalDateTime.now());
-        permit.setUpdatedBy(currentMemberId());
-        repository.save(permit);
-    }
-
-    /**
-     * 계획 결재 반려 콜백
-     */
-    public void onPlanApprovalReject(String permitId) {
+    public void onApprovalReject(String permitId, String stage) {
         WorkPermit permit = getExisting(permitId);
         permit.setStatus("REJCT");
         permit.setUpdatedAt(LocalDateTime.now());
-        permit.setUpdatedBy(currentMemberId());
+        permit.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(permit);
     }
 
     /**
-     * 계획 결재 삭제 콜백
+     * 결재 삭제 콜백 (PLN 단계만)
      */
-    public void onPlanApprovalDelete(String permitId) {
+    public void onApprovalDelete(String permitId, String stage) {
         WorkPermit permit = getExisting(permitId);
         permit.setStatus("DRAFT");
         permit.setApprovalId(null);
         permit.setUpdatedAt(LocalDateTime.now());
-        permit.setUpdatedBy(currentMemberId());
+        permit.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         repository.save(permit);
+    }
+
+    /**
+     * 담당자 확정 (결재 없이 DRAFT → CMPLT)
+     * PLN/ACT 구분 없이 DRAFT 상태만 확정 가능
+     */
+    public void onComplete(String permitId) {
+        WorkPermit permit = getExisting(permitId);
+        
+        if (!"DRAFT".equals(permit.getStatus())) {
+            throw new IllegalStateException("작성 중인 문서만 확정 가능합니다.");
+        }
+        
+        permit.setStatus("CMPLT");
+        permit.setUpdatedAt(LocalDateTime.now());
+        permit.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
+        repository.save(permit);
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
+     */
+    @Deprecated
+    public void onPlanApprovalApprove(String permitId) {
+        onApprovalApprove(permitId, "PLN");
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
+     */
+    @Deprecated
+    public void onPlanApprovalReject(String permitId) {
+        onApprovalReject(permitId, "PLN");
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
+     */
+    @Deprecated
+    public void onPlanApprovalDelete(String permitId) {
+        onApprovalDelete(permitId, "PLN");
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalApprove(String, String)} instead
+     */
+    @Deprecated
+    public void onActualApprovalApprove(String permitId) {
+        onApprovalApprove(permitId, "ACT");
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalReject(String, String)} instead
+     */
+    @Deprecated
+    public void onActualApprovalReject(String permitId) {
+        onApprovalReject(permitId, "ACT");
+    }
+
+    /**
+     * @deprecated Use {@link #onApprovalDelete(String, String)} instead
+     */
+    @Deprecated
+    public void onActualApprovalDelete(String permitId) {
+        onApprovalDelete(permitId, "ACT");
     }
 
     /**

@@ -1,10 +1,13 @@
 package com.cmms11.web.api;
 
+import com.cmms11.common.upload.BulkUploadPreview;
 import com.cmms11.common.upload.BulkUploadResult;
 import com.cmms11.plant.PlantRequest;
 import com.cmms11.plant.PlantResponse;
 import com.cmms11.plant.PlantService;
+import com.cmms11.plant.PlantUploadDto;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -92,11 +95,26 @@ public class PlantApiController {
     }
 
     /**
-     * 설비 대량 업로드 (API)
+     * 설비 대량 업로드 - 검증만 수행 (저장하지 않음)
+     * 유효한 데이터와 오류 내역을 반환
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BulkUploadResult> upload(@RequestParam("file") MultipartFile file) {
-        BulkUploadResult result = service.upload(file);
+    public ResponseEntity<BulkUploadPreview<PlantUploadDto>> upload(
+        @RequestParam("file") MultipartFile file
+    ) {
+        BulkUploadPreview<PlantUploadDto> preview = service.validateUpload(file);
+        return ResponseEntity.ok(preview);
+    }
+
+    /**
+     * 검증된 설비 데이터 일괄 저장
+     * 프론트에서 미리보기 확인 후 호출
+     */
+    @PostMapping("/upload/confirm")
+    public ResponseEntity<BulkUploadResult> confirmUpload(
+        @RequestBody List<PlantUploadDto> items
+    ) {
+        BulkUploadResult result = service.saveUploadedData(items);
         return ResponseEntity.ok(result);
     }
 }

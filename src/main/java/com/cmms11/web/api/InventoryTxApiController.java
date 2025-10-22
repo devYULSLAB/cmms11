@@ -1,5 +1,7 @@
 package com.cmms11.web.api;
 
+import com.cmms11.inventory.InventoryResponse;
+import com.cmms11.inventory.InventoryService;
 import com.cmms11.inventoryTx.InventoryClosingRequest;
 import com.cmms11.inventoryTx.InventoryClosingResponse;
 import com.cmms11.inventoryTx.InventoryClosingService;
@@ -12,6 +14,7 @@ import com.cmms11.inventoryTx.InventoryTxService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,15 +37,18 @@ public class InventoryTxApiController {
     private final InventoryTxService inventoryTxService;
     private final InventoryClosingService inventoryClosingService;
     private final InventoryLedgerService inventoryLedgerService;
+    private final InventoryService inventoryService;
 
     public InventoryTxApiController(
         InventoryTxService inventoryTxService,
         InventoryClosingService inventoryClosingService,
-        InventoryLedgerService inventoryLedgerService
+        InventoryLedgerService inventoryLedgerService,
+        InventoryService inventoryService
     ) {
         this.inventoryTxService = inventoryTxService;
         this.inventoryClosingService = inventoryClosingService;
         this.inventoryLedgerService = inventoryLedgerService;
+        this.inventoryService = inventoryService;
     }
 
     /**
@@ -52,6 +58,19 @@ public class InventoryTxApiController {
     public ResponseEntity<InventoryTxResponse> processTransaction(@Valid @RequestBody InventoryTxRequest request) {
         InventoryTxResponse response = inventoryTxService.processTransaction(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 재고 단위 조회
+     */
+    @GetMapping("/inventory-unit")
+    public ResponseEntity<Map<String, String>> getInventoryUnit(@RequestParam String inventoryId) {
+        InventoryResponse inventory = inventoryService.get(inventoryId);
+        String unit = inventory.unit() != null ? inventory.unit() : "";
+        return ResponseEntity.ok(Map.of(
+            "inventoryId", inventoryId,
+            "unit", unit
+        ));
     }
 
     /**

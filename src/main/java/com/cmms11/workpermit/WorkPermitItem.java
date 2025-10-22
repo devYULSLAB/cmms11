@@ -20,8 +20,8 @@ public class WorkPermitItem {
     private String name;
 
     @Lob
-    @Column(name = "signature")
-    private String signature; // base64 PNG
+    @Column(name = "signature", columnDefinition = "MEDIUMTEXT")
+    private String signature; // base64 PNG (MEDIUMTEXT for large signatures)
 
     @Column(name = "note", length = 500)
     private String note;

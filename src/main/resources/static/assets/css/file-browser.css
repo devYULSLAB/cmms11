@@ -1,0 +1,286 @@
+/* 
+ * FileBrowser 전용 스타일
+ * 기존 CMMS CSS 변수 재사용
+ */
+
+/* FileBrowser 컨테이너 */
+.file-browser-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Breadcrumb (경로 표시) */
+.file-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.file-breadcrumb a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.file-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.file-breadcrumb-separator {
+  color: var(--muted);
+  margin: 0 4px;
+}
+
+/* Toolbar (액션 버튼) */
+.file-toolbar {
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Main Content (트리 + 목록) */
+.file-browser-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 좌측 폴더 트리 */
+.file-tree {
+  width: 250px;
+  min-width: 200px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.file-tree-node {
+  padding: var(--space-8) var(--space-12);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: 14px;
+}
+
+.file-tree-node:hover {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.file-tree-node.selected {
+  background: var(--primary);
+  color: white;
+}
+
+.file-tree-node.selected:hover {
+  background: var(--primary-600);
+}
+
+.file-tree-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.file-tree-toggle {
+  width: 12px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.file-tree-toggle.expanded {
+  transform: rotate(90deg);
+}
+
+.file-tree-children {
+  padding-left: var(--space-16);
+}
+
+/* 우측 파일 목록 */
+.file-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-list-table {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.file-list-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.file-list-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: var(--space-12) var(--space-16);
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 1;
+}
+
+.file-list-table td {
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.file-list-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.file-list-table tbody tr:hover {
+  background: var(--surface);
+}
+
+/* 파일 아이템 */
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.file-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.file-icon.folder {
+  color: #f59e0b;
+}
+
+.file-icon.pdf {
+  color: #dc2626;
+}
+
+.file-icon.image {
+  color: #2563eb;
+}
+
+.file-icon.word {
+  color: #2563eb;
+}
+
+.file-icon.excel {
+  color: #10b981;
+}
+
+.file-icon.hwp {
+  color: #0ea5e9;
+}
+
+.file-icon.default {
+  color: var(--muted);
+}
+
+/* 파일 크기 */
+.file-size {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 파일 날짜 */
+.file-date {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 액션 버튼 */
+.file-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* 빈 상태 */
+.file-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  padding: var(--space-32);
+}
+
+.file-list-empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-16);
+  opacity: 0.5;
+}
+
+/* 드래그 앤 드롭 오버레이 */
+.file-dropzone {
+  position: relative;
+}
+
+.file-dropzone.drag-over::after {
+  content: '파일을 여기에 드롭하세요';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.1);
+  border: 2px dashed var(--primary);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary);
+  z-index: 1000;
+}
+
+/* 로딩 상태 */
+.file-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-32);
+  color: var(--muted);
+}
+
+/* 반응형 (모바일) */
+@media (max-width: 768px) {
+  .file-browser-container {
+    height: auto;
+  }
+  
+  .file-browser-main {
+    flex-direction: column;
+  }
+  
+  .file-tree {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+

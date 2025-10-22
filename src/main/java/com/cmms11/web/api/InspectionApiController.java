@@ -1,7 +1,8 @@
 package com.cmms11.web.api;
 
 import com.cmms11.approval.ApprovalResponse;
-import com.cmms11.inspection.InspectionApprovalFacade;
+import com.cmms11.approval.client.ApprovalSubmissionRequest;
+import com.cmms11.inspection.InspectionApprovalService;
 import com.cmms11.inspection.InspectionItem;
 import com.cmms11.inspection.InspectionRequest;
 import com.cmms11.inspection.InspectionResponse;
@@ -33,11 +34,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class InspectionApiController {
 
     private final InspectionService service;
-    private final InspectionApprovalFacade approvalFacade;
+    private final InspectionApprovalService approvalService;
 
-    public InspectionApiController(InspectionService service, InspectionApprovalFacade approvalFacade) {
+    public InspectionApiController(InspectionService service, InspectionApprovalService approvalService) {
         this.service = service;
-        this.approvalFacade = approvalFacade;
+        this.approvalService = approvalService;
     }
 
     /**
@@ -111,18 +112,21 @@ public class InspectionApiController {
     /**
      * 계획 결재 상신 (API)
      */
-    @PostMapping("/{inspectionId}/submit-plan-approval")
-    public ResponseEntity<ApprovalResponse> submitPlanApproval(@PathVariable String inspectionId) {
-        ApprovalResponse approval = approvalFacade.submitPlanApproval(inspectionId);
+    @PostMapping("/{inspectionId}/approvals")
+    public ResponseEntity<ApprovalResponse> submitApproval(
+        @PathVariable String inspectionId,
+        @Valid @RequestBody ApprovalSubmissionRequest request
+    ) {
+        ApprovalResponse approval = approvalService.submitApproval(inspectionId, request);
         return ResponseEntity.ok(approval);
     }
 
     /**
-     * 계획 자체 확정 (API) - 결재 없이 DRAFT → CMPLT
+     * 담당자 확정 (API) - 결재 없이 DRAFT → CMPLT (PLN/ACT 통합)
      */
-    @PostMapping("/{inspectionId}/confirm-plan")
-    public ResponseEntity<Void> confirmPlan(@PathVariable String inspectionId) {
-        service.onPlanApprovalComplete(inspectionId);
+    @PostMapping("/{inspectionId}/confirm")
+    public ResponseEntity<Void> confirm(@PathVariable String inspectionId) {
+        service.onComplete(inspectionId);
         return ResponseEntity.ok().build();
     }
 
@@ -131,18 +135,9 @@ public class InspectionApiController {
      */
     @PostMapping("/{inspectionId}/prepare-actual")
     public ResponseEntity<InspectionResponse> prepareActual(@PathVariable String inspectionId) {
-        approvalFacade.prepareActualStage(inspectionId);
+        service.prepareActualStage(inspectionId);
         InspectionResponse response = service.get(inspectionId);
         return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 실적 결재 상신 (API)
-     */
-    @PostMapping("/{inspectionId}/submit-actual-approval")
-    public ResponseEntity<ApprovalResponse> submitActualApproval(@PathVariable String inspectionId) {
-        ApprovalResponse approval = approvalFacade.submitActualApproval(inspectionId);
-        return ResponseEntity.ok(approval);
     }
 }
 

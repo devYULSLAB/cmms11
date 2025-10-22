@@ -19,6 +19,9 @@ public class Inventory {
     @Column(length = 100)
     private String name;
 
+    @Column(length = 20)
+    private String unit;
+
     @Column(name = "asset_id", length = 5)
     private String assetId;
 

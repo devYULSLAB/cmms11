@@ -7,8 +7,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,7 +69,7 @@ public class MemoService {
     public MemoResponse create(MemoRequest request) {
         String companyId = MemberUserDetailsService.DEFAULT_COMPANY;
         LocalDateTime now = LocalDateTime.now();
-        String memberId = currentMemberId();
+        String memberId = MemberUserDetailsService.getCurrentMemberId();
 
         String newId = resolveId(companyId, request.memoId());
         Memo entity = new Memo();
@@ -89,7 +87,7 @@ public class MemoService {
         Memo entity = getExisting(memoId);
         applyRequest(entity, request);
         entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedBy(currentMemberId());
+        entity.setUpdatedBy(MemberUserDetailsService.getCurrentMemberId());
         return MemoResponse.from(repository.save(entity));
     }
 
@@ -125,12 +123,4 @@ public class MemoService {
         return autoNumberService.generateTxId(companyId, MODULE_CODE, LocalDate.now());
     }
 
-    private String currentMemberId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return "system";
-        }
-        String name = authentication.getName();
-        return name != null ? name : "system";
-    }
 }

@@ -29,9 +29,10 @@
   </head>
   <body>
     <div class="page">
+      <div th:replace="common/approval-line-modal :: approval-line-modal"></div>
       <!-- Main Content -->
       <section data-slot-root th:fragment="content" data-page="workorder-detail" data-module="workorder-detail"
-               th:attr="data-file-group-id=${workorder.fileGroupId},data-order-id=${workorder.orderId},data-print-enabled=true">
+               th:attr="data-file-group-id=${workorder != null ? workorder.fileGroupId : null},data-order-id=${workorder != null ? workorder.orderId : null},data-dept-id=${workorder != null ? workorder.deptId : null},data-print-enabled=true">
         <main>
           <div class="container">
             <section class="card">
@@ -46,8 +47,7 @@
                     <!-- 수정: status=DRAFT일 때만 활성화 -->
                     <a class="btn" 
                       th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
-                      th:href="${workorder.status == 'DRAFT' ? '/workorder/form?id=' + workorder.orderId : '#'}"
-                      th:onclick="${workorder.status != 'DRAFT' ? 'return false;' : ''}">
+                      th:href="${workorder.status == 'DRAFT' ? '/workorder/form?id=' + workorder.orderId : '#'}">
                       수정
                     </a>
                     
@@ -55,15 +55,22 @@
                     <button class="btn" 
                             th:classappend="${workorder.status == 'DRAFT' ? 'primary' : 'disabled'}"
                             th:disabled="${workorder.status != 'DRAFT'}"
-                            th:onclick="${workorder.status == 'DRAFT' ? 'submitApproval(\'' + workorder.orderId + '\', \'' + workorder.stage + '\', \'workorders\', \'workorder\')' : 'return false;'}">
+                            th:attr="onclick='submitApproval(\'' + ${workorder.orderId} + '\', \'' + ${workorder.stage} + '\', \'workorders\', \'workorder\')'">
                       결재 상신
+                    </button>
+                    
+                    <!-- 담당자 확정: status=DRAFT일 때만 활성화 (PLN/ACT 모두) -->
+                    <button class="btn" 
+                            th:classappend="${workorder.status == 'DRAFT' ? 'success' : 'disabled'}"
+                            th:disabled="${workorder.status != 'DRAFT'}"
+                            th:attr="onclick='confirmComplete(\'' + ${workorder.orderId} + '\', \'workorders\', \'workorder\')'">
+                      담당자 확정
                     </button>
                     
                     <!-- 실적 입력: stage=PLN AND status=APPRV일 때만 활성화 -->
                     <a class="btn" 
                       th:classappend="${workorder.stage == 'PLN' and workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? 'success' : 'disabled'}"
-                      th:href="${workorder.stage == 'PLN' and workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? '/workorder/form?stage=ACT&amp;refEntity=WORK&amp;refId=' + workorder.orderId + '&amp;refStage=PLN' : '#'}"
-                      th:onclick="${workorder.stage != 'PLN' or workorder.status != 'APPRV' or workorder.status != 'CMPLT' ? 'return false;' : ''}">
+                      th:href="${workorder.stage == 'PLN' and workorder.status == 'APPRV' or workorder.status == 'CMPLT' ? '/workorder/form?stage=ACT&amp;refEntity=WORK&amp;refId=' + workorder.orderId + '&amp;refStage=PLN' : '#'}">
                       실적 입력
                     </a>
                   </div>
