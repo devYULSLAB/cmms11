@@ -1,20 +1,20 @@
 spring:
   config:
-    import: optional:classpath:database-prod.properties
+    import:
+      - optional:classpath:database-prod.properties
+      - optional:classpath:webhook-prod.properties
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
       enabled: true
   jpa:
+    open-in-view: true  # 뷰 렌더링 중 지연 로딩 허용 (명시적 설정)
     hibernate:
       ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MariaDB106Dialect
   flyway:
-    enabled: true
-    locations: classpath:db/migration
+    enabled: false
+    #locations: classpath:db/migration
   datasource:
     hikari:
       # 운영환경 커넥션 풀 설정 (더 보수적)
@@ -38,6 +38,8 @@ app:
     location: /opt/cmms11/storage/uploads
     max-size: 10485760  # 운영환경에서는 10MB로 제한 (multipart는 100MB)
     allowed-extensions: jpg,jpeg,png,pdf,doc,docx,xls,xlsx,hwp,hwpx,zip  # 운영환경에서는 txt 제거로 보안 강화
+  approval:
+    base-url: ${APP_APPROVAL_BASE_URL:http://localhost:8080}
 
 aws:
   s3:
@@ -54,6 +56,6 @@ logging:
     com.zaxxer.hikari: WARN  # 운영환경에서는 경고만 로깅
     org.springframework.jdbc: WARN  # JDBC 경고만 로깅
   file:
-    name: /opt/cmms11/logs/cmms11.log
+    name: /opt/cmms11/logs/cmms11-prod.log
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

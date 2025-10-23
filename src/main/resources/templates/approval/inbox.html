@@ -54,7 +54,7 @@
                     <td th:text="${approval.approvalId}">A001</td>
                     <td th:text="${approval.title}">점검 실적 결재</td>
                     <td th:if="${type=='pending' or type=='sent'}" th:text="${approval.createdBy}">admin</td>
-                    <td th:if="${type=='approved' or type=='rejected'}" th:text="${approval.completedAt}">-</td>
+                    <td th:if="${type=='approved' or type=='rejected'}" th:text="${approval.completedAt != null ? #temporals.format(approval.completedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
                     <td>
                       <span class="badge" 
                             th:text="${approval.status == 'SUBMT' ? '상신됨' : approval.status == 'PROC' ? '진행중' : approval.status == 'APPRV' ? '완료' : '반려'}"

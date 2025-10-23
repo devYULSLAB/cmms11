@@ -425,9 +425,28 @@ export function initNavigation() {
               // {id} 패턴을 실제 ID로 치환
               const idMatches = redirectTemplate.match(/\{(\w+)\}/g);
               if (idMatches) {
-                idMatches.forEach(placeholder => {
+                idMatches.forEach((placeholder) => {
                   const fieldName = placeholder.slice(1, -1); // {id} → id
-                  const fieldValue = result[fieldName] || result.inspectionId || result.orderId || result.permitId || result.memoId || result.approvalId;
+
+                  let fieldValue =
+                    result[fieldName] ??
+                    result.plantId ??
+                    result.inventoryId ??
+                    result.inspectionId ??
+                    result.orderId ??
+                    result.permitId ??
+                    result.memoId ??
+                    result.approvalId;
+
+                  if (!fieldValue) {
+                    const fallbackKey = Object.keys(result || {}).find(
+                      (key) => key.toLowerCase().endsWith('id') && result[key]
+                    );
+                    if (fallbackKey) {
+                      fieldValue = result[fallbackKey];
+                    }
+                  }
+
                   if (fieldValue) {
                     redirectUrl = redirectUrl.replace(placeholder, fieldValue);
                   }
@@ -474,7 +493,14 @@ export function initNavigation() {
       }
       
       // 2단계: JSON 변환
+      const skipPrefixes = ['common_', 'fire_', 'confined_', 'electric_', 'high_', 'excavation_'];
       for (let [key, values] of multiValueKeys.entries()) {
+        const shouldSkip =
+          key === 'workTypes' ||
+          skipPrefixes.some(prefix => key.startsWith(prefix));
+        if (shouldSkip) {
+          continue;
+        }
         // items[0].name 형식 처리
         if (key.includes('[') && key.includes('].')) {
           const match = key.match(/^(\w+)\[(\d+)\]\.(\w+)$/);

@@ -29,59 +29,36 @@ export function initWorkflowActions() {
    * submitApproval('W456', 'ACT', 'workorders', 'workorder')
    */
   async function submitApproval(id, stage, module = 'inspections', detailPath = 'inspection') {
+    console.log('🔍 submitApproval called:', { id, stage, module, detailPath });
+    
     const modalEnabledModules = ['inspections', 'workorders', 'workpermits'];
-    if (modalEnabledModules.includes(module) && window.cmms?.approvalLineModal) {
-      const contextSelector = `[data-module="${detailPath}-detail"]`;
-      const contextElement = document.querySelector(contextSelector);
-      const deptId = contextElement?.dataset?.deptId || null;
-      window.cmms.approvalLineModal.open({
-        entityId: id,
-        stage,
-        module,
-        detailPath,
-        deptId
-      });
-      return;
+    
+    // 모달 지원 모듈인지 확인
+    if (!modalEnabledModules.includes(module)) {
+      console.error('❌ 모듈 지원 안됨:', module);
+      throw new Error(`${module} 모듈은 결재 상신을 지원하지 않습니다.`);
     }
-
-    try {
-      if (!confirm('결재를 상신하시겠습니까?')) {
-        return;
-      }
-      
-      const apiUrl = stage === 'PLN' 
-        ? `/api/${module}/${id}/submit-plan-approval`
-        : `/api/${module}/${id}/submit-actual-approval`;
-      
-      const csrfToken = window.cmms?.csrf?.readToken() || '';
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrfToken
-        },
-        credentials: 'same-origin'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`결재 상신 실패: ${response.status}`);
-      }
-      
-      if (window.cmms?.notification) {
-        window.cmms.notification.success('결재가 상신되었습니다.');
-      }
-      
-      setTimeout(() => {
-        window.cmms.navigation.navigate(`/${detailPath}/detail/${id}`);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Approval submission error:', error);
-      if (window.cmms?.notification) {
-        window.cmms.notification.error('결재 상신 중 오류가 발생했습니다.');
-      }
+    
+    // 모달이 초기화되었는지 확인
+    if (!window.cmms?.approvalLineModal) {
+      console.error('❌ 모달 초기화 안됨:', window.cmms);
+      throw new Error('결재선 모달이 초기화되지 않았습니다. 페이지를 새로고침해주세요.');
     }
+    
+    // 모달 사용하여 결재선 구성
+    const contextSelector = `[data-module="${detailPath}-detail"]`;
+    const contextElement = document.querySelector(contextSelector);
+    const deptId = contextElement?.dataset?.deptId || null;
+    
+    console.log('✅ 모달 열기:', { entityId: id, stage, module, detailPath, deptId });
+    
+    window.cmms.approvalLineModal.open({
+      entityId: id,
+      stage,
+      module,
+      detailPath,
+      deptId
+    });
   }
 
   /**

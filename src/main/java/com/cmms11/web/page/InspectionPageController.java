@@ -3,6 +3,7 @@ package com.cmms11.web.page;
 import com.cmms11.code.CodeService;
 import com.cmms11.domain.dept.DeptService;
 import com.cmms11.domain.site.SiteService;
+import com.cmms11.inspection.InspectionRequest;
 import com.cmms11.inspection.InspectionResponse;
 import com.cmms11.inspection.InspectionService;
 import org.springframework.data.domain.Page;
@@ -11,7 +12,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.util.List;
 
 /**
  * 이름: InspectionPageController
@@ -148,7 +152,55 @@ public class InspectionPageController {
         
         model.addAttribute("page", page);
         
+        // Select box용 참조 데이터 추가
+        addReferenceData(model);
+        
         return _fragment ? "inspection/plan :: content" : "inspection/plan";
+    }
+
+    /**
+     * 점검 계획 일괄 저장
+     */
+    @PostMapping("/inspection/plan/save")
+    public String savePlan(
+        @RequestParam("inspections") List<InspectionRequest> inspections,
+        RedirectAttributes redirectAttributes
+    ) {
+        try {
+            // 각 계획 항목을 저장
+            for (InspectionRequest inspection : inspections) {
+                if (inspection.name() != null && !inspection.name().trim().isEmpty()) {
+                    // stage를 PLN으로 설정하여 계획으로 저장
+                    InspectionRequest planRequest = new InspectionRequest(
+                        inspection.inspectionId(),
+                        inspection.name(),
+                        inspection.plantId(),
+                        inspection.jobId(),
+                        inspection.siteId(),
+                        inspection.deptId(),
+                        inspection.memberId(),
+                        inspection.plannedDate(),
+                        inspection.actualDate(),
+                        "DRAFT",  // 계획은 DRAFT 상태로 시작
+                        "PLN",    // 계획 단계
+                        inspection.refEntity(),
+                        inspection.refId(),
+                        inspection.refStage(),
+                        inspection.approvalId(),
+                        inspection.fileGroupId(),
+                        inspection.note(),
+                        inspection.items()
+                    );
+                    service.create(planRequest);
+                }
+            }
+            
+            redirectAttributes.addFlashAttribute("message", "점검 계획이 성공적으로 저장되었습니다.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "계획 저장 중 오류가 발생했습니다: " + e.getMessage());
+        }
+        
+        return "redirect:/inspection/list";
     }
 
     /**

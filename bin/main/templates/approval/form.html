@@ -11,50 +11,41 @@
   </head>
   <body>
     <div class="page">
-      <header class="appbar">
-        <div class="appbar-inner">
-          <div class="brand">시스템관리</div>
-          <div class="spacer"></div>
-          <div class="meta">
-            <span class="badge">작성</span>
-          </div>
-        </div>
-      </header>
-      <nav class="breadcrumbs">
-        <div class="container">
-          <a th:href="@{/}">시스템관리</a>
-          <span class="sep">/</span>
-          <span>결재 작성</span>
-        </div>
-      </nav>
       <main>
         <div class="container">
           <section data-slot-root th:fragment="content" data-page="approval-form" data-module="approval-form">
-          <form class="stack" data-validate method="post" th:action="@{/approval/save}" th:data-redirect="@{/approval/list}">
+          <form class="stack"
+                data-form-manager
+                th:data-action="${isNew ? '/api/approvals' : '/api/approvals/' + approval.approvalId}"
+                th:data-method="${isNew ? 'POST' : 'PUT'}"
+                data-redirect="/approval/list">
 
-            <input type="hidden" name="_csrf" value="" data-csrf-field="true" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-            <input type="hidden" name="isNew" th:value="${isNew}" />
+            <!-- Hidden fields -->
+            <input type="hidden" name="approvalId" th:value="${approval?.approvalId}" />
             <input type="hidden" id="fileGroupId" name="fileGroupId" th:value="${approval.fileGroupId}" />
             <section class="card">
               <div class="card-header">
                 <div class="card-title">결재 작성</div>
                 <div class="toolbar">
                   <a class="btn" th:href="@{/approval/list}">목록</a>
-                  <button class="btn" type="submit" name="action" value="draft">임시저장</button>
-                  <button class="btn primary" type="submit" name="action" value="submit">
-                    <span th:text="${isNew ? '등록' : '수정'}">등록</span>
-                  </button>
+                  <button class="btn" type="button" data-save-draft>임시저장</button>
+                  <button class="btn primary" type="button" data-save-submit>상신</button>
                 </div>
               </div>
               <div class="card-body">
+                <!-- 제목 -->
                 <div class="grid cols-12">
                   <div class="form-row col-span-12">
                     <label class="label" for="title">제목</label>
                     <input id="title" name="title" class="input" type="text" placeholder="제목을 입력하세요" required 
                           th:value="${approval.title}" />
                   </div>
+                </div>
+                
+                <!-- 참조 정보, 결재선, 본문 -->
+                <div class="grid cols-12">
                   <div class="form-row col-span-3">
-                    <label class="label" for="refEntity">참조 모듈</label>
+                    <label class="label" for="refEntity">참조모듈(선택)</label>
                     <select id="refEntity" name="refEntity">
                       <option value="">(선택)</option>
                       <option th:each="module : ${refModules}"
@@ -65,29 +56,46 @@
                     </select>
                   </div>
                   <div class="form-row col-span-3">
-                    <label class="label" for="refId">참조 ID</label>
-                    <input id="refId" name="refId" class="input" type="text" placeholder="예: O250101001" 
-                          th:value="${approval.refId}" />
+                    <label class="label" for="refId">참조 ID(선택)</label>
+                    <div style="display:flex; gap:8px;">
+                      <input id="refId" name="refId" class="input" type="text" placeholder="예: W250101001" 
+                            th:value="${approval.refId}" 
+                            style="flex:1;" />
+                      <button type="button" 
+                              class="btn btn-sm" 
+                              onclick="openRefDocPopup()"
+                              th:disabled="${approval.refEntity == null || approval.refId == null}"
+                              title="원본 문서 보기">
+                        📄
+                      </button>
+                    </div>
                   </div>
                   <div class="form-row col-span-3">
-                    <label class="label" for="status">상태</label>
-                    <select id="status" name="status">
-                      <option value="">(선택)</option>
-                      <option value="DRAFT" th:selected="${!approval.status or approval.status == ''}">임시저장</option>
-                      <option value="SUBMIT">상신</option>
-                      <option th:each="status : ${statusList}"
-                              th:value="${status.code}"
-                              th:text="${status.name}"
-                              th:selected="${approval.status == status.code}">
-                      </option>
+                    <label class="label" for="refStage">단계(선택)</label>
+                    <select id="refStage" name="refStage" class="input">
+                      <option value="">-</option>
+                      <option value="PLN" th:selected="${approval.refStage == 'PLN'}">계획</option>
+                      <option value="ACT" th:selected="${approval.refStage == 'ACT'}">실적</option>
                     </select>
                   </div>
-                  <!-- 결재선-->
-                  <div class="form-row col-span-12">
+                  
+                </div>
+                <!-- 결재선, 본문 -->
+                <div class="grid cols-12">
+                  <div class="form-row col-span-6">
                     <label class="label">결재선</label>
-                    <div class="actions actions-left-align actions-wrap">
-                      <input id="member-id-input" class="input input-flex-1" type="text" placeholder="결재자 ID" />
-                      <button class="btn" type="button" id="btn-org-picker" title="조직도에서 선택">👥</button>
+                    <div class="actions actions-left-align actions-wrap approver-input-group">
+                      <div class="approval-member-input" data-approver-autocomplete>
+                        <input
+                          class="input input-flex-1"
+                          type="text"
+                          placeholder="이름 또는 사번을 입력하세요"
+                          autocomplete="off"
+                          data-approver-display
+                        />
+                        <input type="hidden" data-approver-id />
+                        <div class="approval-member-suggestions" data-approver-suggestions hidden></div>
+                      </div>
                       <select id="decision-select" class="select-fixed-120">
                         <option value="APPROVAL">결재</option>
                         <option value="AGREE">합의</option>
@@ -96,6 +104,8 @@
                       <button class="btn" type="button" id="add-approver">추가</button>
                     </div>
                   </div>
+                </div>
+                <div class="grid cols-12">
                   <div class="form-row col-span-12">
                     <label class="label"></label>
                     <div class="approver-items actions-top-small" id="approver-items">
@@ -125,7 +135,7 @@
                     <textarea id="content" name="content" class="editor-hidden"></textarea>
                   </div>                        
 
-                  <div class="form-row col-span-12" data-attachments>
+                  <div class="form-row col-span-12" data-file-upload>
                     <label class="label">첨부</label>
                     <div>
                       <!-- 기존 파일 목록 표시 -->
@@ -135,7 +145,6 @@
                            data-empty-text="첨부된 파일이 없습니다."
                            data-loading-text="첨부 파일을 불러오는 중..."
                            data-error-text="첨부 파일을 불러올 수 없습니다.">
-                        <div class="loading">첨부 파일을 불러오는 중...</div>
                       </div>
                       <div th:unless="${approval.fileGroupId}" class="notice">
                         첨부된 파일이 없습니다.
@@ -150,7 +159,7 @@
                           <small class="hint">(최대 10MB, jpg,png,pdf,doc,xls,hwp,zip,txt)</small>
                         </button>
                       </div>
-                      <ul class="attachments-list actions-top-small" aria-live="polite" aria-label="첨부 파일 목록">
+                      <ul class="file-list actions-top-small" aria-live="polite" aria-label="첨부 파일 목록">
                         <li class="empty">새로 첨부할 파일을 선택하세요.</li>
                       </ul>
                     </div>
@@ -161,9 +170,6 @@
           </form>
         </div>
       </main>
-      <footer>
-        <div class="container">© 전자결재</div>
-      </footer>
     </div>
     
     <!-- 인라인 스크립트 제거됨 - approval.js로 이관 -->

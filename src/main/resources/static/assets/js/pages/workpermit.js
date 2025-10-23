@@ -66,6 +66,7 @@
       this.initCancelButton(root);
       // this.initSignatureCanvas(root); // 주석 처리 - initSigners에서 처리됨
       this.initSigners(root);
+      this.initChecklist(root);
       // this.initFormSubmit(root);  // Form Manager 제거로 인한 주석 처리
     },
     
@@ -412,6 +413,68 @@
     //   }
     // },
     
+    // 체크리스트 초기화 (root 기반)
+    initChecklist: function(root) {
+      console.log('Workpermit checklist initialized', root);
+      
+      // 보충작업 선택에 따른 체크리스트 그룹 표시/숨김
+      root.querySelectorAll('input[name="workTypes"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const group = root.querySelector(`[data-work-type="${this.value}"]`);
+          if (group) {
+            group.style.display = this.checked ? 'block' : 'none';
+            console.log(`체크리스트 그룹 ${this.value} ${this.checked ? '표시' : '숨김'}`);
+          }
+        });
+      });
+      
+      // 확인/해당없음 체크박스 상호 배타적 처리
+      root.querySelectorAll('.check-confirm').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            const notApplicableCheckbox = this.closest('.checkbox-group').querySelector('.check-not-applicable');
+            if (notApplicableCheckbox) {
+              notApplicableCheckbox.checked = false;
+            }
+          }
+        });
+      });
+      
+      root.querySelectorAll('.check-not-applicable').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            const confirmCheckbox = this.closest('.checkbox-group').querySelector('.check-confirm');
+            if (confirmCheckbox) {
+              confirmCheckbox.checked = false;
+            }
+          }
+        });
+      });
+      
+      // 폼 제출 시 체크리스트 데이터를 JSON으로 변환
+      const form = root.querySelector('form[data-form-manager]');
+      if (form) {
+        form.addEventListener('submit', function() {
+          const checklistData = collectChecklistData(root);
+          const jsonField = root.querySelector('#checksheet-json');
+          if (jsonField) {
+            jsonField.value = JSON.stringify(checklistData);
+          }
+        });
+      }
+      
+      // 기존 데이터 로드 시 체크리스트 상태 복원
+      const jsonField = root.querySelector('#checksheet-json');
+      if (jsonField && jsonField.value) {
+        try {
+          const data = JSON.parse(jsonField.value);
+          loadChecklistData(data, root);
+        } catch (e) {
+          console.warn('체크리스트 데이터 파싱 실패:', e);
+        }
+      }
+    },
+    
     // 서명 데이터 저장 (root 기반)
     saveSignatures: function(form, root) {
       const section = root.querySelector('[data-signers]');
@@ -442,6 +505,163 @@
       });
     }
   });
+  
+  /**
+   * 체크리스트 데이터 수집 (root 기반)
+   */
+  function collectChecklistData(root) {
+    const workTypes = Array.from(root.querySelectorAll('input[name="workTypes"]:checked'))
+      .map(cb => cb.value);
+    
+    const items = [];
+    
+    // 일반작업 항목들
+    root.querySelectorAll('[name^="common_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="common_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="common_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'COMMON',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    // 화기작업 항목들
+    root.querySelectorAll('[name^="fire_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="fire_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="fire_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'FIRE',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    // 밀폐공간작업 항목들
+    root.querySelectorAll('[name^="confined_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="confined_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="confined_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'CONFINED',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    // 전기작업 항목들
+    root.querySelectorAll('[name^="electric_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="electric_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="electric_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'ELECTRIC',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    // 고소작업 항목들
+    root.querySelectorAll('[name^="high_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="high_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="high_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'HIGH',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    // 굴착작업 항목들
+    root.querySelectorAll('[name^="excavation_checked_"]').forEach(checkbox => {
+      const index = checkbox.name.match(/\d+/)[0];
+      const checked = checkbox.checked;
+      const notApplicable = root.querySelector(`[name="excavation_not_applicable_${index}"]`).checked;
+      const itemName = root.querySelector(`[name="excavation_item_name_${index}"]`).value;
+      
+      if (checked || notApplicable) {
+        items.push({
+          workType: 'EXCAVATION',
+          itemName: itemName,
+          checked: checked,
+          notApplicable: notApplicable
+        });
+      }
+    });
+    
+    return {
+      workTypes: workTypes,
+      items: items
+    };
+  }
+  
+  /**
+   * 기존 체크리스트 데이터 로드 (root 기반)
+   */
+  function loadChecklistData(jsonData, root) {
+    if (!jsonData || !jsonData.items) return;
+    
+    // 작업 유형 선택 복원
+    if (jsonData.workTypes) {
+      jsonData.workTypes.forEach(workType => {
+        const checkbox = root.querySelector(`input[name="workTypes"][value="${workType}"]`);
+        if (checkbox) {
+          checkbox.checked = true;
+          checkbox.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+    
+    // 체크리스트 항목 상태 복원
+    jsonData.items.forEach(item => {
+      const workType = item.workType.toLowerCase();
+      const itemName = item.itemName;
+      
+      // 해당 항목의 체크박스 찾기
+      const itemElements = root.querySelectorAll(`[name^="${workType}_item_name_"]`);
+      itemElements.forEach(element => {
+        if (element.value === itemName) {
+          const index = element.name.match(/\d+/)[0];
+          const checkedCheckbox = root.querySelector(`[name="${workType}_checked_${index}"]`);
+          const notApplicableCheckbox = root.querySelector(`[name="${workType}_not_applicable_${index}"]`);
+          
+          if (item.checked) {
+            checkedCheckbox.checked = true;
+          } else if (item.notApplicable) {
+            notApplicableCheckbox.checked = true;
+          }
+        }
+      });
+    });
+  }
   
   // 페이지별 초기화 등록 (root 기반 구조)
   window.cmms.pages.register('workpermit-list', function(root) {

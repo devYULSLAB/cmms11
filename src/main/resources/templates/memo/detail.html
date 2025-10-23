@@ -88,7 +88,7 @@
                             <th>작성자</th>
                             <td th:text="${memo.createdBy}">관리자</td>
                             <th>작성일</th>
-                            <td th:text="${memo.createdAt}">2025-01-05</td>
+                            <td th:text="${#temporals.format(memo.createdAt, 'yyyy-MM-dd HH:mm')}">2025-01-05</td>
                           </tr>
                         </table>
                       </div>

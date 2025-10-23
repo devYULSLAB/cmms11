@@ -59,6 +59,7 @@
       
       this.initEditor(root);
       this.initApproverManagement(root);
+      this.initSaveButtons(root);
     },
     
     // 페이지네이션 초기화 (공통 유틸 사용, root 기반)
@@ -473,6 +474,126 @@
     // 인쇄 버튼 초기화 (통합 모듈 사용)
     initPrintButton: function(root) {
       window.cmms.printUtils.initPrintButton(root);
+    },
+    
+    // 저장 버튼 초기화 (root 기반)
+    initSaveButtons: function(root) {
+      const form = root.querySelector('[data-form-manager]');
+      if (!form) return;
+      
+      // 임시저장 버튼
+      const draftBtn = root.querySelector('[data-save-draft]');
+      if (draftBtn) {
+        draftBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.submitForm(form, 'DRAFT');
+        });
+      }
+      
+      // 상신 버튼
+      const submitBtn = root.querySelector('[data-save-submit]');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.submitForm(form, 'SUBMIT');
+        });
+      }
+    },
+    
+    // 폼 제출 처리 함수
+    submitForm: async function(form, status) {
+      try {
+        // Status 필드 설정
+        let statusInput = form.querySelector('[name="status"]');
+        if (!statusInput) {
+          statusInput = document.createElement('input');
+          statusInput.type = 'hidden';
+          statusInput.name = 'status';
+          form.appendChild(statusInput);
+        }
+        statusInput.value = status;
+        
+        // 기존 Form Manager 로직과 동일하게 처리
+        const action = form.getAttribute('data-action');
+        const method = form.getAttribute('data-method') || 'POST';
+        
+        // 파일 업로드 처리
+        if (window.cmms?.fileUpload) {
+          try {
+            const fileGroupId = await window.cmms.fileUpload.uploadFormFiles(form);
+            if (fileGroupId) {
+              let fileGroupIdInput = form.querySelector('[name="fileGroupId"]');
+              if (!fileGroupIdInput) {
+                fileGroupIdInput = document.createElement('input');
+                fileGroupIdInput.type = 'hidden';
+                fileGroupIdInput.name = 'fileGroupId';
+                form.appendChild(fileGroupIdInput);
+              }
+              fileGroupIdInput.value = fileGroupId;
+            }
+          } catch (uploadError) {
+            console.error('File upload failed:', uploadError);
+            if (window.cmms?.notification) {
+              window.cmms.notification.error('파일 업로드에 실패했습니다.');
+            }
+            return;
+          }
+        }
+        
+        // FormData를 JSON으로 변환
+        const formData = new FormData(form);
+        const jsonData = this.formDataToJSON(formData);
+        
+        // API 호출
+        const response = await fetch(action, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': window.cmms?.csrf?.readToken() || ''
+          },
+          body: JSON.stringify(jsonData)
+        });
+        
+        if (!response.ok) {
+          throw new Error('저장 실패');
+        }
+        
+        const result = await response.json();
+        
+        // 성공 메시지
+        if (window.cmms?.notification) {
+          const message = status === 'DRAFT' ? '임시저장되었습니다.' : '상신되었습니다.';
+          window.cmms.notification.success(message);
+        }
+        
+        // 리다이렉트
+        setTimeout(() => {
+          window.cmms.navigation.navigate('/approval/list');
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Form submit error:', error);
+        if (window.cmms?.notification) {
+          window.cmms.notification.error('저장 중 오류가 발생했습니다.');
+        }
+      }
+    },
+    
+    // FormData를 JSON으로 변환하는 유틸리티 함수
+    formDataToJSON: function(formData) {
+      const json = {};
+      for (let [key, value] of formData.entries()) {
+        if (json[key]) {
+          if (Array.isArray(json[key])) {
+            json[key].push(value);
+          } else {
+            json[key] = [json[key], value];
+          }
+        } else {
+          json[key] = value;
+        }
+      }
+      return json;
     }
   });
   

@@ -73,8 +73,8 @@
                               th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}"
                               th:classappend="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? 'success' : approval.status == 'PROC' ? 'info' : approval.status == 'REJCT' ? 'danger' : ''}">-</span>
                       </td>
-                      <td th:text="${approval.submittedAt}">-</td>
-                      <td th:text="${approval.completedAt}">-</td>
+                      <td th:text="${approval.submittedAt != null ? #temporals.format(approval.submittedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
+                      <td th:text="${approval.completedAt != null ? #temporals.format(approval.completedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
                       <td class="actions">
                         <a class="btn btn-xs" th:href="@{/approval/form(id=${approval.approvalId})}">수정</a>
                         <button class="btn btn-xs danger"

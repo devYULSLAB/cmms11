@@ -117,11 +117,29 @@
     // 테이블 매니저 초기화 (공통 TableManager 활용, root 기반)
     initTableManager: function(root) {
       const table = root.querySelector('[data-table-manager]');
-      if (!table) return;
+      if (!table || table.__tableManagerInitialized) return;
       
-      // 공통 TableManager 초기화 (root 범위 내에서만)
-      if (window.cmms?.TableManager) {
-        window.cmms.TableManager.init(table);
+      const config = {};
+      const { rowSelector, numberField, addBtn, removeBtn, minRows } = table.dataset;
+      if (rowSelector) config.rowSelector = rowSelector;
+      if (numberField) config.numberField = numberField;
+      if (addBtn) config.addBtn = addBtn;
+      if (removeBtn) config.removeBtn = removeBtn;
+      if (minRows) config.minRows = parseInt(minRows, 10) || 1;
+      
+      const manager = window.cmms?.common?.TableManager?.init(table, config);
+      if (manager) {
+        table.__tableManagerInitialized = true;
+        
+        // 서버에서 내려준 초기 항목이 있으면 로드
+        try {
+          const serverItems = table.dataset.serverItems ? JSON.parse(table.dataset.serverItems) : null;
+          if (serverItems && Array.isArray(serverItems) && serverItems.length > 0 && manager.loadFromData) {
+            manager.loadFromData(serverItems);
+          }
+        } catch (error) {
+          console.warn('WorkOrder: failed to load server items:', error);
+        }
       }
     },
     

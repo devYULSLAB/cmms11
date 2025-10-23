@@ -51,7 +51,7 @@
                 <div class="meta-row">
                   <div>문서번호: <span th:text="${approval.approvalId}">APR-2025-0001</span></div>
                   <div>기안자: <span th:text="${approval.createdBy}">admin</span></div>
-                  <div>작성일: <span th:text="${approval.createdAt}">2025-09-01</span></div>
+                  <div>작성일: <span th:text="${#temporals.format(approval.createdAt, 'yyyy-MM-dd HH:mm')}">2025-09-01</span></div>
                   <div>상태: <span class="badge"
                             th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}"
                             th:classappend="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? 'success' : approval.status == 'PROC' ? 'info' : approval.status == 'REJCT' ? 'danger' : ''}">처리중</span></div>
@@ -94,7 +94,7 @@
                           <span th:if="${step.result == 'REJCT'}" class="badge danger">반려</span>
                           <span th:if="${step.result == null}" class="badge">대기</span>
                         </td>
-                        <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
+                        <td th:text="${step.decidedAt != null ? #temporals.format(step.decidedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
                         <td th:text="${step.comment ?: ''}">-</td>
                       </tr>
                     </tbody>
@@ -146,7 +146,7 @@
                     <div class="row"><strong>문서번호</strong><span class="spacer"></span><span th:text="${approval.approvalId}">APR-2025-0001</span></div>
                     <div class="row"><strong>결재 제목</strong><span class="spacer"></span><span th:text="${approval.title}">설비 구매 요청의 건</span></div>
                     <div class="row"><strong>기안자</strong><span class="spacer"></span><span th:text="${approval.createdBy}">admin</span></div>
-                    <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${approval.createdAt}">2025-09-01</span></div>
+                    <div class="row"><strong>작성일</strong><span class="spacer"></span><span th:text="${#temporals.format(approval.createdAt, 'yyyy-MM-dd HH:mm')}">2025-09-01</span></div>
                     <div class="row"><strong>결재 상태</strong><span class="spacer"></span><span th:text="${approval.status == 'APPRV' or approval.status == 'CMPLT' ? '승인' : approval.status == 'PROC' ? '처리중' : approval.status == 'SUBMT' ? '제출' : approval.status == 'DRAFT' ? '기안' : approval.status == 'REJCT' ? '반려' : '기타'}">처리중</span></div>
                   </div>
 
@@ -170,7 +170,7 @@
                           <td th:text="${step.memberId}">-</td>
                           <td th:text="${step.decision == 'APPROVAL' ? '결재' : step.decision == 'AGREE' ? '합의' : '통보'}">결재</td>
                           <td th:text="${step.result == 'APPRV' ? '승인' : step.result == 'REJCT' ? '반려' : '대기'}">대기</td>
-                          <td th:text="${step.decidedAt != null ? step.decidedAt : '-'}">-</td>
+                          <td th:text="${step.decidedAt != null ? #temporals.format(step.decidedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</td>
                           <td th:text="${step.comment ?: '-'}">-</td>
                         </tr>
                       </tbody>

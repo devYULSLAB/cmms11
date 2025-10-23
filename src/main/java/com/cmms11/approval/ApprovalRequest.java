@@ -14,9 +14,9 @@ import java.util.List;
  */
 public record ApprovalRequest(
     @NotBlank @Size(max = 100) String title,
-    @NotBlank @Size(max = 64) String refEntity,
-    @NotBlank @Size(max = 10) String refId,
-    @NotBlank @Size(max = 10) String refStage,
+    @Size(max = 64) String refEntity,
+    @Size(max = 10) String refId,
+    @Size(max = 10) String refStage,
     String content,
     @Size(max = 10) String fileGroupId,
     @NotBlank @Size(max = 255) String callbackUrl,

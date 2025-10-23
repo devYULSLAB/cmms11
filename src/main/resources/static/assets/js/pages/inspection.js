@@ -180,7 +180,8 @@
       const i = tbody.querySelectorAll('.insp-item-row').length;
       
       // 첫 번째 행 (데이터 입력) - root 기반 DOM 생성
-      const tr1 = root.createElement ? root.createElement('tr') : document.createElement('tr');
+      const doc = tbody?.ownerDocument || document;
+      const tr1 = doc.createElement('tr');
       tr1.className = 'insp-item-row';
       tr1.innerHTML = `
         <td class="cell-center line-no" rowspan="2">${i + 1}</td>
@@ -194,7 +195,7 @@
         <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger" data-remove-item>삭제</button></td>`;
       
       // 두 번째 행 (비고) - root 기반 DOM 생성
-      const tr2 = root.createElement ? root.createElement('tr') : document.createElement('tr');
+      const tr2 = doc.createElement('tr');
       tr2.className = 'insp-item-note-row';
       tr2.innerHTML = `
         <td colspan="7">
@@ -303,7 +304,8 @@
       // 새 항목 추가
       items.forEach((item, idx) => {
         // root 기반 DOM 생성
-        const tr1 = root.createElement ? root.createElement('tr') : document.createElement('tr');
+        const doc = tbody?.ownerDocument || document;
+        const tr1 = doc.createElement('tr');
         tr1.className = 'insp-item-row';
         tr1.innerHTML = `
           <td class="cell-center line-no" rowspan="2">${idx + 1}</td>
@@ -316,7 +318,7 @@
           <td><input class="input" name="items[${idx}].resultVal" maxlength="50" placeholder="결과" value="${item.resultVal || ''}" /></td>
           <td class="cell-center" rowspan="2"><button type="button" class="btn sm danger ${idx === 0 ? 'hidden' : ''}" data-remove-item>삭제</button></td>`;
         
-        const tr2 = root.createElement ? root.createElement('tr') : document.createElement('tr');
+        const tr2 = doc.createElement('tr');
         tr2.className = 'insp-item-note-row';
         tr2.innerHTML = `
           <td colspan="7">

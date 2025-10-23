@@ -57,8 +57,7 @@
                         <label class="label" for="stage">계획/실적</label>
                         <select id="stage" name="stage" disabled>
                           <option value="PLN" selected th:selected="${workPermit?.stage == 'PLN' or workPermit?.stage == null}">계획</option>
-                          <option value="PROC" th:selected="${workPermit?.stage == 'PROC'}">진행</option>
-                          <option value="CMPLT" th:selected="${workPermit?.stage == 'CMPLT'}">완료</option>
+                          <option value="ACT" th:selected="${workPermit?.stage == 'ACT'}">실적</option>
                         </select>
                       </div>
                     </div>
